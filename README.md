@@ -41,7 +41,7 @@ processo. O usuário confirmou o funcionamento do launcher no Windows. Ele foi p
 com instalação de pré-requisitos adicionada nesta revisão; essa parte ainda precisa
 ser validada no Windows.
 
-A interface inicia em tema escuro. O botão Tema claro/Tema escuro salva sua
+A interface inicia em tema claro quando não há preferência salva. O botão Tema claro/Tema escuro salva sua
 preferência neste navegador.
 
 ## Execução
@@ -102,7 +102,7 @@ servir esse build em produção será necessário configurar o encaminhamento de
 
 1. Use Chrome ou Edge. Posicione a câmera à altura dos olhos, a 40–70 cm,
    com luz frontal difusa. Evite contraluz, reflexos nos óculos e olhos muito
-   pequenos na imagem. As orientações aparecem em tempo real sobre a prévia da câmera, inclusive
+   pequenos na imagem. As orientações aparecem em tempo real junto da prévia da câmera, inclusive
    durante a calibração e a prévia em tela cheia.
 2. Marque o consentimento, ative a câmera e inicie a calibração. A aplicação
    solicita **tela cheia real**; permita-a. Ela é obrigatória também na prévia.
@@ -111,7 +111,7 @@ servir esse build em produção será necessário configurar o encaminhamento de
    naturais durante o acompanhamento entram nas características coletadas.
 4. Cinco alvos parados são apresentados depois para validação independente.
    Mantenha o olhar no alvo por 1.5 segundo, sem mudar de postura por instrução.
-   A tentativa completa leva aproximadamente **20 segundos**. A coleta insuficiente é rejeitada, não completada
+   A tentativa completa leva aproximadamente **23 segundos**, incluindo a contagem regressiva de três segundos. A coleta insuficiente é rejeitada, não completada
    com coordenadas artificiais.
 5. Pisque naturalmente. Piscadas, recuperação após piscada (180 ms) e mudanças
    oculares rápidas são descartadas; não são contabilizadas como olhar parado.
@@ -186,3 +186,14 @@ Problemas devem persistir por pelo menos 1.2 segundo para gerar aviso; mensagens
 exibidas ficam por pelo menos dois segundos. A recuperação visual exige 600 ms
 de detecção estável. Essas regras afetam somente a apresentação: amostras inválidas
 continuam sendo rejeitadas imediatamente, sem congelar uma estimativa válida.
+
+### Campo visual e controles
+
+A calibração e a prévia usam um campo branco nos dois temas. Câmera e orientações
+ficam numa coluna à direita, e botões numa barra inferior, sem sobrepor o alvo.
+Coordenadas são normalizadas somente dentro desse campo visual, excluindo a
+coluna da câmera e a barra. A contagem 3–2–1 não coleta amostras.
+Piscadas não desativam os botões: uma perda contínua de detecção precisa atingir
+1.2 segundo; a câmera desligada, coleta em andamento ou ausência de calibração
+aprovada continuam bloqueando as ações correspondentes. Essa tolerância não
+torna amostras de piscadas válidas.

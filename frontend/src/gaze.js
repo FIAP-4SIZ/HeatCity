@@ -80,3 +80,11 @@ export class GuidanceFilter {
     return this.current;
   }
 }
+
+export class EyeReadiness {
+  lastSeen=-Infinity;
+  update(feature,time) {
+    if(feature)this.lastSeen=time;
+    return time-this.lastSeen<1200;
+  }
+}

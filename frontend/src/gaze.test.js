@@ -76,3 +76,14 @@ test('persistent problem warns, text is held and recovery is stable',async()=>{
   assert.deepEqual(guide.update(null,2000),warning);
   assert.equal(guide.update(null,3200).warning,false);
 });
+
+test('button readiness survives blinks but expires after persistent detection loss',async()=>{
+  const {EyeReadiness}=await import('./gaze.js');
+  const ready=new EyeReadiness();
+  assert.equal(ready.update(null,0),false);
+  assert.equal(ready.update([1,2],100),true);
+  assert.equal(ready.update(null,350),true);
+  assert.equal(ready.update(null,1299),true);
+  assert.equal(ready.update(null,1300),false);
+  assert.equal(ready.update([1,2],1400),true);
+});

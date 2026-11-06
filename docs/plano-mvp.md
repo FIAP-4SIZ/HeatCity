@@ -22,7 +22,8 @@ Não persistir frames ou vídeos faciais por padrão.
    React e MediaPipe WASM locais. Um alvo móvel percorre uma trajetória de 12 segundos; cinco alvos posteriores
    de 1.5 segundo fazem validação independente. Sem passos de mudança de postura;
    as features da cabeça são capturadas junto com os olhos durante movimentos naturais.
-   Tela cheia obrigatória na coleta e prévia. Modelo ridge inclui ambos os olhos
+   Tela cheia obrigatória na coleta e prévia, com campo branco, câmera lateral e
+   controles inferiores fora do campo. Contagem 3–2–1 antes da coleta. Modelo ridge inclui ambos os olhos
    e posição da cabeça; piscadas, recuperação e movimentos rápidos são pausas.
    Posições fora da faixa coletada suspendem estimativas. O limite RMSE 0.100
    permanece. O usuário relatou 0.150 na versão anterior em Chrome/Edge Windows;

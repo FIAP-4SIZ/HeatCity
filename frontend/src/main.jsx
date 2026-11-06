@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { validationTargets, inspectEyes, predict, trajectory, PASS_MS, EyeGate, supportedHead, GuidanceFilter } from './gaze.js';
+import { validationTargets, inspectEyes, predict, trajectory, PASS_MS, EyeGate, supportedHead, GuidanceFilter, EyeReadiness } from './gaze.js';
 import './style.css';
 
 async function api(path, body, method = 'POST') {
@@ -13,14 +13,15 @@ async function api(path, body, method = 'POST') {
 }
 
 function App() {
-  const [theme,setTheme]=useState(()=>{try{return localStorage.getItem('heatcity-theme')==='light'?'light':'dark';}catch{return 'dark';}});
+  const [theme,setTheme]=useState(()=>{try{return localStorage.getItem('heatcity-theme')==='dark'?'dark':'light';}catch{return 'light';}});
   useEffect(()=>{document.documentElement.dataset.theme=theme;try{localStorage.setItem('heatcity-theme',theme);}catch{}},[theme]);
-  const video = useRef(), stage = useRef(), runtime = useRef({}), runId = useRef(0);
+  const video = useRef(), stage = useRef(), field = useRef(), runtime = useRef({}), runId = useRef(0);
   const [consent, setConsent] = useState(false), [camera, setCamera] = useState(false);
   const [busy, setBusy] = useState(false), [phase, setPhase] = useState('idle');
   const [message, setMessage] = useState('Ative a câmera para verificar o enquadramento.');
   const [quality, setQuality] = useState(false), [target, setTarget] = useState(null);
   const [progress, setProgress] = useState(0), [result, setResult] = useState(null);
+  const [countdown,setCountdown]=useState(null);
   const [gaze, setGaze] = useState(null);
   const [visualWarning,setVisualWarning]=useState(false);
   const [guidance, setGuidance] = useState('Centralize o rosto e ilumine-o pela frente.');
@@ -32,7 +33,7 @@ function App() {
     if (state.calibration?.calibration_id) api(`/calibrations/${state.calibration.calibration_id}`, null, 'DELETE').catch(() => {});
     state.calibration = null;
     clearTimeout(state.expiry);
-    setResult(null); setTarget(null); setGaze(null); setPhase('idle');
+    setCountdown(null); setResult(null); setTarget(null); setGaze(null); setPhase('idle');
     if (text) setMessage(text);
   }
 
@@ -50,7 +51,7 @@ function App() {
   useEffect(() => {
     const resized = () => {
       const geometry=runtime.current.geometry;
-      if(geometry && (stage.current.clientWidth!==geometry[0] || stage.current.clientHeight!==geometry[1])) invalidate('A área de exibição mudou. Refaça a calibração.');
+      if(geometry && (field.current.clientWidth!==geometry[0] || field.current.clientHeight!==geometry[1])) invalidate('A área de exibição mudou. Refaça a calibração.');
     };
     const fullscreen = () => { if(document.fullscreenElement!==stage.current) invalidate('Tela cheia encerrada. Refaça a calibração para continuar.'); };
     document.addEventListener('fullscreenchange',fullscreen);
@@ -77,6 +78,7 @@ function App() {
       state.mesh ??= new window.FaceMesh({locateFile: file=>`/mediapipe/${file}`});
       state.mesh.setOptions({maxNumFaces:2,refineLandmarks:true,minDetectionConfidence:.6,minTrackingConfidence:.6});
       state.gate=new EyeGate();
+      state.readiness=new EyeReadiness();
       state.guide=new GuidanceFilter();
       setVisualWarning(false);
       state.mesh.onResults(results=> {
@@ -85,7 +87,7 @@ function App() {
         const feature=inspection.feature;
         const now=state.frameTime;
         const accepted=state.gate.update(feature,now);
-        setQuality(Boolean(feature));
+        setQuality(state.readiness.update(feature,now));
         let issue=feature?null:inspection.blink?'Olhos fechados por mais tempo. Abra-os quando estiver confortável.':inspection.reason;
         const collection=state.collection;
         if(collection && accepted && now-collection.since>900 && now-(collection.last || 0)>=50) {
@@ -122,14 +124,22 @@ function App() {
 
   async function calibrate() {
     invalidate();
+    setPhase('countdown');setCountdown(3);
     const id=runId.current, state=runtime.current;
     const payload={mode:'motion',features:[],targets:[],validation_features:[],validation_targets:[]};
     try {
       if(document.fullscreenElement!==stage.current) await stage.current.requestFullscreen();
       await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
       if(runId.current!==id) return;
-      state.geometry=[stage.current.clientWidth,stage.current.clientHeight];
-      setPhase('collecting'); setProgress(0);
+      state.geometry=[field.current.clientWidth,field.current.clientHeight];
+      setProgress(0);
+      for(let remaining=3;remaining>0;remaining--){
+        if(runId.current!==id)return;
+        setCountdown(remaining);setMessage(`Prepare-se. Iniciando em ${remaining}…`);
+        await new Promise(resolve=>setTimeout(resolve,1000));
+      }
+      if(runId.current!==id)return;
+      setCountdown(null);setPhase('collecting');
       const collect=async(moving,point,duration)=> {
         const collection={since:performance.now(),features:[],targets:[],moving,target:point};
         state.collection=collection;
@@ -182,7 +192,7 @@ function App() {
     } catch(error) { invalidate(error.message); }
   }
 
-  const collecting=phase==='collecting';
+  const collecting=phase==='collecting'||phase==='countdown';
   return <main>
     <header><a className="brand" href="/">Heat<span>City</span></a><span>LABORATÓRIO DE ATENÇÃO VISUAL</span><button className="theme-toggle" onClick={()=>setTheme(theme==='dark'?'light':'dark')}>{theme==='dark'?'Tema claro':'Tema escuro'}</button></header>
     <section className="intro"><p className="eyebrow">01 / PREPARAÇÃO DO PARTICIPANTE</p><h1>Um olhar para cidades<br/>mais acessíveis.</h1><p>Calibre a estimativa de olhar antes de avaliar a sinalização.<br/>Um participante por vez, uma nova calibração a cada teste.</p></section>
@@ -193,9 +203,11 @@ function App() {
         <button disabled={!consent||busy||collecting} onClick={()=>camera?stop():startCamera()}>{busy?'Preparando…':camera?'Desligar câmera':'Ativar câmera'}</button>
         <p className="small">Apenas coordenadas oculares são enviadas à API na calibração. Nenhum vídeo ou imagem facial é armazenado. Uso acadêmico, sem precisão clínica garantida.</p>
       </aside>
-      <section className="experiment"><div className="stage-head"><h2>{phase==='tracking'?'Prévia do olhar':'Calibração individual'}</h2><span>{progress}/6 etapas · cerca de 20 s</span></div>
+      <section className="experiment"><div className="stage-head"><h2>{phase==='tracking'?'Prévia do olhar':'Calibração individual'}</h2><span>{progress}/6 etapas · cerca de 23 s</span></div>
         <div ref={stage} className="stage" aria-label="Área de calibração">
-          {target ? <div className="target" style={{left:`${target[0]*100}%`,top:`${target[1]*100}%`}}/> : phase==='tracking' ? <>{gaze && <div className="gaze" style={{left:`${gaze[0]*100}%`,top:`${gaze[1]*100}%`}}/>}<span className="stage-note">{gaze?'Estimativa em tempo real':'Sem estimativa válida'}</span></> : <div className="placeholder"><span>＋</span><h3>Olhe. Calibre. Avalie.</h3><p>Um alvo móvel por 12 segundos.<br/>Cinco alvos de validação independente.</p></div>}
+          <div ref={field} className="visual-field" aria-label="Campo visual branco">
+          {countdown!==null ? <div className="countdown" role="timer" aria-label="Contagem regressiva">{countdown}</div> : target ? <div className="target" style={{left:`${target[0]*100}%`,top:`${target[1]*100}%`}}/> : phase==='tracking' ? <>{gaze && <div className="gaze" style={{left:`${gaze[0]*100}%`,top:`${gaze[1]*100}%`}}/>}<span className="stage-note">{gaze?'Estimativa em tempo real':'Sem estimativa válida'}</span></> : <div className="placeholder"><span>＋</span><h3>Olhe. Calibre. Avalie.</h3><p>Um alvo móvel por 12 segundos.<br/>Cinco alvos de validação independente.</p></div>}
+          </div>
           <div className={`camera-preview ${visualWarning?'warning':'ready'}`} aria-label="Câmera com orientação em tempo real">
             <video ref={video} muted playsInline aria-label="Prévia da webcam"/>
             <p className="camera-guidance" aria-live="polite">{camera?guidance:'Câmera desligada'}</p>
@@ -203,14 +215,14 @@ function App() {
           <div className="fullscreen-panel">
             <strong>{message}</strong>
             {result && <p>RMSE {result.validation_rmse.toFixed(3)} · Limite 0.100 · {result.approved?'Aprovada':'Reprovada'}</p>}
-            {!collecting && <button disabled={!camera||!quality} onClick={calibrate}>Refazer calibração</button>}
-            {!collecting && <button disabled={!result?.approved||phase==='tracking'} onClick={preview}>Iniciar prévia</button>}
-            <button className="secondary" onClick={()=>{invalidate('Teste encerrado.');document.exitFullscreen().catch(()=>{});}}>Encerrar tela cheia</button>
+            <button disabled={!camera||!quality||collecting||busy} onClick={calibrate}>{result?'Refazer calibração':'Iniciar calibração'}</button>
+            <button disabled={!result?.approved||!camera||collecting||phase==='tracking'} onClick={preview}>Iniciar prévia</button>
+            <button className="secondary" onClick={()=>{invalidate('Teste encerrado.');if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});}}>Cancelar / Encerrar</button>
           </div>
         </div>
         <div className="feedback" role="status">{message}</div>
         {result && <p className={result.approved?'good':'error'}>Erro de validação: {result.validation_rmse.toFixed(3)} · Limite: 0.100 · {result.approved?'Aprovada':'Reprovada'}</p>}
-        <div className="actions"><button disabled={!camera||!quality||collecting||busy} onClick={calibrate}>{result?'Refazer calibração':'Iniciar calibração'}</button><button className="secondary" disabled={!result?.approved||!camera||collecting||phase==='tracking'} onClick={preview}>Iniciar prévia</button>{collecting && <button className="secondary" onClick={()=>invalidate('Calibração cancelada.')}>Cancelar</button>}</div>
+
       </section>
     </div><footer>HeatCity / Global Solution FIAP · Estimativa experimental por webcam</footer>
   </main>;

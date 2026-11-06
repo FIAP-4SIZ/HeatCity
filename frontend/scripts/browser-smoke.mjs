@@ -2,6 +2,20 @@
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 
+async function checkContrast(page) {
+  const ratios=await page.evaluate(()=>{
+    const luminance=color=>{
+      const rgb=color.match(/[\d.]+/g).slice(0,3).map(v=>{const c=Number(v)/255;return c<=.04045?c/12.92:((c+.055)/1.055)**2.4;});
+      return rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;
+    };
+    return [['aside label','aside'],['.intro>p:last-child','body'],['.camera-guidance','.camera-guidance'],['.fullscreen-panel strong','.fullscreen-panel'],['.placeholder p','.visual-field'],['.theme-toggle','.theme-toggle']].map(([text,back])=>{
+      const a=luminance(getComputedStyle(document.querySelector(text)).color),b=luminance(getComputedStyle(document.querySelector(back)).backgroundColor);
+      return {text,ratio:(Math.max(a,b)+.05)/(Math.min(a,b)+.05)};
+    });
+  });
+  for(const item of ratios)assert.ok(item.ratio>=4.5,`${item.text}: contraste ${item.ratio}`);
+}
+
 const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || undefined,
   args: ['--no-sandbox', '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream',
@@ -12,6 +26,14 @@ try {
   const errors=[];
   page.on('pageerror', error=>errors.push(error.message));
   await page.goto('http://127.0.0.1:5173');
+  await page.waitForFunction(()=>document.documentElement.dataset.theme==='light');
+  await checkContrast(page);
+  await page.getByRole('button',{name:'Tema escuro',exact:true}).click();
+  await page.reload();
+  await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');
+  await checkContrast(page);
+  assert.equal(await page.locator('.visual-field').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(255, 255, 255)');
+
   assert.equal(await page.getByRole('button',{name:'Iniciar prévia',exact:true}).isDisabled(),true);
   await page.getByRole('checkbox').check();
   await page.getByRole('button',{name:'Ativar câmera',exact:true}).click();
@@ -45,8 +67,17 @@ try {
   });
   await page.getByRole('checkbox').check();
   await page.getByRole('button',{name:'Ativar câmera',exact:true}).click();
+  await page.waitForFunction(()=>!document.querySelector('.fullscreen-panel button').disabled);
+  await page.evaluate(()=>{window.testBlink=true;});
+  await page.waitForTimeout(250);
+  assert.equal(await page.getByRole('button',{name:'Iniciar calibração',exact:true}).isEnabled(),true);
+  await page.evaluate(()=>{window.testBlink=false;});
   const calibrationStarted=Date.now();
   await page.getByRole('button',{name:'Iniciar calibração',exact:true}).click();
+  await page.getByRole('timer').filter({hasText:'3'}).waitFor();
+  assert.equal(await page.locator('.target').count(),0);
+  await page.getByRole('timer').filter({hasText:'2'}).waitFor();
+  await page.getByRole('timer').filter({hasText:'1'}).waitFor();
   await page.locator('.fullscreen-panel strong').filter({hasText:'Calibração aprovada.'}).waitFor({timeout:120000});
   assert.ok(Date.now()-calibrationStarted<30000, 'Calibração deve terminar em menos de 30 s');
   assert.equal(await page.evaluate(()=>Boolean(document.fullscreenElement)),true);
@@ -55,11 +86,17 @@ try {
   assert.equal(await page.getByText(/Desloque levemente/).count(),0);
   await page.locator('.fullscreen-panel').getByRole('button',{name:'Iniciar prévia',exact:true}).click();
   await page.locator('.gaze').waitFor();
+  assert.equal(await page.locator('.visual-field').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(255, 255, 255)');
+  const boxes=await page.evaluate(()=>['.visual-field','.camera-preview','.fullscreen-panel'].map(s=>{const r=document.querySelector(s).getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom};}));
+  assert.ok(boxes[0].right<=boxes[1].x,'Câmera deve ficar fora do campo visual');
+  assert.ok(boxes[0].bottom<=boxes[2].y,'Controles devem ficar abaixo do campo visual');
+
   await page.evaluate(()=>{window.testBlink=true;});
   await page.waitForFunction(()=>!document.querySelector('.gaze'));
   assert.equal(await page.locator('.camera-preview.warning').count(),0);
   await page.evaluate(()=>{window.testBlink=false;});
   await page.locator('.gaze').waitFor();
+  await page.screenshot({path:'/tmp/heatcity-white-layout.png'});
   await page.evaluate(()=>document.exitFullscreen());
   await page.getByRole('status').filter({hasText:'Tela cheia encerrada. Refaça a calibração para continuar.'}).waitFor();
   assert.equal(await page.getByRole('button',{name:'Iniciar prévia',exact:true}).isDisabled(),true);
