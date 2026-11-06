@@ -67,7 +67,7 @@ class MotionCalibration:
 def fit_motion_calibration(features, targets, validation_features, validation_targets):
     """Ridge com ambos os olhos e seis descritores de posição da cabeça.
 
-    O cliente coleta três trajetórias com posturas diferentes. A validação é
+    O cliente coleta uma trajetória, incluindo movimentos naturais da cabeça. A validação é
     coletada depois do ajuste, sem otimizar hiperparâmetros com essas amostras.
     """
     x, vx = np.asarray(features, dtype=float), np.asarray(validation_features, dtype=float)

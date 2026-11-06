@@ -30,8 +30,8 @@ Windows automaticamente. A primeira preparação precisa de Internet. Portas
 8000 e 5173 devem estar livres; o launcher não encerra instâncias desconhecidas.
 Não execute como administrador. O `.cmd` chama `scripts/start-windows.ps1` usando
 PowerShell do Windows; a política de execução é ajustada somente para esse
-processo. O launcher foi revisado neste ambiente Linux, mas sua execução no
-Windows ainda precisa ser confirmada no seu computador.
+processo. O usuário confirmou o funcionamento do launcher no Windows. Ele foi preservado
+sem alterações nesta revisão.
 
 ## Execução
 
@@ -91,16 +91,16 @@ servir esse build em produção será necessário configurar o encaminhamento de
 
 1. Use Chrome ou Edge. Posicione a câmera à altura dos olhos, a 40–70 cm,
    com luz frontal difusa. Evite contraluz, reflexos nos óculos e olhos muito
-   pequenos na imagem. A interface orienta conforme a detecção dos olhos.
+   pequenos na imagem. As orientações aparecem em tempo real sobre a prévia da câmera, inclusive
+   durante a calibração e a prévia em tela cheia.
 2. Marque o consentimento, ative a câmera e inicie a calibração. A aplicação
    solicita **tela cheia real**; permita-a. Ela é obrigatória também na prévia.
-3. Acompanhe um único alvo contínuo em três trajetórias de 14 segundos. Antes
-   de cada uma, há uma instrução de postura: centro, leve deslocamento à esquerda
-   e leve deslocamento à direita com pequena variação de altura. Mantenha cada
-   postura confortável enquanto segue o alvo com os olhos. Não faça giros extremos.
+3. Acompanhe um único alvo contínuo por **12 segundos**, na sua posição
+   confortável. Não há etapas para mudar a cabeça ou a postura. Movimentos
+   naturais durante o acompanhamento entram nas características coletadas.
 4. Cinco alvos parados são apresentados depois para validação independente.
-   Mantenha o olhar no alvo; as instruções alternam as posturas. A tentativa leva
-   aproximadamente um minuto. A coleta insuficiente é rejeitada, não completada
+   Mantenha o olhar no alvo por 1.5 segundo, sem mudar de postura por instrução.
+   A tentativa completa leva aproximadamente **20 segundos**. A coleta insuficiente é rejeitada, não completada
    com coordenadas artificiais.
 5. Pisque naturalmente. Piscadas, recuperação após piscada (180 ms) e mudanças
    oculares rápidas são descartadas; não são contabilizadas como olhar parado.

@@ -140,25 +140,17 @@ function App() {
         if(collection.features.length<(moving?40:6)) throw new Error('Poucas amostras válidas. Aproxime a câmera, ilumine os olhos e tente novamente.');
         return collection;
       };
-      const postures=['Cabeça em posição confortável, de frente.',
-        'Desloque levemente a cabeça para a esquerda, mantendo o rosto visível.',
-        'Desloque levemente a cabeça para a direita e varie um pouco a altura.'];
-      for(let pass=0;pass<3;pass++) {
-        setTarget([.5,.5]); setMessage(`Preparação: ${postures[pass]} Depois acompanhe o alvo com os olhos.`);
-        await new Promise(resolve=>setTimeout(resolve,2500));
-        if(runId.current!==id)return;
-        setMessage(`Trajetória ${pass+1}/3: ${postures[pass]} Pisque naturalmente; não persiga o ponto com a cabeça.`);
-        const collection=await collect(true,null,PASS_MS);
-        if(!collection)return;
-        payload.features.push(...collection.features);payload.targets.push(...collection.targets);
-        setProgress(pass+1);
-      }
+      setMessage('Acompanhe o alvo com os olhos. Fique confortável e pisque normalmente; não precisa mudar a postura.');
+      const training=await collect(true,null,PASS_MS);
+      if(!training)return;
+      payload.features.push(...training.features);payload.targets.push(...training.targets);
+      setProgress(1);
       for(let index=0;index<validationTargets.length;index++) {
-        setMessage(`Validação ${index+1}/5: olhe para o ponto. ${postures[index%3]}`);
-        const collection=await collect(false,validationTargets[index],2200);
+        setMessage(`Validação ${index+1}/5: mantenha o olhar no ponto. Continue na sua posição confortável.`);
+        const collection=await collect(false,validationTargets[index],1500);
         if(!collection)return;
         payload.validation_features.push(...collection.features);payload.validation_targets.push(...collection.targets);
-        setProgress(index+4);
+        setProgress(index+2);
       }
       setTarget(null); setMessage('Avaliando erro em amostras independentes…');
       const response=await api('/calibrations/evaluate',payload);
@@ -189,17 +181,20 @@ function App() {
     <section className="intro"><p className="eyebrow">01 / PREPARAÇÃO DO PARTICIPANTE</p><h1>Um olhar para cidades<br/>mais acessíveis.</h1><p>Calibre a estimativa de olhar antes de avaliar a sinalização.<br/>Um participante por vez, uma nova calibração a cada teste.</p></section>
     <div className="workspace">
       <aside><h2>Prepare seu espaço</h2><p>Use luz difusa pela frente, câmera na altura dos olhos e distância de 40–70 cm. Evite contraluz e reflexos nas lentes. Aproxime-se se os olhos não forem reconhecidos.</p>
-        <video ref={video} muted playsInline aria-label="Prévia da webcam"/>
-        <p className={quality?'good':'muted'} aria-live="polite">{camera?guidance:'○ Câmera desligada'}</p>
+
         <label><input type="checkbox" checked={consent} disabled={busy} onChange={e=>{setConsent(e.target.checked);if(!e.target.checked)stop('Consentimento retirado. Câmera desligada.');}}/> Concordo com o uso da câmera para este teste. Os frames são processados neste navegador, sem gravação ou envio.</label>
         <button disabled={!consent||busy||collecting} onClick={()=>camera?stop():startCamera()}>{busy?'Preparando…':camera?'Desligar câmera':'Ativar câmera'}</button>
         <p className="small">Apenas coordenadas oculares são enviadas à API na calibração. Nenhum vídeo ou imagem facial é armazenado. Uso acadêmico, sem precisão clínica garantida.</p>
       </aside>
-      <section className="experiment"><div className="stage-head"><h2>{phase==='tracking'?'Prévia do olhar':'Calibração individual'}</h2><span>{progress}/8 etapas</span></div>
+      <section className="experiment"><div className="stage-head"><h2>{phase==='tracking'?'Prévia do olhar':'Calibração individual'}</h2><span>{progress}/6 etapas · cerca de 20 s</span></div>
         <div ref={stage} className="stage" aria-label="Área de calibração">
-          {target ? <div className="target" style={{left:`${target[0]*100}%`,top:`${target[1]*100}%`}}/> : phase==='tracking' ? <>{gaze && <div className="gaze" style={{left:`${gaze[0]*100}%`,top:`${gaze[1]*100}%`}}/>}<span className="stage-note">{gaze?'Estimativa em tempo real':'Sem estimativa válida'}</span></> : <div className="placeholder"><span>＋</span><h3>Olhe. Calibre. Avalie.</h3><p>Um alvo móvel, três posturas leves.<br/>Cinco alvos de validação independente.</p></div>}
+          {target ? <div className="target" style={{left:`${target[0]*100}%`,top:`${target[1]*100}%`}}/> : phase==='tracking' ? <>{gaze && <div className="gaze" style={{left:`${gaze[0]*100}%`,top:`${gaze[1]*100}%`}}/>}<span className="stage-note">{gaze?'Estimativa em tempo real':'Sem estimativa válida'}</span></> : <div className="placeholder"><span>＋</span><h3>Olhe. Calibre. Avalie.</h3><p>Um alvo móvel por 12 segundos.<br/>Cinco alvos de validação independente.</p></div>}
+          <div className={`camera-preview ${quality?'ready':''}`} aria-label="Câmera com orientação em tempo real">
+            <video ref={video} muted playsInline aria-label="Prévia da webcam"/>
+            <p className="camera-guidance" aria-live="polite">{camera?guidance:'Câmera desligada'}</p>
+          </div>
           <div className="fullscreen-panel">
-            <strong>{message}</strong><p>{guidance}</p>
+            <strong>{message}</strong>
             {result && <p>RMSE {result.validation_rmse.toFixed(3)} · Limite 0.100 · {result.approved?'Aprovada':'Reprovada'}</p>}
             {!collecting && <button disabled={!camera||!quality} onClick={calibrate}>Refazer calibração</button>}
             {!collecting && <button disabled={!result?.approved||phase==='tracking'} onClick={preview}>Iniciar prévia</button>}

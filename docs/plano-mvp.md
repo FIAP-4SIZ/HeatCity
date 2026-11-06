@@ -19,14 +19,16 @@ Não persistir frames ou vídeos faciais por padrão.
    Testar transformação conhecida, erro de validação, perda de rastreamento,
    reentrada na AOI e tempos inválidos; executar requisições reais à API.
 2. **Captura e calibração (software validado; nova validação humana pendente):**
-   React e MediaPipe WASM locais. Um alvo móvel percorre três trajetórias com
-   posturas diferentes; cinco alvos posteriores fazem validação independente.
+   React e MediaPipe WASM locais. Um alvo móvel percorre uma trajetória de 12 segundos; cinco alvos posteriores
+   de 1.5 segundo fazem validação independente. Sem passos de mudança de postura;
+   as features da cabeça são capturadas junto com os olhos durante movimentos naturais.
    Tela cheia obrigatória na coleta e prévia. Modelo ridge inclui ambos os olhos
    e posição da cabeça; piscadas, recuperação e movimentos rápidos são pausas.
    Posições fora da faixa coletada suspendem estimativas. O limite RMSE 0.100
    permanece. O usuário relatou 0.150 na versão anterior em Chrome/Edge Windows;
    não há evidência humana de melhoria ainda. Launcher `.cmd` automatiza o início
-   no Windows; sua execução nativa depende da confirmação do usuário.
+   no Windows; o usuário confirmou seu funcionamento. A câmera e as orientações
+   permanecem visíveis também em tela cheia.
 3. **Estudos e sessões:** FastAPI/PostgreSQL, migrações, estudos, imagens,
    AOIs, participantes por código, consentimento e sessão vinculada à calibração.
    Restrição de acesso e exclusão de registros antes de dados reais compartilhados.

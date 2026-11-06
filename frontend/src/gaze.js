@@ -1,7 +1,7 @@
 export const targets = [0.1, 0.5, 0.9].flatMap(y => [0.1, 0.5, 0.9].map(x => [x, y]));
 export const validationTargets = [[.2, .2], [.8, .2], [.5, .5], [.2, .8], [.8, .8]];
 const path = [[.1,.1],[.9,.1],[.1,.9],[.9,.9],[.5,.5]];
-export const PASS_MS = 14000;
+export const PASS_MS = 12000;
 export function trajectory(elapsed) {
   const position = Math.max(0,Math.min(1,elapsed/PASS_MS))*(path.length-1);
   const index=Math.min(path.length-2,Math.floor(position)), fraction=position-index;
