@@ -21,7 +21,7 @@ export function trajectory(elapsed) {
   return path[index].map((value, axis) => value + (path[index + 1][axis] - value) * fraction);
 }
 
-export function inspectEyes(faces, classic = false) {
+export function inspectEyes(faces, classic = false, options = {}) {
   if (faces?.length !== 1)
     return {
       reason:
@@ -47,7 +47,7 @@ export function inspectEyes(faces, classic = false) {
     if (width < (classic ? 0.015 : 0.022))
       return { reason: 'Aproxime-se: os olhos estão pequenos na imagem.' };
     const openness = Math.hypot(u.x - l.x, u.y - l.y) / width;
-    if (openness < (classic ? 0.12 : 0.14))
+    if (openness < (options.minOpenness ?? (classic ? 0.12 : 0.14)))
       return { reason: 'Piscada ou olhos parcialmente fechados: coleta pausada.', blink: true };
     features.push(
       ((i.x - p.x) * dx + (i.y - p.y) * dy) / (width * width),

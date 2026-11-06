@@ -192,3 +192,30 @@ Não há resultados inventados para preencher essa etapa.
 
 Referência principal: enunciado **Cognitive Computing-GS2-2026.pdf**, Arnaldo Jr.
 [Pesquisa de MediaPipe e alternativas](docs/pesquisa-rastreamento-ocular.md).
+
+## Diagnósticos / DEV sem cadastro
+
+Abra **Diagnósticos / DEV** no menu. Não exige estudo, cenário ou participante;
+consentimento e permissão da câmera continuam necessários. O laboratório permite:
+
+- Calibrar por pontos ou alvo móvel, com análise detalhada por alvo.
+- Ver FPS, tempo de processamento, quantidade de frames, taxa válida e features.
+- Mostrar olhos/íris ou landmarks do rosto na câmera.
+- Visualizar o tracking mesmo com RMSE reprovado, com identificação experimental.
+- Ajustar confiança de detecção/tracking, abertura mínima e filtro temporal antes
+  de ligar a câmera; escolher overlay e suavização visual da prévia.
+- Importar até 20 diagnósticos JSON por comparação (até 2 MB cada), somente no
+  navegador, com RMSE recalculado, resíduos agrupados por alvo e indicação de
+  estimativas fora da tela. Nenhum arquivo importado é enviado ou persistido.
+
+`POST /diagnostics/calibration` somente calcula: não emite identificador de
+calibração, não registra modelo autorizado e não cria dados de estudo. Um marcador
+em movimento nessa área não comprova qualidade nem libera uma sessão acadêmica.
+Alterações DEV não mudam os critérios nem o fluxo dos estudos. ESC retorna da
+prévia ao resultado para examinar e exportar o diagnóstico.
+
+Teste de navegador específico, com API e Vite ativos:
+
+```bash
+CHROMIUM_PATH=/usr/bin/chromium node frontend/scripts/diagnostics-smoke.mjs
+```

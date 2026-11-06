@@ -45,3 +45,4 @@ jobs:
                   raise SystemExit(f'Not ready: {url}')
           PY
           node frontend/scripts/mvp-smoke.mjs
+          node frontend/scripts/diagnostics-smoke.mjs

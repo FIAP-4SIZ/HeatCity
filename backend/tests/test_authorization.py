@@ -41,3 +41,20 @@ class AuthorizationTests(unittest.TestCase):
         with patch("heatcity.api.monotonic", return_value=611):
             with self.assertRaises(HTTPException):
                 preview(PreviewRequest(calibration_id=result["calibration_id"], consent=True))
+
+    def test_diagnostic_evaluation_never_issues_study_authorization(self):
+        from heatcity.api import diagnostic_calibration
+        from heatcity.workflow import calibration_models
+
+        grid = [[x, y] for x in (0.1, 0.5, 0.9) for y in (0.1, 0.5, 0.9)]
+        held = [[0.2, 0.2], [0.8, 0.2], [0.5, 0.5], [0.2, 0.8], [0.8, 0.8]]
+        before = (set(approvals), set(calibration_models))
+        result = diagnostic_calibration(
+            CalibrationRequest(
+                features=grid, targets=grid, validation_features=held, validation_targets=held
+            )
+        )
+        self.assertTrue(result["approved"])
+        self.assertTrue(result["diagnostic_only"])
+        self.assertNotIn("calibration_id", result)
+        self.assertEqual((set(approvals), set(calibration_models)), before)

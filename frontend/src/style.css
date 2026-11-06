@@ -1220,3 +1220,116 @@ meter {
 .section-heading label {
   max-width: 100%;
 }
+.diagnostic-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  margin-top: 24px;
+}
+.diagnostic-report {
+  min-width: 0;
+}
+.diagnostic-report svg {
+  width: 100%;
+  max-height: 340px;
+}
+.diagnostic-import {
+  margin-top: 28px;
+}
+.dev-controls {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 16px 0;
+}
+.dev-controls legend {
+  font-size: 12px;
+}
+.dev-controls label {
+  margin: 12px 0 !important;
+}
+.diagnostic-lab .camera-preview {
+  position: relative;
+}
+.landmark-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 130px;
+  object-fit: contain;
+  transform: scaleX(-1);
+  pointer-events: none;
+}
+.diagnostic-lab .stage:fullscreen .landmark-canvas {
+  height: 150px;
+}
+.live-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font:
+    11px ui-monospace,
+    monospace;
+  padding: 16px 0;
+  color: var(--muted);
+}
+.live-metrics span:last-child {
+  flex-basis: 100%;
+  overflow-wrap: anywhere;
+}
+.diagnostic-watermark {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  color: #8b341d;
+  background: white;
+  font: 12px system-ui;
+}
+.gaze[data-outside='true'] {
+  background: #b53a21;
+}
+@media (max-width: 900px) {
+  .diagnostic-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 620px) {
+  .app-sidebar {
+    flex-wrap: wrap;
+  }
+  .app-sidebar nav {
+    flex-wrap: wrap;
+  }
+  .app-sidebar nav a {
+    font-size: 10px;
+  }
+}
+.calibration-lab aside,
+.calibration-lab .experiment {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.calibration-lab button:not(.secondary):not(:disabled) {
+  background: var(--accent);
+  color: var(--accent-text);
+  border: 1px solid var(--accent);
+  padding: 11px 14px;
+}
+.calibration-lab .stage button:not(.secondary):not(:disabled) {
+  background: #215743;
+  color: #fff;
+  border-color: #215743;
+}
+.diagnostic-report h3 {
+  overflow-wrap: anywhere;
+}
+.diagnostic-lab .workspace {
+  grid-template-columns: 280px minmax(0, 1fr);
+}
+@media (max-width: 1200px) {
+  .diagnostic-lab .workspace {
+    grid-template-columns: 1fr;
+  }
+}

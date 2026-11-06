@@ -163,3 +163,28 @@ test('session camera inference uses the basis authorized by calibration', async 
   assert.ok(Math.abs(point[0] - 0.4) < 1e-10);
   assert.ok(Math.abs(point[1] - 0.45) < 1e-10);
 });
+
+test('diagnostic imports recompute error and group validation targets without trusting the declared score', async () => {
+  const { summarizeDiagnostic } = await import('./diagnostics.js');
+  const result = summarizeDiagnostic({
+    mode: 'fixed',
+    quality: { validation_rmse: 0.2 },
+    features: [],
+    residuals: [{ expected: [0.5, 0.5], estimated: [0.8, 0.9] }],
+  });
+  assert.ok(Math.abs(result.recomputed - 0.5) < 1e-10);
+  assert.equal(result.targets.length, 1);
+});
+test('malformed diagnostic data cannot be rendered as a report', async () => {
+  const { summarizeDiagnostic } = await import('./diagnostics.js');
+  assert.throws(() =>
+    summarizeDiagnostic({ mode: 'fixed', quality: { validation_rmse: -1 }, residuals: [] }),
+  );
+  assert.throws(() =>
+    summarizeDiagnostic({
+      mode: 'fixed',
+      quality: { validation_rmse: 0.2 },
+      residuals: [{ expected: [2, 0.5], estimated: [0.5, 0.5] }],
+    }),
+  );
+});

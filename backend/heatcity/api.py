@@ -61,6 +61,19 @@ def health():
     return {"status": "ok", "service": "HeatCity"}
 
 
+@app.post("/diagnostics/calibration")
+def diagnostic_calibration(body: CalibrationRequest):
+    # A pure evaluation: no authorization ID, model registration or persistence.
+    try:
+        values = body.model_dump(
+            exclude={"mode", "participant_code", "scenario_id", "viewport_width", "viewport_height"}
+        )
+        fit = fit_motion_calibration if body.mode == "motion" else fit_calibration
+        return {**asdict(fit(**values)), "diagnostic_only": True}
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+
+
 @app.post("/calibrations/evaluate")
 def calibrate(body: CalibrationRequest):
     try:

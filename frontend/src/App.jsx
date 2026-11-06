@@ -1,3 +1,4 @@
+import Diagnostics from './views/Diagnostics.jsx';
 import React, { useEffect, useState } from 'react';
 import { api, post, route, number } from './api.js';
 import ScenarioEditor from './views/ScenarioEditor.jsx';
@@ -186,11 +187,14 @@ export default function App() {
           ATENÇÃO VISUAL
         </p>
         <nav aria-label="Navegação principal">
-          <a className={path[0] !== 'method' ? 'active' : ''} href="#/">
+          <a className={!['method', 'diagnostics'].includes(path[0]) ? 'active' : ''} href="#/">
             <span>▦</span> Estudos
           </a>
           <a className={path[0] === 'method' ? 'active' : ''} href="#/method">
             <span>◎</span> Método e qualidade
+          </a>
+          <a className={path[0] === 'diagnostics' ? 'active' : ''} href="#/diagnostics">
+            <span>⌁</span> Diagnósticos / DEV
           </a>
         </nav>
         <div className="sidebar-bottom">
@@ -212,7 +216,13 @@ export default function App() {
         <header className="app-topbar">
           <div>
             <span className="breadcrumb">WORKSPACE</span>
-            <span className="breadcrumb-current">{study?.title || 'Estudos de sinalização'}</span>
+            <span className="breadcrumb-current">
+              {path[0] === 'diagnostics'
+                ? 'Diagnósticos / DEV'
+                : path[0] === 'method'
+                  ? 'Método e qualidade'
+                  : study?.title || 'Estudos de sinalização'}
+            </span>
           </div>
           <span className="tag neutral">MVP · Olhar experimental</span>
         </header>
@@ -232,7 +242,9 @@ export default function App() {
             </button>
           </div>
         )}
-        {path[0] === 'method' ? (
+        {path[0] === 'diagnostics' ? (
+          <Diagnostics />
+        ) : path[0] === 'method' ? (
           <Methodology />
         ) : studyId ? (
           <>
@@ -439,9 +451,14 @@ export default function App() {
                   Da delimitação das placas à análise de estimativas de olhar.
                 </p>
               </div>
-              <button className="primary" onClick={() => setCreating(true)}>
-                + Criar estudo
-              </button>
+              <div className="button-row">
+                <button className="secondary" onClick={() => route('/diagnostics')}>
+                  Diagnósticos
+                </button>
+                <button className="primary" onClick={() => setCreating(true)}>
+                  + Criar estudo
+                </button>
+              </div>
             </div>
             <div className="home-strip">
               <div>
