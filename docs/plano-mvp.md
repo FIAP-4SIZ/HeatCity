@@ -18,13 +18,15 @@ Não persistir frames ou vídeos faciais por padrão.
    avaliação independente, rejeição de entradas inválidas e métricas por AOI.
    Testar transformação conhecida, erro de validação, perda de rastreamento,
    reentrada na AOI e tempos inválidos; executar requisições reais à API.
-2. **Captura e calibração (implementada; validação humana pendente):** React
-   captura webcam e MediaPipe processa localmente via WASM, sem enviar frames.
-   Modelos distribuídos pelo pacote npm fixado e lockfile. Nove pontos de ajuste,
-   cinco de validação, feedback, consentimento e repetição. Prévia liberada por
-   autorização temporária da API; invalidação por resize, câmera desligada,
-   troca de aba ou expiração. Testes sintéticos de interface e detector real sem
-   rosto passaram; precisão com webcam real ainda precisa ser medida.
+2. **Captura e calibração (software validado; nova validação humana pendente):**
+   React e MediaPipe WASM locais. Um alvo móvel percorre três trajetórias com
+   posturas diferentes; cinco alvos posteriores fazem validação independente.
+   Tela cheia obrigatória na coleta e prévia. Modelo ridge inclui ambos os olhos
+   e posição da cabeça; piscadas, recuperação e movimentos rápidos são pausas.
+   Posições fora da faixa coletada suspendem estimativas. O limite RMSE 0.100
+   permanece. O usuário relatou 0.150 na versão anterior em Chrome/Edge Windows;
+   não há evidência humana de melhoria ainda. Launcher `.cmd` automatiza o início
+   no Windows; sua execução nativa depende da confirmação do usuário.
 3. **Estudos e sessões:** FastAPI/PostgreSQL, migrações, estudos, imagens,
    AOIs, participantes por código, consentimento e sessão vinculada à calibração.
    Restrição de acesso e exclusão de registros antes de dados reais compartilhados.
@@ -50,8 +52,8 @@ Não persistir frames ou vídeos faciais por padrão.
 - Coordenadas da imagem serão normalizadas em [0, 1]. O frontend deve remover
   margens da imagem e considerar escala/espelhamento antes de registrar amostras.
 - Validação separada evita aprovar a calibração pelo próprio erro de treinamento.
-  A interface coleta a posição relativa das íris, agregando por mediana em cada
-  alvo. A acurácia desse método ainda depende de validação experimental humana.
+  A interface coleta posições relativas das duas íris e descritores da cabeça
+  durante trajetórias; a validação usa amostras posteriores em cinco alvos. A acurácia desse método ainda depende de validação experimental humana.
 - O endpoint de análise atual é stateless e serve ao desenvolvimento dos cálculos.
   A rota de prévia exige consentimento e aprovação em memória. A futura rota de
   sessão deverá associar estudo, participante e autorização persistida.

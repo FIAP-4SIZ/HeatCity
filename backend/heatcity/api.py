@@ -5,9 +5,10 @@ from time import monotonic
 from uuid import uuid4
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
+from typing import Literal
 
 from .analysis import Area, Sample, analyze
-from .calibration import fit_calibration
+from .calibration import fit_calibration, fit_motion_calibration
 
 app = FastAPI(title="HeatCity", version="0.1.0")
 # Somente autorização temporária para prévia local; sem persistência de sessões.
@@ -32,6 +33,7 @@ def revoke(calibration_id: str):
 
 
 class CalibrationRequest(BaseModel):
+    mode: Literal["fixed", "motion"] = "fixed"
     features: list[list[float]] = Field(max_length=5000)
     targets: list[list[float]] = Field(max_length=5000)
     validation_features: list[list[float]] = Field(max_length=5000)
@@ -52,7 +54,9 @@ def health():
 @app.post("/calibrations/evaluate")
 def calibrate(body: CalibrationRequest):
     try:
-        result = asdict(fit_calibration(**body.model_dump()))
+        values = body.model_dump(exclude={"mode"})
+        fit = fit_motion_calibration if body.mode == "motion" else fit_calibration
+        result = asdict(fit(**values))
         now = monotonic()
         for key, expires in list(approvals.items()):
             if expires <= now:

@@ -26,3 +26,32 @@ test('uses distinct validation targets and robust median', () => {
   assert.equal(validationTargets.length,5);
   assert.deepEqual(medianFeature([[1,2],[100,200],[2,3]]),[2,3]);
 });
+
+test('motion trajectory is bounded and covers all four quadrants', async () => {
+  const {trajectory,PASS_MS}=await import('./gaze.js');
+  const quadrants=new Set();
+  for(let t=0;t<=PASS_MS;t+=50){
+    const point=trajectory(t);
+    assert.ok(point.every(v=>v>=.1-1e-10&&v<=.9+1e-10));
+    quadrants.add(point.map(v=>Number(v>=.5)).join(','));
+  }
+  assert.equal(quadrants.size,4);
+});
+
+test('blink recovery and saccades suppress invalid samples without freezing gaze', async()=>{
+  const {EyeGate}=await import('./gaze.js');
+  const gate=new EyeGate();
+  assert.equal(gate.update([.3,.1,.3,.1],0),true);
+  assert.equal(gate.update(null,20),false);
+  assert.equal(gate.update([.3,.1,.3,.1],100),false);
+  assert.equal(gate.update([.3,.1,.3,.1],220),true);
+  assert.equal(gate.update([.9,.1,.9,.1],240),false);
+  assert.equal(gate.update([.9,.1,.9,.1],400),true);
+});
+
+test('head posture beyond the calibrated range requires recalibration', async()=>{
+  const {supportedHead}=await import('./gaze.js');
+  const model={head_min:[0,0,.4,.4,.2,0],head_max:[.1,.1,.6,.6,.3,.1]};
+  assert.equal(supportedHead([0,0,0,0,.05,.05,.5,.5,.25,.05],model),true);
+  assert.equal(supportedHead([0,0,0,0,.05,.05,.9,.5,.25,.05],model),false);
+});

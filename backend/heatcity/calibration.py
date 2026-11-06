@@ -52,3 +52,49 @@ def fit_calibration(
     predicted = np.column_stack((vx, np.ones(len(vx)))) @ coefficients
     error = float(np.sqrt(np.mean(np.sum((predicted - vy) ** 2, axis=1))))
     return Calibration(coefficients.tolist(), error, error <= max_rmse)
+
+
+@dataclass(frozen=True)
+class MotionCalibration:
+    coefficients: list[list[float]]
+    validation_rmse: float
+    approved: bool
+    head_min: list[float]
+    head_max: list[float]
+    validation_p90: float
+
+
+def fit_motion_calibration(features, targets, validation_features, validation_targets):
+    """Ridge com ambos os olhos e seis descritores de posição da cabeça.
+
+    O cliente coleta três trajetórias com posturas diferentes. A validação é
+    coletada depois do ajuste, sem otimizar hiperparâmetros com essas amostras.
+    """
+    x, vx = np.asarray(features, dtype=float), np.asarray(validation_features, dtype=float)
+    y, vy = _pairs(targets, 120), _pairs(validation_targets, 30)
+    if (x.ndim != 2 or vx.ndim != 2 or x.shape != (len(y), 10)
+            or vx.shape != (len(vy), 10) or not np.isfinite(x).all() or not np.isfinite(vx).all()
+            or np.abs(x).max() > 100 or np.abs(vx).max() > 100):
+        raise ValueError("Amostras móveis exigem dez características finitas por alvo.")
+    if (y < 0).any() or (y > 1).any() or (vy < 0).any() or (vy > 1).any():
+        raise ValueError("Alvos devem estar em [0, 1].")
+    for values in (y, vy):
+        # Cobertura em ambos os eixos e em cada quadrante, sem exigir grade fixa.
+        if np.ptp(values, axis=0).min() < .5 or len(set(map(tuple, (values >= .5).astype(int)))) < 4:
+            raise ValueError("Cobertura insuficiente: acompanhe toda a trajetória.")
+    if np.ptp(x[:, :4], axis=0).max() < .01:
+        raise ValueError("Movimento ocular insuficiente. Verifique a detecção das íris.")
+    mean, scale = x.mean(axis=0), x.std(axis=0)
+    scale = np.maximum(scale, 1e-4)
+    design = np.column_stack(((x-mean)/scale, np.ones(len(x))))
+    penalty = np.eye(11) * (len(x)*.01)
+    penalty[-1, -1] = 0
+    weights = np.linalg.solve(design.T @ design + penalty, design.T @ y)
+    coefficients = weights[:-1] / scale[:, None]
+    intercept = weights[-1] - mean @ coefficients
+    coefficients = np.vstack((coefficients, intercept))
+    distances = np.linalg.norm(np.column_stack((vx, np.ones(len(vx)))) @ coefficients - vy, axis=1)
+    error = float(np.sqrt(np.mean(distances**2)))
+    return MotionCalibration(coefficients.tolist(), error, error <= .1,
+                             x[:, 4:].min(axis=0).tolist(), x[:, 4:].max(axis=0).tolist(),
+                             float(np.percentile(distances, 90)))

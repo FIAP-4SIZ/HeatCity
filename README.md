@@ -8,10 +8,30 @@ imagens de espaços públicos por estimativas de olhar, mapas de calor e indicad
 ## Estado atual
 
 Etapas 1–2 do MVP: API FastAPI, interface React com webcam e MediaPipe,
-calibração afim de nove pontos com validação independente e cálculo de métricas
+calibração com compensação de postura e validação independente e cálculo de métricas
 temporais por área de interesse (AOI). Há prévia experimental do olhar;
 ainda não há estudos persistidos, sessões de pesquisa, banco ou heatmaps.
 Os testes sintéticos validam cálculos; não demonstram precisão com pessoas.
+
+## Iniciar no Windows com dois cliques
+
+Execute **`Iniciar-HeatCity.cmd`** na raiz do projeto. Não precisa abrir terminal
+nem ativar a `.venv` manualmente. O launcher:
+
+- Confere Python 3.12, Node.js 22.12+ (recomendado LTS 24) e npm.
+- Cria `.venv` quando necessário e confere as dependências Python.
+- Executa `npm ci` se o lockfile mudou e prepara os modelos locais.
+- Inicia API e interface, aguarda resposta e abre o navegador padrão.
+- Mostra logs em duas janelas; pressione ENTER na janela inicial para encerrar
+  os processos criados por ele.
+
+Se faltar Python ou Node.js, ele orienta a instalação, sem instalar programas no
+Windows automaticamente. A primeira preparação precisa de Internet. Portas
+8000 e 5173 devem estar livres; o launcher não encerra instâncias desconhecidas.
+Não execute como administrador. O `.cmd` chama `scripts/start-windows.ps1` usando
+PowerShell do Windows; a política de execução é ajustada somente para esse
+processo. O launcher foi revisado neste ambiente Linux, mas sua execução no
+Windows ainda precisa ser confirmada no seu computador.
 
 ## Execução
 
@@ -69,22 +89,46 @@ onboarding não fornece preview web. `npm run build` valida a compilação; para
 servir esse build em produção será necessário configurar o encaminhamento de
 `/api` à API (o proxy do Vite funciona somente em desenvolvimento).
 
-1. Leia e marque o consentimento; ative a câmera e enquadre um único rosto.
-2. Inicie a calibração. Olhe para cada ponto sem mover a cabeça: nove pontos de
-   ajuste e cinco de validação, em torno de 2.2 segundos cada. Amostras sem olhos
-   detectados são descartadas. Poucas amostras interrompem a tentativa.
-3. A API aprova pelo erro independente. Se reprovada, repita. Se aprovada, inicie
-   a prévia do olhar. Ela não registra uma sessão nem salva dados de pesquisa.
-4. Redimensionar a janela, trocar de aba, desligar a câmera ou retirar o
-   consentimento invalida a calibração. A autorização também expira em dez minutos.
+1. Use Chrome ou Edge. Posicione a câmera à altura dos olhos, a 40–70 cm,
+   com luz frontal difusa. Evite contraluz, reflexos nos óculos e olhos muito
+   pequenos na imagem. A interface orienta conforme a detecção dos olhos.
+2. Marque o consentimento, ative a câmera e inicie a calibração. A aplicação
+   solicita **tela cheia real**; permita-a. Ela é obrigatória também na prévia.
+3. Acompanhe um único alvo contínuo em três trajetórias de 14 segundos. Antes
+   de cada uma, há uma instrução de postura: centro, leve deslocamento à esquerda
+   e leve deslocamento à direita com pequena variação de altura. Mantenha cada
+   postura confortável enquanto segue o alvo com os olhos. Não faça giros extremos.
+4. Cinco alvos parados são apresentados depois para validação independente.
+   Mantenha o olhar no alvo; as instruções alternam as posturas. A tentativa leva
+   aproximadamente um minuto. A coleta insuficiente é rejeitada, não completada
+   com coordenadas artificiais.
+5. Pisque naturalmente. Piscadas, recuperação após piscada (180 ms) e mudanças
+   oculares rápidas são descartadas; não são contabilizadas como olhar parado.
+   Movimento ocular lento de acompanhamento permanece válido.
+6. O erro RMSE deve ser no máximo 0.100. A prévia só é liberada após aprovação.
+   Sair da tela cheia (ESC), alterar o tamanho da área ou desligar a câmera exige
+   nova calibração. Se a cabeça sair da faixa coletada, a estimativa é suspensa
+   e a interface pede retorno à faixa ou nova calibração.
 
-O MediaPipe Face Mesh (`refineLandmarks`) executa em WebAssembly no navegador.
-O instalador copia modelos e WASM do pacote npm fixado, cuja integridade é
-verificada pelo lockfile; não há CDN em runtime. Os frames ficam no dispositivo.
-Somente pares de features oculares e alvos são enviados na calibração. A posição
-da íris é normalizada pelos cantos de cada olho, com rejeição de olhos fechados;
-não é um rastreador ocular certificado. O espelhamento da prévia é apenas visual.
-OpenCV no backend não é necessário nesta arquitetura de captura web.
+O MediaPipe Face Mesh (`refineLandmarks`) executa em WASM no navegador, com captura
+preferencial em 1280×720. Ambos os olhos são usados separadamente, junto de seis
+características de posição, escala e orientação do rosto. Um ajuste ridge
+padronizado aprende a relação com o alvo; as cinco posições posteriores medem
+RMSE e percentil 90 do erro sem reajustar o modelo. Os coeficientes voltam à escala
+original para a inferência no navegador.
+
+Durante as trajetórias, a posição-alvo usada no ajuste recua 150 ms para compensar
+aproximadamente o atraso de acompanhamento visual. Esse valor, os limiares de
+piscada/movimento e a margem de postura são heurísticos e precisam ser avaliados
+com participantes. O sistema não estima pose 3D métrica nem garante precisão em
+qualquer posição. A mudança não demonstra por si só uma melhora sobre o melhor
+RMSE 0.150 relatado pelo usuário na versão anterior; é preciso repetir o teste.
+
+O instalador copia modelos e WASM do pacote npm fixado, verificado pelo lockfile;
+sem CDN em runtime. Frames ficam no dispositivo. Somente features e alvos são
+enviados na calibração. A versão anterior da API (`mode: "fixed"`, padrão) continua
+aceitando a grade de nove pontos; a interface agora envia `mode: "motion"`, com
+pelo menos 120 amostras de ajuste, 30 de validação e dez features por amostra.
 
 `POST /tracking/preview` exige consentimento e identificador temporário emitido
 pela API após aprovação. A autorização fica em memória (um único worker), é
@@ -103,7 +147,7 @@ CHROMIUM_PATH=/usr/bin/chromium node scripts/browser-smoke.mjs
 
 O smoke test usa o MediaPipe real com vídeo sintético sem rosto para verificar
 carregamento e bloqueio; depois substitui o detector por landmarks sintéticos
-para testar os 14 pontos, aprovação pela API, prévia e invalidação por resize.
+para testar trajetórias em tela cheia, aprovação pela API, piscada, recuperação e invalidação ao sair da tela cheia.
 São verificações de software; validar precisão e usabilidade exige uma pessoa
 real e uma webcam, com iluminação e postura documentadas.
 
