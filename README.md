@@ -25,13 +25,18 @@ nem ativar a `.venv` manualmente. O launcher:
 - Mostra logs em duas janelas; pressione ENTER na janela inicial para encerrar
   os processos criados por ele.
 
-Se faltar Python ou Node.js, ele orienta a instalação, sem instalar programas no
-Windows automaticamente. A primeira preparação precisa de Internet. Portas
+Se faltar Python 3.12, Node.js compatível ou npm, o launcher instala pelo winget,
+respeitando verificações e permissões do instalador. Se winget não estiver disponível,
+solicita instalar App Installer pela Microsoft Store. A primeira preparação precisa de Internet. Portas
 8000 e 5173 devem estar livres; o launcher não encerra instâncias desconhecidas.
 Não execute como administrador. O `.cmd` chama `scripts/start-windows.ps1` usando
 PowerShell do Windows; a política de execução é ajustada somente para esse
 processo. O usuário confirmou o funcionamento do launcher no Windows. Ele foi preservado
-sem alterações nesta revisão.
+com instalação de pré-requisitos adicionada nesta revisão; essa parte ainda precisa
+ser validada no Windows.
+
+A interface inicia em tema escuro. O botão Tema claro/Tema escuro salva sua
+preferência neste navegador.
 
 ## Execução
 

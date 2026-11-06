@@ -30,8 +30,25 @@ function Assert-FreePort([int]$port) {
     try { $listener.Start() } catch { throw "Porta $port ocupada. Feche a instancia anterior antes de iniciar novamente." }
     finally { $listener.Stop() }
 }
+function Install-Prerequisite([string]$id) {
+    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+        throw 'Instale ou atualize App Installer na Microsoft Store para disponibilizar winget e execute novamente.'
+    }
+    Write-Host "Instalando $id pelo winget..." -ForegroundColor Cyan
+    Run-Checked 'winget' @('install','--id',$id,'--exact','--source','winget','--accept-package-agreements','--accept-source-agreements')
+    $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
+}
 try {
     Write-Host 'HeatCity - verificando requisitos...' -ForegroundColor Cyan
+    if (-not ((Get-Command py -ErrorAction SilentlyContinue) -and (Python-Is312 'py' @('-3.12'))) -and
+        -not ((Get-Command python -ErrorAction SilentlyContinue) -and (Python-Is312 'python' @()))) {
+        Install-Prerequisite 'Python.Python.3.12'
+    }
+    $nodeReady = $false
+    if ((Get-Command node -ErrorAction SilentlyContinue) -and (Get-Command npm.cmd -ErrorAction SilentlyContinue)) {
+        try { $nodeReady = [version]((& node --version).TrimStart('v')) -ge [version]'22.12.0' } catch {}
+    }
+    if (-not $nodeReady) { Install-Prerequisite 'OpenJS.NodeJS.LTS' }
     $python = $null; $pythonArgs = @()
     if ((Get-Command py -ErrorAction SilentlyContinue) -and (Python-Is312 'py' @('-3.12'))) {
         $python = 'py'; $pythonArgs = @('-3.12')

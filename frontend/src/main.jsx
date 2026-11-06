@@ -13,6 +13,8 @@ async function api(path, body, method = 'POST') {
 }
 
 function App() {
+  const [theme,setTheme]=useState(()=>{try{return localStorage.getItem('heatcity-theme')==='light'?'light':'dark';}catch{return 'dark';}});
+  useEffect(()=>{document.documentElement.dataset.theme=theme;try{localStorage.setItem('heatcity-theme',theme);}catch{}},[theme]);
   const video = useRef(), stage = useRef(), runtime = useRef({}), runId = useRef(0);
   const [consent, setConsent] = useState(false), [camera, setCamera] = useState(false);
   const [busy, setBusy] = useState(false), [phase, setPhase] = useState('idle');
@@ -177,7 +179,7 @@ function App() {
 
   const collecting=phase==='collecting';
   return <main>
-    <header><a className="brand" href="/">Heat<span>City</span></a><span>LABORATÓRIO DE ATENÇÃO VISUAL</span></header>
+    <header><a className="brand" href="/">Heat<span>City</span></a><span>LABORATÓRIO DE ATENÇÃO VISUAL</span><button className="theme-toggle" onClick={()=>setTheme(theme==='dark'?'light':'dark')}>{theme==='dark'?'Tema claro':'Tema escuro'}</button></header>
     <section className="intro"><p className="eyebrow">01 / PREPARAÇÃO DO PARTICIPANTE</p><h1>Um olhar para cidades<br/>mais acessíveis.</h1><p>Calibre a estimativa de olhar antes de avaliar a sinalização.<br/>Um participante por vez, uma nova calibração a cada teste.</p></section>
     <div className="workspace">
       <aside><h2>Prepare seu espaço</h2><p>Use luz difusa pela frente, câmera na altura dos olhos e distância de 40–70 cm. Evite contraluz e reflexos nas lentes. Aproxime-se se os olhos não forem reconhecidos.</p>
