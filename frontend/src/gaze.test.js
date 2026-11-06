@@ -87,3 +87,15 @@ test('button readiness survives blinks but expires after persistent detection lo
   assert.equal(ready.update(null,1300),false);
   assert.equal(ready.update([1,2],1400),true);
 });
+
+test('classic calibration uses the mean of both eyes consistently for training and prediction',async()=>{
+  const {calibrationFeature,predict}=await import('./gaze.js');
+  const features=[.2,.1,.4,.3,1,2,3,4,5,6];
+  const classic=calibrationFeature(features,'fixed');
+  assert.ok(Math.abs(classic[0]-.3)<1e-10);
+  assert.equal(classic[1],.2);
+  const point=predict(classic,[[2,0],[0,3],[.1,.2]]);
+  assert.ok(Math.abs(point[0]-.7)<1e-10);
+  assert.ok(Math.abs(point[1]-.8)<1e-10);
+  assert.deepEqual(calibrationFeature(features,'motion'),features);
+});

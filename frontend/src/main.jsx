@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { validationTargets, inspectEyes, predict, trajectory, PASS_MS, EyeGate, supportedHead, GuidanceFilter, EyeReadiness } from './gaze.js';
+import { targets, validationTargets, medianFeature, calibrationFeature, inspectEyes, predict, trajectory, PASS_MS, EyeGate, supportedHead, GuidanceFilter, EyeReadiness } from './gaze.js';
 import './style.css';
 
 async function api(path, body, method = 'POST') {
@@ -17,6 +17,7 @@ function App() {
   useEffect(()=>{document.documentElement.dataset.theme=theme;try{localStorage.setItem('heatcity-theme',theme);}catch{}},[theme]);
   const video = useRef(), stage = useRef(), field = useRef(), runtime = useRef({}), runId = useRef(0);
   const [consent, setConsent] = useState(false), [camera, setCamera] = useState(false);
+  const [calibrationMode,setCalibrationMode]=useState('fixed');
   const [busy, setBusy] = useState(false), [phase, setPhase] = useState('idle');
   const [message, setMessage] = useState('Ative a câmera para verificar o enquadramento.');
   const [quality, setQuality] = useState(false), [target, setTarget] = useState(null);
@@ -77,13 +78,14 @@ function App() {
       await video.current.play();
       state.mesh ??= new window.FaceMesh({locateFile: file=>`/mediapipe/${file}`});
       state.mesh.setOptions({maxNumFaces:2,refineLandmarks:true,minDetectionConfidence:.6,minTrackingConfidence:.6});
+      state.featureMode=calibrationMode;
       state.gate=new EyeGate();
       state.readiness=new EyeReadiness();
       state.guide=new GuidanceFilter();
       setVisualWarning(false);
       state.mesh.onResults(results=> {
         if (!state.running) return;
-        const inspection=inspectEyes(results.multiFaceLandmarks);
+        const inspection=inspectEyes(results.multiFaceLandmarks,state.featureMode==='fixed');
         const feature=inspection.feature;
         const now=state.frameTime;
         const accepted=state.gate.update(feature,now);
@@ -100,7 +102,7 @@ function App() {
         if(state.tracking && state.calibration) {
           const inRange=feature && supportedHead(feature,state.calibration);
           if(feature && !inRange) issue='Cabeça fora da faixa calibrada. Retorne à postura anterior ou recalibre.';
-          const point=accepted && inRange?predict(feature,state.calibration.coefficients):null;
+          const point=accepted && inRange?predict(calibrationFeature(feature,state.calibration.feature_mode),state.calibration.coefficients):null;
           // No smoothing across invalid intervals: a blink never freezes a valid gaze.
           setGaze(point?.every(v=>Number.isFinite(v)&&v>=0&&v<=1)?point:null);
         }
@@ -128,7 +130,8 @@ function App() {
     invalidate();
     setPhase('countdown');setCountdown(3);
     const id=runId.current, state=runtime.current;
-    const payload={mode:'motion',features:[],targets:[],validation_features:[],validation_targets:[]};
+    state.featureMode=calibrationMode;
+    const payload={mode:calibrationMode,features:[],targets:[],validation_features:[],validation_targets:[]};
     try {
       if(document.fullscreenElement!==stage.current) await stage.current.requestFullscreen();
       if(runId.current!==id) return;
@@ -141,7 +144,7 @@ function App() {
       if(runId.current!==id)return;
       state.geometry=[field.current.clientWidth,field.current.clientHeight];
       setCountdown(null);setPhase('collecting');
-      const collect=async(moving,point,duration)=> {
+      const collect=async(moving,point,duration,minimum=6)=> {
         const collection={since:performance.now(),features:[],targets:[],moving,target:point,clock:0};
         state.collection=collection;
         await new Promise((resolve,reject)=> {
@@ -149,11 +152,11 @@ function App() {
             if(runId.current!==id) {resolve();return;}
             const elapsed=performance.now()-collection.since;
             setTarget(moving?trajectory(collection.clock):point);
-            const enough=moving?collection.clock>=PASS_MS&&collection.features.length>=120:elapsed>=duration&&collection.features.length>=6;
+            const enough=moving?collection.clock>=PASS_MS&&collection.features.length>=120:elapsed>=duration&&collection.features.length>=minimum;
             if(enough) {resolve();return;}
             if(elapsed>(moving?45000:6500)) {
               state.collection=null;
-              reject(new Error(`Coleta insuficiente: ${collection.features.length} amostras válidas (${moving?'mínimo 120 na trajetória':'mínimo 6 neste ponto'}). Verifique iluminação e enquadramento; a câmera pode estar processando lentamente.`));return;
+              reject(new Error(`Coleta insuficiente: ${collection.features.length} amostras válidas (${moving?'mínimo 120 na trajetória':`mínimo ${minimum} neste ponto`}). Verifique iluminação e enquadramento; a câmera pode estar processando lentamente.`));return;
             }
             requestAnimationFrame(poll);
           };poll();
@@ -162,17 +165,32 @@ function App() {
         if(runId.current!==id) return null;
         return collection;
       };
-      setMessage('Acompanhe o alvo com os olhos. Fique confortável e pisque normalmente; não precisa mudar a postura.');
-      const training=await collect(true,null,PASS_MS);
-      if(!training)return;
-      payload.features.push(...training.features);payload.targets.push(...training.targets);
-      setProgress(1);
+      if(calibrationMode==='fixed') {
+        for(let index=0;index<targets.length;index++) {
+          setMessage(`Calibração clássica ${index+1}/9: olhe para o ponto e mantenha a posição confortável.`);
+          const collection=await collect(false,targets[index],2200,20);
+          if(!collection)return;
+          payload.features.push(medianFeature(collection.features.map(feature=>calibrationFeature(feature,'fixed'))));
+          payload.targets.push(targets[index]);setProgress(index+1);
+        }
+      } else {
+        setMessage('Acompanhe o alvo com os olhos. Pisque normalmente.');
+        const training=await collect(true,null,PASS_MS);
+        if(!training)return;
+        payload.features.push(...training.features);payload.targets.push(...training.targets);setProgress(1);
+      }
       for(let index=0;index<validationTargets.length;index++) {
-        setMessage(`Validação ${index+1}/5: mantenha o olhar no ponto. Continue na sua posição confortável.`);
-        const collection=await collect(false,validationTargets[index],1500);
+        setMessage(`Validação ${index+1}/5: mantenha o olhar no ponto.`);
+        const classic=calibrationMode==='fixed';
+        const collection=await collect(false,validationTargets[index],classic?2200:1500,classic?20:6);
         if(!collection)return;
-        payload.validation_features.push(...collection.features);payload.validation_targets.push(...collection.targets);
-        setProgress(index+2);
+        if(classic){
+          payload.validation_features.push(medianFeature(collection.features.map(feature=>calibrationFeature(feature,'fixed'))));
+          payload.validation_targets.push(validationTargets[index]);
+        }else{
+          payload.validation_features.push(...collection.features);payload.validation_targets.push(...collection.targets);
+        }
+        setProgress(index+(classic?10:2));
       }
       setTarget(null); setMessage('Avaliando erro em amostras independentes…');
       const response=await api('/calibrations/evaluate',payload);
@@ -180,7 +198,7 @@ function App() {
         if (response.calibration_id) api(`/calibrations/${response.calibration_id}`,null,'DELETE').catch(()=>{});
         return;
       }
-      state.calibration=response; setResult(response); setPhase('result');
+      state.calibration={...response,feature_mode:calibrationMode}; setResult(response); setPhase('result');
       setMessage(response.approved ? 'Calibração aprovada. A prévia do olhar está liberada.' : 'Calibração reprovada. Ajuste a postura e repita.');
       if (response.approved) state.expiry=setTimeout(()=>invalidate('Calibração expirada. Refaça antes de continuar.'),response.expires_in_seconds*1000);
     } catch(error) { if(runId.current===id) invalidate(error.message); }
@@ -202,16 +220,16 @@ function App() {
     <header><a className="brand" href="/">Heat<span>City</span></a><span>LABORATÓRIO DE ATENÇÃO VISUAL</span><button className="theme-toggle" onClick={()=>setTheme(theme==='dark'?'light':'dark')}>{theme==='dark'?'Tema claro':'Tema escuro'}</button></header>
     <section className="intro"><p className="eyebrow">01 / PREPARAÇÃO DO PARTICIPANTE</p><h1>Um olhar para cidades<br/>mais acessíveis.</h1><p>Calibre a estimativa de olhar antes de avaliar a sinalização.<br/>Um participante por vez, uma nova calibração a cada teste.</p></section>
     <div className="workspace">
-      <aside><h2>Prepare seu espaço</h2><p>Use luz difusa pela frente, câmera na altura dos olhos e distância de 40–70 cm. Evite contraluz e reflexos nas lentes. Aproxime-se se os olhos não forem reconhecidos.</p>
+      <aside><h2>Prepare seu espaço</h2><label>Método de calibração<select aria-label="Método de calibração" value={calibrationMode} disabled={collecting||busy} onChange={e=>{invalidate('Método alterado. Faça uma nova calibração.');runtime.current.featureMode=e.target.value;setCalibrationMode(e.target.value);}}><option value="fixed">Clássica · 9 pontos (referência)</option><option value="motion">Rápida · alvo móvel</option></select></label><p>Use luz difusa pela frente, câmera na altura dos olhos e distância de 40–70 cm. Evite contraluz e reflexos nas lentes. Aproxime-se se os olhos não forem reconhecidos.</p>
 
         <label><input type="checkbox" checked={consent} disabled={busy} onChange={e=>{setConsent(e.target.checked);if(!e.target.checked)stop('Consentimento retirado. Câmera desligada.');}}/> Concordo com o uso da câmera para este teste. Os frames são processados neste navegador, sem gravação ou envio.</label>
         <button disabled={!consent||busy||collecting} onClick={()=>camera?stop():startCamera()}>{busy?'Preparando…':camera?'Desligar câmera':'Ativar câmera'}</button>
         <p className="small">Apenas coordenadas oculares são enviadas à API na calibração. Nenhum vídeo ou imagem facial é armazenado. Uso acadêmico, sem precisão clínica garantida.</p>
       </aside>
-      <section className="experiment"><div className="stage-head"><h2>{phase==='tracking'?'Prévia do olhar':'Calibração individual'}</h2><span>{progress}/6 etapas · cerca de 23 s</span></div>
+      <section className="experiment"><div className="stage-head"><h2>{phase==='tracking'?'Prévia do olhar':'Calibração individual'}</h2><span>{progress}/{calibrationMode==='fixed'?14:6} etapas · {calibrationMode==='fixed'?'cerca de 35 s':'tempo adaptativo'}</span></div>
         <div ref={stage} className={`stage ${collecting||phase==='tracking'?'immersive':''}`} aria-label="Área de calibração">
           <div ref={field} className="visual-field" aria-label="Campo visual branco">
-          {countdown!==null ? <div className="countdown" role="timer" aria-label="Contagem regressiva">{countdown}</div> : target ? <div className="target" style={{left:`${target[0]*100}%`,top:`${target[1]*100}%`}}/> : phase==='tracking' ? <>{gaze && <div className="gaze" style={{left:`${gaze[0]*100}%`,top:`${gaze[1]*100}%`}}/>}<span className="stage-note">{gaze?'Estimativa em tempo real':'Sem estimativa válida'}</span></> : <div className="placeholder"><span>＋</span><h3>Olhe. Calibre. Avalie.</h3><p>Um alvo móvel por 12 segundos.<br/>Cinco alvos de validação independente.</p></div>}
+          {countdown!==null ? <div className="countdown" role="timer" aria-label="Contagem regressiva">{countdown}</div> : target ? <div className="target" style={{left:`${target[0]*100}%`,top:`${target[1]*100}%`}}/> : phase==='tracking' ? <>{gaze && <div className="gaze" style={{left:`${gaze[0]*100}%`,top:`${gaze[1]*100}%`}}/>}<span className="stage-note">{gaze?'Estimativa em tempo real':'Sem estimativa válida'}</span></> : <div className="placeholder"><span>＋</span><h3>Olhe. Calibre. Avalie.</h3><p>{calibrationMode==='fixed'?'Nove pontos fixos para comparar com o método inicial.':'Um alvo móvel por 12 segundos.'}<br/>Cinco alvos de validação independente.</p></div>}
           </div>
           <div className={`camera-preview ${visualWarning?'warning':'ready'}`} aria-label="Câmera com orientação em tempo real">
             <video ref={video} muted playsInline aria-label="Prévia da webcam"/>

@@ -106,13 +106,13 @@ servir esse build em produção será necessário configurar o encaminhamento de
    a medição, câmera e controles ficam ocultos e ESC permite interromper.
 2. Marque o consentimento, ative a câmera e inicie a calibração. A aplicação
    solicita **tela cheia real**; permita-a. Ela é obrigatória também na prévia.
-3. Acompanhe um único alvo contínuo por **12 segundos**, na sua posição
-   confortável. Não há etapas para mudar a cabeça ou a postura. Movimentos
-   naturais durante o acompanhamento entram nas características coletadas.
-4. Cinco alvos parados são apresentados depois para validação independente.
-   Mantenha o olhar no alvo por 1.5 segundo, sem mudar de postura por instrução.
-   A tentativa completa leva aproximadamente **23 segundos**, incluindo a contagem regressiva de três segundos. A coleta insuficiente é rejeitada, não completada
-   com coordenadas artificiais.
+3. Use **Clássica · 9 pontos (referência)** para comparar com o método inicial.
+   Olhe para nove pontos fixos, mantendo uma posição confortável. Se escolher
+   **Rápida · alvo móvel**, acompanhe uma trajetória de 12 segundos úteis.
+4. Cinco alvos separados fazem validação independente. A clássica leva cerca
+   de 35 segundos incluindo a contagem; a móvel costuma levar cerca de 23.
+   A coleta pode demorar mais se a captura estiver lenta. Dados insuficientes
+   são rejeitados, sem preencher coordenadas artificialmente.
 5. Pisque naturalmente. Piscadas, recuperação após piscada (180 ms) e mudanças
    oculares rápidas são descartadas; não são contabilizadas como olhar parado.
    Movimento ocular lento de acompanhamento permanece válido.
@@ -224,3 +224,25 @@ CHROMIUM_PATH=/usr/bin/chromium HEATCITY_TEST_SLOW=1 node frontend/scripts/brows
 
 O cenário simula processamento lento com landmarks sintéticos, sem medir precisão
 humana. API e Vite devem estar em execução.
+
+### Comparação com a calibração inicial
+
+A calibração **Clássica · 9 pontos (referência)** é agora o padrão. Ela recupera
+o método inicial: média das features dos dois olhos, mediana em cada ponto,
+nove pontos de ajuste afim e cinco pontos separados para validação. Leva cerca
+de 35 segundos, ou mais se a captura estiver lenta. Não inclui compensação de
+pose pelo modelo ridge. Procure manter uma posição confortável durante o teste.
+A tela cheia, a contagem, o launcher e os temas foram preservados.
+
+O método **Rápida · alvo móvel** continua disponível no seletor. Trocar o método
+invalida a calibração anterior. A inferência usa a mesma transformação de features
+do respectivo ajuste; os modelos não são misturados. Nos dois casos o limite é
+RMSE 0.100. Os relatos de 0.150 na versão inicial e 0.206 na versão posterior são
+resultados do usuário, não uma comparação controlada. Não há evidência humana
+de melhora desta revisão ainda; repetir o teste nas mesmas condições.
+
+Para testar o fluxo clássico automaticamente, com API e Vite em execução:
+
+```bash
+CHROMIUM_PATH=/usr/bin/chromium HEATCITY_TEST_FIXED=1 node frontend/scripts/browser-smoke.mjs
+```

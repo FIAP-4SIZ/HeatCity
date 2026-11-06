@@ -74,6 +74,8 @@ try {
   await page.waitForTimeout(250);
   assert.equal(await page.getByRole('button',{name:'Iniciar calibração',exact:true}).isEnabled(),true);
   await page.evaluate(()=>{window.testBlink=false;});
+  assert.equal(await page.getByLabel('Método de calibração').inputValue(),'fixed');
+  if(!process.env.HEATCITY_TEST_FIXED)await page.getByLabel('Método de calibração').selectOption('motion');
   const calibrationStarted=Date.now();
   await page.getByRole('button',{name:'Iniciar calibração',exact:true}).click();
   await page.getByRole('timer').filter({hasText:'3'}).waitFor();
@@ -81,7 +83,7 @@ try {
   await page.getByRole('timer').filter({hasText:'2'}).waitFor();
   await page.getByRole('timer').filter({hasText:'1'}).waitFor();
   await page.locator('.fullscreen-panel strong').filter({hasText:'Calibração aprovada.'}).waitFor({timeout:120000});
-  assert.ok(Date.now()-calibrationStarted<(process.env.HEATCITY_TEST_SLOW?60000:30000), 'Calibração deve concluir dentro do limite do cenário');
+  assert.ok(Date.now()-calibrationStarted<(process.env.HEATCITY_TEST_SLOW?90000:process.env.HEATCITY_TEST_FIXED?45000:30000), 'Calibração deve concluir dentro do limite do cenário');
   assert.equal(await page.evaluate(()=>Boolean(document.fullscreenElement)),true);
   assert.equal(await page.locator('.camera-preview video').isVisible(),true);
   assert.equal(await page.locator('.camera-guidance').isVisible(),true);

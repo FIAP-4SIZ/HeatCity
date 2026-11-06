@@ -8,7 +8,7 @@ export function trajectory(elapsed) {
   return path[index].map((value,axis)=>value+(path[index+1][axis]-value)*fraction);
 }
 
-export function inspectEyes(faces) {
+export function inspectEyes(faces,classic=false) {
   if (faces?.length !== 1) return {reason:faces?.length>1?'Mantenha apenas um rosto na câmera.':'Centralize o rosto e ilumine-o pela frente.'};
   const points=faces[0];
   if(points.length<478) return {reason:'Íris não detectadas. Aproxime-se e evite reflexos nos óculos.'};
@@ -18,9 +18,9 @@ export function inspectEyes(faces) {
     const [p,q,u,l,i]=[a,b,upper,lower,iris].map(index=>points[index]);
     if(![p,q,u,l,i].every(valid)) return {reason:'Olhos encobertos. Ajuste o enquadramento.'};
     const dx=q.x-p.x,dy=q.y-p.y,width=Math.hypot(dx,dy);
-    if(width<.022) return {reason:'Aproxime-se: os olhos estão pequenos na imagem.'};
+    if(width<(classic?.015:.022)) return {reason:'Aproxime-se: os olhos estão pequenos na imagem.'};
     const openness=Math.hypot(u.x-l.x,u.y-l.y)/width;
-    if(openness<.14) return {reason:'Piscada ou olhos parcialmente fechados: coleta pausada.',blink:true};
+    if(openness<(classic?.12:.14)) return {reason:'Piscada ou olhos parcialmente fechados: coleta pausada.',blink:true};
     features.push(((i.x-p.x)*dx+(i.y-p.y)*dy)/(width*width),
       ((i.y-(p.y+q.y)/2)*dx-(i.x-(p.x+q.x)/2)*dy)/(width*width));
   }
@@ -87,4 +87,8 @@ export class EyeReadiness {
     if(feature)this.lastSeen=time;
     return time-this.lastSeen<1200;
   }
+}
+
+export function calibrationFeature(feature,mode) {
+  return mode==='fixed'?[(feature[0]+feature[2])/2,(feature[1]+feature[3])/2]:feature;
 }
