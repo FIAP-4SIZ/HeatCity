@@ -87,16 +87,3 @@ test('button readiness survives blinks but expires after persistent detection lo
   assert.equal(ready.update(null,1300),false);
   assert.equal(ready.update([1,2],1400),true);
 });
-
-test('individual eyelid reference accepts naturally narrow eyes and rejects closure',async()=>{
-  const {EyelidProfile}=await import('./gaze.js');
-  const profile=new EyelidProfile();
-  for(let i=0;i<20;i++)assert.equal(profile.isClosed(0,.065),false);
-  assert.equal(profile.isClosed(0,.008,false),true);
-  assert.equal(profile.isClosed(0,.065,false),false);
-});
-test('closed eyes do not bootstrap a false open-eye reference',async()=>{
-  const {EyelidProfile}=await import('./gaze.js');const profile=new EyelidProfile();
-  for(let i=0;i<50;i++)assert.equal(profile.isClosed(0,.01),true);
-  assert.equal(profile.samples[0].length,0);
-});

@@ -192,7 +192,7 @@ continuam sendo rejeitadas imediatamente, sem congelar uma estimativa válida.
 A calibração e a prévia usam um campo branco nos dois temas. Durante a medição,
 o campo ocupa toda a tela: câmera e barra não aparecem nem reservam espaço.
 Na preparação e no resultado, câmera e controles ficam em áreas próprias.
-A contagem 3–2–1 aprende a referência palpebral, mas não coleta pares de gaze.
+A contagem 3–2–1 prepara o participante, sem coletar pares de gaze.
 Piscadas não desativam os botões: uma perda contínua de detecção precisa atingir
 1.2 segundo; a câmera desligada, coleta em andamento ou ausência de calibração
 aprovada continuam bloqueando as ações correspondentes. Essa tolerância não
@@ -200,8 +200,9 @@ torna amostras de piscadas válidas.
 
 ### Olhos com menor abertura e campo completo
 
-A referência de abertura das pálpebras é individual por olho, aprendida durante
-preparação e contagem; não é necessário forçar os olhos abertos. A captura continua
+A detecção ocular foi restaurada ao método de 1242b2e, anterior à referência
+individual das pálpebras, após relatos de zero amostras na validação.
+O perfil adaptativo e a alteração de proporção introduzidos depois foram retirados. A captura continua
 em segundo plano durante calibração e teste, mas a prévia da câmera e os botões
 ficam ocultos para não sobrepor nem reservar uma faixa da tela. Use ESC para sair.
 Veja [a pesquisa de MediaPipe e alternativas](docs/pesquisa-rastreamento-ocular.md).

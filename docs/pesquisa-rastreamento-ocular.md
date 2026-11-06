@@ -53,3 +53,11 @@ com Face Landmarker Tasks. Comparar erro de validação, percentil 90, fração 
 rastreamento válido, perdas durante piscadas, latência e tolerância a movimentos
 naturais da cabeça. Usar as mesmas pessoas, câmera, alvos e cenários; não trocar
 biblioteca nem aumentar o limite de aprovação apenas para obter um resultado verde.
+
+## Atualização após teste do usuário
+
+O perfil individual e a mudança de proporção descritos acima foram retirados
+por compatibilidade, após o usuário relatar zero amostras num ponto de validação.
+A detecção retornou à implementação de 1242b2e. A causa na webcam real ainda
+não foi confirmada; os testes sintéticos anteriores não reproduziam essa falha.
+A pesquisa permanece como registro, não como indicação de recursos ativos.

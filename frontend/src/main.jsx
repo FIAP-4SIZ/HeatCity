@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { validationTargets, inspectEyes, predict, trajectory, PASS_MS, EyeGate, supportedHead, GuidanceFilter, EyeReadiness, EyelidProfile } from './gaze.js';
+import { validationTargets, inspectEyes, predict, trajectory, PASS_MS, EyeGate, supportedHead, GuidanceFilter, EyeReadiness } from './gaze.js';
 import './style.css';
 
 async function api(path, body, method = 'POST') {
@@ -78,13 +78,12 @@ function App() {
       state.mesh ??= new window.FaceMesh({locateFile: file=>`/mediapipe/${file}`});
       state.mesh.setOptions({maxNumFaces:2,refineLandmarks:true,minDetectionConfidence:.6,minTrackingConfidence:.6});
       state.gate=new EyeGate();
-      state.lids=new EyelidProfile();
       state.readiness=new EyeReadiness();
       state.guide=new GuidanceFilter();
       setVisualWarning(false);
       state.mesh.onResults(results=> {
         if (!state.running) return;
-        const inspection=inspectEyes(results.multiFaceLandmarks,state.lids,!state.collection&&!state.calibration,video.current.videoHeight/video.current.videoWidth);
+        const inspection=inspectEyes(results.multiFaceLandmarks);
         const feature=inspection.feature;
         const now=state.frameTime;
         const accepted=state.gate.update(feature,now);
@@ -129,7 +128,6 @@ function App() {
     invalidate();
     setPhase('countdown');setCountdown(3);
     const id=runId.current, state=runtime.current;
-    state.lids=new EyelidProfile();
     const payload={mode:'motion',features:[],targets:[],validation_features:[],validation_targets:[]};
     try {
       if(document.fullscreenElement!==stage.current) await stage.current.requestFullscreen();
