@@ -25,8 +25,14 @@ nem ativar a `.venv` manualmente. O launcher:
 - Mostra logs em duas janelas; pressione ENTER na janela inicial para encerrar
   os processos criados por ele.
 
-Se faltar Python 3.12, Node.js compatível ou npm, o launcher instala pelo winget,
-respeitando verificações e permissões do instalador. Se winget não estiver disponível,
+Se faltar Python 3.12, o launcher instala pelo winget. Para Node.js/npm,
+primeiro testa a instalação existente e atualiza o PATH do processo; se necessário,
+baixa o ZIP oficial do Node.js 24 LTS em `.heatcity-tools`, verifica SHA-256
+contra o manifesto HTTPS oficial e usa essa cópia local. Não usa MSI do Node,
+não precisa de administrador para essa cópia e não altera o PATH permanente.
+O Node local é reutilizado nas próximas execuções e fica fora do Git.
+A falha MSI 1603 relatada não permite concluir a causa sem o log do instalador;
+a cópia local evita depender desse MSI. Se winget não estiver disponível,
 solicita instalar App Installer pela Microsoft Store. A primeira preparação precisa de Internet. Portas
 8000 e 5173 devem estar livres; o launcher não encerra instâncias desconhecidas.
 Não execute como administrador. O `.cmd` chama `scripts/start-windows.ps1` usando

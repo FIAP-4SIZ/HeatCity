@@ -38,17 +38,72 @@ function Install-Prerequisite([string]$id) {
     Run-Checked 'winget' @('install','--id',$id,'--exact','--source','winget','--accept-package-agreements','--accept-source-agreements')
     $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
 }
+function Node-IsReady {
+    if (-not (Get-Command node -ErrorAction SilentlyContinue) -or -not (Get-Command npm.cmd -ErrorAction SilentlyContinue)) { return $false }
+    try {
+        $nodeVersion = (& node --version 2>$null)
+        if ($LASTEXITCODE -ne 0) { return $false }
+        if ([version]($nodeVersion.Trim().TrimStart('v')) -lt [version]'22.12.0') { return $false }
+        & npm.cmd --version 2>$null | Out-Null
+        return $LASTEXITCODE -eq 0
+    } catch { return $false }
+}
+function Ensure-Node {
+    if (Node-IsReady) { Write-Host 'Node.js e npm existentes verificados.'; return }
+    # Refresh the current process too: an installer may have updated PATH earlier.
+    $originalPath = $env:Path
+    $env:Path = $originalPath + ';' + [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
+    if (Node-IsReady) { return }
+    $tools = Join-Path $root '.heatcity-tools'
+    foreach ($cached in @(Get-ChildItem $tools -Directory -Filter 'node-v24*-win-*' -ErrorAction SilentlyContinue)) {
+        $env:Path = $cached.FullName + ';' + $originalPath
+        if (Node-IsReady) { Write-Host 'Usando Node.js local do HeatCity.'; return }
+    }
+    $env:Path = $originalPath
+    $architecture = $env:PROCESSOR_ARCHITECTURE
+    if ($env:PROCESSOR_ARCHITEW6432) { $architecture = $env:PROCESSOR_ARCHITEW6432 }
+    switch ($architecture) {
+        'AMD64' { $arch = 'x64' }
+        'ARM64' { $arch = 'arm64' }
+        default { throw 'Node.js local requer Windows x64 ou ARM64.' }
+    }
+    Write-Host 'Preparando Node.js 24 LTS local, sem MSI ou alteracao do PATH permanente...' -ForegroundColor Cyan
+    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+    $base = 'https://nodejs.org/dist/latest-v24.x'
+    $manifest = (Invoke-WebRequest -UseBasicParsing "$base/SHASUMS256.txt").Content
+    $pattern = '(?m)^([a-fA-F0-9]{64})\s+(node-v24\.\d+\.\d+-win-' + $arch + '\.zip)\s*$'
+    $entry = [regex]::Match($manifest, $pattern)
+    if (-not $entry.Success) { throw 'Manifesto oficial do Node.js sem ZIP compativel. Nenhum binario sera executado.' }
+    $filename = $entry.Groups[2].Value
+    # Fetch immutable version URL after resolving the moving LTS manifest.
+    $versionName = ($filename -replace '^node-', '' -replace ('-win-' + $arch + '\.zip$'), '')
+    $stageDir = Join-Path $tools ([guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $stageDir -Force | Out-Null
+    try {
+        $archive = Join-Path $stageDir $filename
+        Invoke-WebRequest -UseBasicParsing "https://nodejs.org/dist/$versionName/$filename" -OutFile $archive
+        if ((Get-FileHash $archive -Algorithm SHA256).Hash -ne $entry.Groups[1].Value) {
+            throw 'SHA-256 do Node.js divergente. Download rejeitado.'
+        }
+        Expand-Archive -LiteralPath $archive -DestinationPath $stageDir
+        $directoryName = $filename -replace '\.zip$', ''
+        $destination = Join-Path $tools $directoryName
+        if (Test-Path $destination) { throw "Pasta local invalida ja existe: $destination. Renomeie-a e tente novamente." }
+        Move-Item (Join-Path $stageDir $directoryName) $destination
+        $env:Path = $destination + ';' + $originalPath
+        if (-not (Node-IsReady)) { throw 'Node.js extraido, mas node/npm nao executaram. Verifique bloqueios do Windows ou antivirus.' }
+        Write-Host "Node.js $versionName e npm prontos (SHA-256 verificado)." -ForegroundColor Green
+    } finally {
+        Remove-Item -LiteralPath $stageDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
 try {
     Write-Host 'HeatCity - verificando requisitos...' -ForegroundColor Cyan
     if (-not ((Get-Command py -ErrorAction SilentlyContinue) -and (Python-Is312 'py' @('-3.12'))) -and
         -not ((Get-Command python -ErrorAction SilentlyContinue) -and (Python-Is312 'python' @()))) {
         Install-Prerequisite 'Python.Python.3.12'
     }
-    $nodeReady = $false
-    if ((Get-Command node -ErrorAction SilentlyContinue) -and (Get-Command npm.cmd -ErrorAction SilentlyContinue)) {
-        try { $nodeReady = [version]((& node --version).TrimStart('v')) -ge [version]'22.12.0' } catch {}
-    }
-    if (-not $nodeReady) { Install-Prerequisite 'OpenJS.NodeJS.LTS' }
+    Ensure-Node
     $python = $null; $pythonArgs = @()
     if ((Get-Command py -ErrorAction SilentlyContinue) -and (Python-Is312 'py' @('-3.12'))) {
         $python = 'py'; $pythonArgs = @('-3.12')
