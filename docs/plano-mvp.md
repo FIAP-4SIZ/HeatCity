@@ -14,15 +14,17 @@ Não persistir frames ou vídeos faciais por padrão.
 
 ## Etapas e critérios de aceite
 
-1. **Fundação matemática e API (em implementação):** ajuste de nove pontos,
+1. **Fundação matemática e API (implementada):** ajuste de nove pontos,
    avaliação independente, rejeição de entradas inválidas e métricas por AOI.
    Testar transformação conhecida, erro de validação, perda de rastreamento,
    reentrada na AOI e tempos inválidos; executar requisições reais à API.
-2. **Captura e calibração:** React captura webcam via navegador e envia frames
-   temporários ao processamento Python/MediaPipe/OpenCV. Fixar a versão do
-   modelo e verificar integridade. Nove pontos de ajuste e cinco de validação,
-   feedback de qualidade e repetição. Sessão deve permanecer bloqueada até a
-   calibração individual ser aprovada. Verificar na máquina com webcam real.
+2. **Captura e calibração (implementada; validação humana pendente):** React
+   captura webcam e MediaPipe processa localmente via WASM, sem enviar frames.
+   Modelos distribuídos pelo pacote npm fixado e lockfile. Nove pontos de ajuste,
+   cinco de validação, feedback, consentimento e repetição. Prévia liberada por
+   autorização temporária da API; invalidação por resize, câmera desligada,
+   troca de aba ou expiração. Testes sintéticos de interface e detector real sem
+   rosto passaram; precisão com webcam real ainda precisa ser medida.
 3. **Estudos e sessões:** FastAPI/PostgreSQL, migrações, estudos, imagens,
    AOIs, participantes por código, consentimento e sessão vinculada à calibração.
    Restrição de acesso e exclusão de registros antes de dados reais compartilhados.
@@ -40,17 +42,19 @@ Não persistir frames ou vídeos faciais por padrão.
 ## Decisões técnicas iniciais
 
 - A webcam pertence ao computador do participante. OpenCV no servidor não acessa
-  automaticamente esse dispositivo; a captura web precisa passar pelo navegador.
+  automaticamente esse dispositivo. A captura e detecção ficam no navegador;
+  esta decisão substitui o envio de frames e reduz exposição de imagens faciais.
 - Olhar estimado por webcam é aproximação. Movimentos da cabeça, iluminação,
   óculos, resolução e distância podem reduzir a qualidade. Falha de detecção
   deve produzir amostra inválida, nunca coordenada fictícia.
 - Coordenadas da imagem serão normalizadas em [0, 1]. O frontend deve remover
   margens da imagem e considerar escala/espelhamento antes de registrar amostras.
 - Validação separada evita aprovar a calibração pelo próprio erro de treinamento.
-  A etapa atual aceita pares preparados; a coleta real dessas features ainda
-  será implementada e validada.
+  A interface coleta a posição relativa das íris, agregando por mediana em cada
+  alvo. A acurácia desse método ainda depende de validação experimental humana.
 - O endpoint de análise atual é stateless e serve ao desenvolvimento dos cálculos.
-  A futura rota de sessão fará cumprir consentimento, calibração e autorização.
+  A rota de prévia exige consentimento e aprovação em memória. A futura rota de
+  sessão deverá associar estudo, participante e autorização persistida.
 - Dados sintéticos devem ser identificados como tais e excluídos de conclusões
   sobre desempenho com participantes.
 
