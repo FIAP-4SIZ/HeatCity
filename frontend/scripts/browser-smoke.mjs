@@ -47,10 +47,12 @@ try {
 
   // Substitui APENAS o detector para testar a máquina de estados. Não mede precisão.
   await page.reload();
-  await page.evaluate(()=> {
+  await page.evaluate(slow=> {
+    window.testFrameDelay=slow?150:0;
     window.FaceMesh=class {
       setOptions(){} onResults(callback){this.callback=callback} close(){}
       async send(){
+        if(window.testFrameDelay)await new Promise(resolve=>setTimeout(resolve,window.testFrameDelay));
         const target=document.querySelector('.target');
         const x=target?parseFloat(target.style.left)/100:.5;
         const y=target?parseFloat(target.style.top)/100:.5;
@@ -64,7 +66,7 @@ try {
         this.callback({multiFaceLandmarks:[points]});
       }
     };
-  });
+  },Boolean(process.env.HEATCITY_TEST_SLOW));
   await page.getByRole('checkbox').check();
   await page.getByRole('button',{name:'Ativar câmera',exact:true}).click();
   await page.waitForFunction(()=>!document.querySelector('.fullscreen-panel button').disabled);
@@ -79,7 +81,7 @@ try {
   await page.getByRole('timer').filter({hasText:'2'}).waitFor();
   await page.getByRole('timer').filter({hasText:'1'}).waitFor();
   await page.locator('.fullscreen-panel strong').filter({hasText:'Calibração aprovada.'}).waitFor({timeout:120000});
-  assert.ok(Date.now()-calibrationStarted<30000, 'Calibração deve terminar em menos de 30 s');
+  assert.ok(Date.now()-calibrationStarted<(process.env.HEATCITY_TEST_SLOW?60000:30000), 'Calibração deve concluir dentro do limite do cenário');
   assert.equal(await page.evaluate(()=>Boolean(document.fullscreenElement)),true);
   assert.equal(await page.locator('.camera-preview video').isVisible(),true);
   assert.equal(await page.locator('.camera-guidance').isVisible(),true);

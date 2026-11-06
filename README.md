@@ -205,3 +205,21 @@ preparação e contagem; não é necessário forçar os olhos abertos. A captura
 em segundo plano durante calibração e teste, mas a prévia da câmera e os botões
 ficam ocultos para não sobrepor nem reservar uma faixa da tela. Use ESC para sair.
 Veja [a pesquisa de MediaPipe e alternativas](docs/pesquisa-rastreamento-ocular.md).
+
+### Coleta com processamento lento
+
+A contagem começa assim que a entrada em tela cheia é confirmada. A geometria é
+registrada após os três segundos, evitando que a transição do navegador cancele
+a tentativa. A trajetória avança conforme chegam amostras válidas: piscadas e
+perdas de detecção pausam o alvo, e câmeras lentas podem levar mais tempo.
+São exigidas as mesmas 120 amostras de ajuste e seis em cada um dos cinco alvos
+de validação (30 no total). Cada ponto espera sua coleta, com limite de 6.5 s;
+a trajetória tem limite de 45 s. Não há aprovação automática por falta de dados.
+O erro de coleta informa a quantidade obtida. Para reproduzir o cenário lento:
+
+```bash
+CHROMIUM_PATH=/usr/bin/chromium HEATCITY_TEST_SLOW=1 node frontend/scripts/browser-smoke.mjs
+```
+
+O cenário simula processamento lento com landmarks sintéticos, sem medir precisão
+humana. API e Vite devem estar em execução.

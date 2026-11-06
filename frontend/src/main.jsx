@@ -92,9 +92,11 @@ function App() {
         let issue=feature?null:inspection.blink?'Olhos fechados por mais tempo. Abra-os quando estiver confortável.':inspection.reason;
         const collection=state.collection;
         if(collection && accepted && now-collection.since>900 && now-(collection.last || 0)>=50) {
+          const delta=collection.last?Math.min(now-collection.last,100):0;
           collection.last=now;
           collection.features.push(feature);
-          collection.targets.push(collection.moving?trajectory(now-collection.since-150):collection.target);
+          collection.targets.push(collection.moving?trajectory(Math.max(0,collection.clock-150)):collection.target);
+          if(collection.moving)collection.clock=Math.min(PASS_MS,collection.clock+delta);
         }
         if(state.tracking && state.calibration) {
           const inRange=feature && supportedHead(feature,state.calibration);
@@ -131,9 +133,7 @@ function App() {
     const payload={mode:'motion',features:[],targets:[],validation_features:[],validation_targets:[]};
     try {
       if(document.fullscreenElement!==stage.current) await stage.current.requestFullscreen();
-      await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
       if(runId.current!==id) return;
-      state.geometry=[field.current.clientWidth,field.current.clientHeight];
       setProgress(0);
       for(let remaining=3;remaining>0;remaining--){
         if(runId.current!==id)return;
@@ -141,22 +141,27 @@ function App() {
         await new Promise(resolve=>setTimeout(resolve,1000));
       }
       if(runId.current!==id)return;
+      state.geometry=[field.current.clientWidth,field.current.clientHeight];
       setCountdown(null);setPhase('collecting');
       const collect=async(moving,point,duration)=> {
-        const collection={since:performance.now(),features:[],targets:[],moving,target:point};
+        const collection={since:performance.now(),features:[],targets:[],moving,target:point,clock:0};
         state.collection=collection;
-        await new Promise(resolve=> {
+        await new Promise((resolve,reject)=> {
           const poll=()=> {
             if(runId.current!==id) {resolve();return;}
             const elapsed=performance.now()-collection.since;
-            setTarget(moving?trajectory(elapsed):point);
-            if(elapsed>=duration) {resolve();return;}
+            setTarget(moving?trajectory(collection.clock):point);
+            const enough=moving?collection.clock>=PASS_MS&&collection.features.length>=120:elapsed>=duration&&collection.features.length>=6;
+            if(enough) {resolve();return;}
+            if(elapsed>(moving?45000:6500)) {
+              state.collection=null;
+              reject(new Error(`Coleta insuficiente: ${collection.features.length} amostras válidas (${moving?'mínimo 120 na trajetória':'mínimo 6 neste ponto'}). Verifique iluminação e enquadramento; a câmera pode estar processando lentamente.`));return;
+            }
             requestAnimationFrame(poll);
           };poll();
         });
         state.collection=null;
         if(runId.current!==id) return null;
-        if(collection.features.length<(moving?40:6)) throw new Error('Poucas amostras válidas. Aproxime a câmera, ilumine os olhos e tente novamente.');
         return collection;
       };
       setMessage('Acompanhe o alvo com os olhos. Fique confortável e pisque normalmente; não precisa mudar a postura.');
