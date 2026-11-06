@@ -1,92 +1,71 @@
 # HeatCity
 
-Transformando olhares em cidades mais inteligentes.
+**Transformando olhares em cidades mais inteligentes.**
 
-Projeto acadêmico da Global Solution FIAP: avaliar a visibilidade de placas em
-imagens de espaços públicos por estimativas de olhar, mapas de calor e indicadores.
+MVP acadêmico da Global Solution FIAP — Cognitive Computing, Computer Vision And
+IoT Systems. O produto investiga como participantes localizam placas em imagens
+de espaços públicos, **exclusivamente por estimativas de olhar**. Não há modo por
+clique e o sistema não trata estimativa de gaze como certeza de atenção ou leitura.
 
-## Estado atual
+## O que esta versão entrega
 
-Etapas 1–2 do MVP: API FastAPI, interface React com webcam e MediaPipe,
-calibração com compensação de postura e validação independente e cálculo de métricas
-temporais por área de interesse (AOI). Há prévia experimental do olhar;
-ainda não há estudos persistidos, sessões de pesquisa, banco ou heatmaps.
-Os testes sintéticos validam cálculos; não demonstram precisão com pessoas.
+- Estudos persistidos, cenários A/B e cadastro visual de áreas de interesse (AOIs).
+- Participantes por código, consentimento, calibração individual e sessão de 15 s.
+- Câmera processada localmente com MediaPipe, sem salvar ou enviar frames faciais.
+- Qualidade vinculada ao participante, cenário, tela e dimensão da placa.
+- Sessões elegíveis/inconclusivas, histórico e exclusão de registros.
+- Heatmaps individuais e consolidados, indicadores por tarefa/cenário, CSV e JSON.
+- Processamento OpenCV de cenas/AOIs e geração de relatório PDF a partir dos dados.
+- Interface responsiva com temas claro/escuro; claro como padrão sem preferência salva.
+- Launcher Windows, testes automatizados, notebook e protocolo de coleta.
 
-## Iniciar no Windows com dois cliques
+**Limitação atual:** os RMSE 0.146–0.206 relatados pelo usuário não atendem ao
+limite experimental de 0.100. A reestruturação oferece o fluxo completo de
+software e seleção de ajuste afim/quadrático por validação cruzada de treinamento,
+mas **não demonstra melhora de precisão humana**. Uma calibração reprovada
+continua bloqueando a sessão. A viabilidade com webcam real depende da coleta
+experimental; não é correto afirmar que a precisão foi resolvida pelos testes.
 
-Execute **`Iniciar-HeatCity.cmd`** na raiz do projeto. Não precisa abrir terminal
-nem ativar a `.venv` manualmente. O launcher:
+## Iniciar no Windows
 
-- Confere Python 3.12, Node.js 22.12+ (recomendado LTS 24) e npm.
-- Cria `.venv` quando necessário e confere as dependências Python.
-- Executa `npm ci` se o lockfile mudou e prepara os modelos locais.
-- Inicia API e interface, aguarda resposta e abre o navegador padrão.
-- Mostra logs em duas janelas; pressione ENTER na janela inicial para encerrar
-  os processos criados por ele.
+Atualize a branch de desenvolvimento desta entrega:
 
-Se faltar Python 3.12, o launcher instala pelo winget. Para Node.js/npm,
-primeiro testa a instalação existente e atualiza o PATH do processo; se necessário,
-baixa o ZIP oficial do Node.js 24 LTS em `.heatcity-tools`, verifica SHA-256
-contra o manifesto HTTPS oficial e usa essa cópia local. Não usa MSI do Node,
-não precisa de administrador para essa cópia e não altera o PATH permanente.
-O Node local é reutilizado nas próximas execuções e fica fora do Git.
-A falha MSI 1603 relatada não permite concluir a causa sem o log do instalador;
-a cópia local evita depender desse MSI. Se winget não estiver disponível,
-solicita instalar App Installer pela Microsoft Store. A primeira preparação precisa de Internet. Portas
-8000 e 5173 devem estar livres; o launcher não encerra instâncias desconhecidas.
-Não execute como administrador. O `.cmd` chama `scripts/start-windows.ps1` usando
-PowerShell do Windows; a política de execução é ajustada somente para esse
-processo. O usuário confirmou o funcionamento do launcher no Windows. Ele foi preservado
-com instalação de pré-requisitos adicionada nesta revisão; essa parte ainda precisa
-ser validada no Windows.
+```cmd
+git fetch origin
+git switch feature/mvp-study-workflow
+Iniciar-HeatCity.cmd
+```
 
-A interface inicia em tema claro quando não há preferência salva. O botão Tema claro/Tema escuro salva sua
-preferência neste navegador.
+Feche as janelas da execução anterior. O `.cmd`:
 
-## Execução
+1. Verifica Python 3.12; usa winget para instalar quando necessário.
+2. Testa Node/npm existentes. Se necessário, baixa o ZIP oficial de Node.js 24
+   LTS, verifica SHA-256 e usa uma cópia em `.heatcity-tools`, sem MSI do Node,
+   privilégio de administrador para esse ZIP ou alteração permanente do PATH.
+3. Prepara `.venv`, dependências Python fixadas e dependências web por `npm ci`.
+4. Inicia API/interface em **127.0.0.1**, verifica respostas e abre o navegador padrão.
 
-Requer Python 3.12. A partir da raiz do repositório:
+Mantenha a janela principal aberta; ENTER encerra os processos criados por ela.
+A primeira instalação exige Internet. Winget ausente exige App Installer da
+Microsoft Store; instaladores de Python podem solicitar permissões do Windows.
+Portas 8000 e 5173 devem estar livres. O launcher não encerra processos desconhecidos.
+A parte anterior de inicialização foi confirmada pelo usuário no Windows; as novas
+dependências OpenCV/ReportLab foram validadas neste ambiente Linux e ainda precisam
+ser confirmadas no Windows. Em erro `DLL load failed` do OpenCV, verifique o
+Microsoft Visual C++ Redistributable oficial compatível com a arquitetura do Python.
+
+## Execução manual
+
+Python 3.12 e Node.js 22.12+ (recomendado LTS 24):
 
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r backend/requirements.lock
 cd backend
-../.venv/bin/python -m unittest discover -s tests -v
-../.venv/bin/python -m uvicorn heatcity.api:app --host 0.0.0.0 --port 8000
+../.venv/bin/python -m uvicorn heatcity.api:app --host 127.0.0.1 --port 8000
 ```
 
-`GET /health` informa a saúde do serviço. `/docs` contém a documentação interativa.
-`POST /calibrations/evaluate` recebe `features`, `targets`,
-`validation_features` e `validation_targets`, todos listas de pares numéricos.
-Os alvos de ajuste devem cobrir a grade formada por 0.1, 0.5 e 0.9 nos dois eixos;
-a validação requer pelo menos cinco amostras coletadas em uma etapa separada.
-O limite inicial de aprovação é RMSE euclidiano de 0.1 em coordenadas normalizadas.
-É um parâmetro experimental a avaliar com dados reais.
-
-`POST /analysis` recebe amostras temporais, AOIs e duração em segundos:
-
-```json
-{
-  "samples": [
-    {"time": 0, "x": 0.2, "y": 0.2, "valid": true},
-    {"time": 0.1, "x": 0.2, "y": 0.2, "valid": true}
-  ],
-  "areas": [{"name": "recepcao", "x": 0, "y": 0, "width": 0.5, "height": 0.5}],
-  "duration": 0.2
-}
-```
-
-O resultado esperado inclui 0.2 segundo de atenção, primeira observação em zero
-e um evento para a recepção. Uma amostra representa o intervalo até a próxima,
-limitado a 0.2 segundo e ao fim da sessão. Intervalos restantes são desconhecidos.
-Eventos são entradas consecutivas em uma AOI, não fixações oculares medidas.
-AOIs sobrepostas são analisadas separadamente e podem contar o mesmo intervalo.
-A API inicial não possui autenticação; execute somente em ambiente de desenvolvimento.
-
-### Interface e webcam
-
-Requer Node.js 22.12+ (validado com 24.22.1). Com a API na porta 8000, abra outro terminal:
+Em outro terminal, na raiz:
 
 ```bash
 cd frontend
@@ -94,155 +73,122 @@ npm ci
 npm run dev
 ```
 
-Use o endereço local exibido pelo Vite ao executar no seu computador. Para câmera
-em acesso remoto é necessário HTTPS e permissão do navegador; o ambiente de
-onboarding não fornece preview web. `npm run build` valida a compilação; para
-servir esse build em produção será necessário configurar o encaminhamento de
-`/api` à API (o proxy do Vite funciona somente em desenvolvimento).
+No Windows, substitua `.venv/bin/python` por `.venv\Scripts\python.exe`.
+O proxy `/api` do Vite encaminha para a API. `HEATCITY_API_URL` permite outro
+endereço durante testes. Build: `npm run build`. Servir o build fora do Vite exige
+configurar encaminhamento de `/api`; esta entrega é **local, de operador único,
+sem autenticação**, e não deve ser exposta como serviço compartilhado.
 
-1. Use Chrome ou Edge. Posicione a câmera à altura dos olhos, a 40–70 cm,
-   com luz frontal difusa. Evite contraluz, reflexos nos óculos e olhos muito
-   pequenos na imagem. As orientações aparecem junto da prévia na preparação e no resultado; durante
-   a medição, câmera e controles ficam ocultos e ESC permite interromper.
-2. Marque o consentimento, ative a câmera e inicie a calibração. A aplicação
-   solicita **tela cheia real**; permita-a. Ela é obrigatória também na prévia.
-3. Use **Clássica · 9 pontos (referência)** para comparar com o método inicial.
-   Olhe para nove pontos fixos, mantendo uma posição confortável. Se escolher
-   **Rápida · alvo móvel**, acompanhe uma trajetória de 12 segundos úteis.
-4. Cinco alvos separados fazem validação independente. A clássica leva cerca
-   de 35 segundos incluindo a contagem; a móvel costuma levar cerca de 23.
-   A coleta pode demorar mais se a captura estiver lenta. Dados insuficientes
-   são rejeitados, sem preencher coordenadas artificialmente.
-5. Pisque naturalmente. Piscadas, recuperação após piscada (180 ms) e mudanças
-   oculares rápidas são descartadas; não são contabilizadas como olhar parado.
-   Movimento ocular lento de acompanhamento permanece válido.
-6. O erro RMSE deve ser no máximo 0.100. A prévia só é liberada após aprovação.
-   Sair da tela cheia (ESC), alterar o tamanho da área ou desligar a câmera exige
-   nova calibração. Se a cabeça sair da faixa coletada, a estimativa é suspensa
-   e a interface pede retorno à faixa ou nova calibração.
+## Fluxo de uso
 
-O MediaPipe Face Mesh (`refineLandmarks`) executa em WASM no navegador, com captura
-preferencial em 1280×720. Ambos os olhos são usados separadamente, junto de seis
-características de posição, escala e orientação do rosto. Um ajuste ridge
-padronizado aprende a relação com o alvo; as cinco posições posteriores medem
-RMSE e percentil 90 do erro sem reajustar o modelo. Os coeficientes voltam à escala
-original para a inferência no navegador.
+1. Crie um estudo com objetivo concreto, por exemplo localizar recepção e saída.
+2. Cadastre um cenário. Envie PNG/JPEG/WebP (até 4 MB e 8 MP, mínimo 200 px por
+   lado) ou use a cena didática. A cena didática não cria participantes ou resultados.
+3. Nomeie cada placa e arraste na imagem para delimitar sua AOI. Áreas não podem
+   se sobrepor. Cenários salvos são imutáveis; crie outro para uma posição alternativa.
+4. Abra **Nova sessão**, informe código, cenário e placa-alvo. Explique o experimento
+   e registre consentimento. Não use nomes, documentos ou dados pessoais no código.
+5. Calibre individualmente. A câmera aparece na preparação; ao iniciar, tela cheia
+   e contagem 3–2–1. Campo branco ocupa a tela inteira durante coleta. ESC cancela.
+6. O ajuste padrão usa nove pontos e cinco alvos posteriores de validação. Afim e
+   quadrático são comparados por leave-one-out nos pontos de ajuste; o quadrático
+   só é escolhido com redução de erro de pelo menos 20%. A validação posterior
+   não escolhe o modelo. O modo móvel experimental também está disponível.
+   Se reprovar, **Baixar diagnóstico da calibração** exporta features e erros por alvo,
+   sem frames faciais ou identificador de autorização. Isso permite investigar os
+   dados reais em vez de ajustar limites às cegas. Compartilhe somente se desejar.
+7. Somente uma calibração aprovada pode ser usada no estudo. A autorização expira
+   em dez minutos e é válida para o mesmo código, cenário e tamanho de tela.
+8. Inicie a sessão de 15 s. Procure a placa com os olhos, **sem clicar na imagem**.
+   Câmera continua ativa sem prévia sobreposta; o frame não é transmitido ou salvo.
+9. Consulte resultados, cobertura, heatmaps e histórico. Adicione outro participante
+   com nova calibração ou gere PDF/CSV/JSON. Apague sessões ou estudos quando necessário.
 
-Durante as trajetórias, a posição-alvo usada no ajuste recua 150 ms para compensar
-aproximadamente o atraso de acompanhamento visual. Esse valor, os limiares de
-piscada/movimento e a margem de postura são heurísticos e precisam ser avaliados
-com participantes. O sistema não estima pose 3D métrica nem garante precisão em
-qualquer posição. A mudança não demonstra por si só uma melhora sobre o melhor
-RMSE 0.150 relatado pelo usuário na versão anterior; é preciso repetir o teste.
+## Indicadores e critérios
 
-O instalador copia modelos e WASM do pacote npm fixado, verificado pelo lockfile;
-sem CDN em runtime. Frames ficam no dispositivo. Somente features e alvos são
-enviados na calibração. A versão anterior da API (`mode: "fixed"`, padrão) continua
-aceitando a grade de nove pontos; a interface agora envia `mode: "motion"`, com
-pelo menos 120 amostras de ajuste, 30 de validação e dez features por amostra.
+- RMSE euclidiano em coordenadas normalizadas ≤ 0.100; não significa porcentagem
+  de precisão. É um critério experimental, ainda sem validação clínica.
+- Erro menor que metade da menor dimensão da placa escolhida. Pontos junto à borda,
+  numa margem igual ao RMSE, ficam ambíguos e não contam para a placa. Essa margem
+  é heurística, não intervalo de confiança.
+- Sessão elegível: ao menos 30 amostras válidas e cobertura temporal da cena ≥ 60%.
+  Pontos fora da imagem, piscadas e perdas de detecção não viram observações artificiais.
+- A taxa de observação estimada usa participantes elegíveis da mesma tarefa/cenário.
+  Para repetições, seleciona-se a última sessão elegível do código naquele grupo.
+- Tempo até observar é resumido **somente entre sucessos**; falhas permanecem no
+  denominador da taxa. Falta de observação e insuficiência de rastreamento são distintas.
+- Tempo de atenção estimada soma intervalos até a próxima amostra, limitados a
+  200 ms. Entradas em AOI não são fixações oculares medidas.
+- Heatmap representa densidade de amostras válidas, não tempo de fixação, leitura
+  ou compreensão. Cores são normalizadas por imagem e não são diretamente comparáveis.
+- OpenCV descreve área da placa, luminância, contraste local por percentis 1/99
+  e variância do Laplaciano. Isso não certifica acessibilidade nem legibilidade.
 
-`POST /tracking/preview` exige consentimento e identificador temporário emitido
-pela API após aprovação. A autorização fica em memória (um único worker), é
-revogável com `DELETE /calibrations/{id}` e desaparece ao reiniciar a API. Não
-substitui autenticação nem o futuro vínculo de sessão/participante/estudo.
+## Dados e arquitetura
 
-### Testes da interface
+- `frontend/src/views`: estudos, edição de cenas, preparação, calibração, sessão e resultados.
+- `frontend/src/camera.js`: carregamento local do detector, captura e inferência.
+- `backend/heatcity/schemas.py`: contratos e invariantes.
+- `backend/heatcity/storage.py`: SQLite transacional, schema v1 e exclusão em cascata.
+- `backend/heatcity/services`: métricas, visão e relatório PDF.
+- `data/heatcity.sqlite3`: registros locais; ignorado pelo Git. Faça backup com a
+  aplicação parada. `HEATCITY_DATA_DIR` muda o diretório, inclusive para testes.
+
+SQLite substitui PostgreSQL neste MVP para permitir execução local sem Docker ou
+serviço adicional. Não há promessa de migração automática, multioperador ou gestão
+de usuários. Calibrações/autorização ficam em memória e devem ser refeitas ao
+reiniciar a API. Sessões e resultados já salvos sobrevivem ao reinício.
+As imagens persistidas são **cenas enviadas pelo operador**, não capturas faciais.
+
+## Verificação e padrões de código
+
+```bash
+cd backend
+../.venv/bin/python -m unittest discover -s tests -v
+# Ferramentas de desenvolvimento opcionais:
+../.venv/bin/python -m pip install -r requirements-dev.txt
+../.venv/bin/ruff check .
+../.venv/bin/ruff format --check .
+```
 
 ```bash
 cd frontend
 npm test
+npm run format:check
 npm run build
-# Com API e Vite em execução, e Chromium instalado:
-CHROMIUM_PATH=/usr/bin/chromium node scripts/browser-smoke.mjs
+# API e Vite ativos; use Chromium já instalado:
+CHROMIUM_PATH=/usr/bin/chromium npm run test:e2e
 ```
 
-O smoke test usa o MediaPipe real com vídeo sintético sem rosto para verificar
-carregamento e bloqueio; depois substitui o detector por landmarks sintéticos
-para testar trajetórias em tela cheia, aprovação pela API, piscada, recuperação e invalidação ao sair da tela cheia.
-São verificações de software; validar precisão e usabilidade exige uma pessoa
-real e uma webcam, com iluminação e postura documentadas.
+O E2E usa detector MediaPipe real com vídeo sintético sem rosto para verificar
+bloqueio. Depois usa **landmarks sintéticos somente no script de teste** para
+percorrer o fluxo completo: estudo, cena, calibração, sessão, persistência,
+heatmap e PDF. Os registros são removidos ao final. Isso não comprova precisão
+humana. `HEATCITY_BASE_URL` seleciona outra instância para testes isolados.
+Formatação: Prettier no frontend e Ruff no backend. Git Flow: `feature/*` a partir
+de `develop`, integração/release após revisão. Sem assinatura automática Codex.
 
-## Desenvolvimento e entregas
+## Entrega acadêmica e reprodução
 
-Veja [o plano do MVP](docs/plano-mvp.md). Use Git Flow: `main` para versões,
-`develop` para integração e `feature/*` para etapas. Não incluir assinatura
-ChatGPT/Codex nem trailer de coautoria automática nos commits.
-
-## Referências
-
-- Enunciado fornecido: Cognitive Computing, Computer Vision And IOT Systems,
-  Global Solution 2026, professor Arnaldo Jr.
-- [Laboratório MediaPipe](https://arnaldojr.github.io/cognitivecomputing/aulas/PDI/lab17/mediapipe.html)
-- [Tema Citizen Tech](https://experience.fiap.com.br/global-solution-citizen-tech)
-
-As tentativas de consultar esses links retornaram HTTP 403 na rede do ambiente;
-seu conteúdo ainda precisa ser conferido. O relatório final deverá separar método, resultados
-experimentais, limitações e evidências reproduzíveis.
-
-### Orientações estáveis na câmera
-
-Piscadas naturais e sua recuperação não trocam a orientação nem acionam amarelo.
-Problemas devem persistir por pelo menos 1.2 segundo para gerar aviso; mensagens
-exibidas ficam por pelo menos dois segundos. A recuperação visual exige 600 ms
-de detecção estável. Essas regras afetam somente a apresentação: amostras inválidas
-continuam sendo rejeitadas imediatamente, sem congelar uma estimativa válida.
-
-### Campo visual e controles
-
-A calibração e a prévia usam um campo branco nos dois temas. Durante a medição,
-o campo ocupa toda a tela: câmera e barra não aparecem nem reservam espaço.
-Na preparação e no resultado, câmera e controles ficam em áreas próprias.
-A contagem 3–2–1 prepara o participante, sem coletar pares de gaze.
-Piscadas não desativam os botões: uma perda contínua de detecção precisa atingir
-1.2 segundo; a câmera desligada, coleta em andamento ou ausência de calibração
-aprovada continuam bloqueando as ações correspondentes. Essa tolerância não
-torna amostras de piscadas válidas.
-
-### Olhos com menor abertura e campo completo
-
-A detecção ocular foi restaurada ao método de 1242b2e, anterior à referência
-individual das pálpebras, após relatos de zero amostras na validação.
-O perfil adaptativo e a alteração de proporção introduzidos depois foram retirados. A captura continua
-em segundo plano durante calibração e teste, mas a prévia da câmera e os botões
-ficam ocultos para não sobrepor nem reservar uma faixa da tela. Use ESC para sair.
-Veja [a pesquisa de MediaPipe e alternativas](docs/pesquisa-rastreamento-ocular.md).
-
-### Coleta com processamento lento
-
-A contagem começa assim que a entrada em tela cheia é confirmada. A geometria é
-registrada após os três segundos, evitando que a transição do navegador cancele
-a tentativa. A trajetória avança conforme chegam amostras válidas: piscadas e
-perdas de detecção pausam o alvo, e câmeras lentas podem levar mais tempo.
-São exigidas as mesmas 120 amostras de ajuste e seis em cada um dos cinco alvos
-de validação (30 no total). Cada ponto espera sua coleta, com limite de 6.5 s;
-a trajetória tem limite de 45 s. Não há aprovação automática por falta de dados.
-O erro de coleta informa a quantidade obtida. Para reproduzir o cenário lento:
+- [Requisitos e critérios de aceite](docs/requisitos-mvp.md).
+- [Protocolo experimental](docs/protocolo-experimental.md).
+- [Relatório técnico provisório em PDF](docs/reports/HeatCity-relatorio-tecnico.pdf).
+- [Notebook de análise](notebooks/analise-estudos.ipynb) — abra com Jupyter/VS Code
+  se desejar; não é necessário para executar a aplicação.
+- `scripts/recompute_metrics.py`: recalcula taxas/tempos de uma exportação JSON
+  sem importar a API.
+- `scripts/generate_report.py`: gera relatório provisório sem participantes ou,
+  com `--study-id ID`, gera relatório dos dados persistidos. A interface também exporta PDF.
 
 ```bash
-CHROMIUM_PATH=/usr/bin/chromium HEATCITY_TEST_SLOW=1 node frontend/scripts/browser-smoke.mjs
+.venv/bin/python scripts/generate_report.py
+.venv/bin/python scripts/recompute_metrics.py data/heatcity-evidencias.json
 ```
 
-O cenário simula processamento lento com landmarks sintéticos, sem medir precisão
-humana. API e Vite devem estar em execução.
+O relatório versionado identifica que ainda não há validação humana desta versão.
+Antes da entrega final, coletar resultados reais com consentimento, analisar
+limitações, regenerar o PDF do estudo e preparar a demonstração/arguição individual.
+Não há resultados inventados para preencher essa etapa.
 
-### Comparação com a calibração inicial
-
-A calibração **Clássica · 9 pontos (referência)** é agora o padrão. Ela recupera
-o método inicial: média das features dos dois olhos, mediana em cada ponto,
-nove pontos de ajuste afim e cinco pontos separados para validação. Leva cerca
-de 35 segundos, ou mais se a captura estiver lenta. Não inclui compensação de
-pose pelo modelo ridge. Procure manter uma posição confortável durante o teste.
-A tela cheia, a contagem, o launcher e os temas foram preservados.
-
-O método **Rápida · alvo móvel** continua disponível no seletor. Trocar o método
-invalida a calibração anterior. A inferência usa a mesma transformação de features
-do respectivo ajuste; os modelos não são misturados. Nos dois casos o limite é
-RMSE 0.100. Os relatos de 0.150 na versão inicial e 0.206 na versão posterior são
-resultados do usuário, não uma comparação controlada. Não há evidência humana
-de melhora desta revisão ainda; repetir o teste nas mesmas condições.
-
-Para testar o fluxo clássico automaticamente, com API e Vite em execução:
-
-```bash
-CHROMIUM_PATH=/usr/bin/chromium HEATCITY_TEST_FIXED=1 node frontend/scripts/browser-smoke.mjs
-```
+Referência principal: enunciado **Cognitive Computing-GS2-2026.pdf**, Arnaldo Jr.
+[Pesquisa de MediaPipe e alternativas](docs/pesquisa-rastreamento-ocular.md).

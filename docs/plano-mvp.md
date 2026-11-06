@@ -1,72 +1,17 @@
 # Plano do MVP
 
-## Escopo e fontes
+O plano atual e os critérios estão em [requisitos-mvp.md](requisitos-mvp.md).
+A coleta humana segue [protocolo-experimental.md](protocolo-experimental.md).
 
-Nome do produto: HeatCity em todas as entregas. O PDF acadêmico define a entrega
-e os critérios de avaliação. O texto de proposta define o escopo inicial do
-produto; recomendações e tecnologias nele descritas orientam a implementação.
-Requisitos adicionais encontrados em links devem ser confrontados com o escopo
-antes de serem incorporados.
+A reconstrução é exclusivamente ocular, conforme decisão do usuário. Ela inclui
+estudos, cenas/AOIs, consentimento, calibração, sessões persistidas, critérios de
+qualidade, heatmaps, relatório PDF e exportações reproduzíveis. SQLite foi escolhido
+para execução local no Windows. O software não oferece modo por clique nem
+aprovação automática de calibrações reprovadas.
 
-O experimento avalia imagens exibidas na tela, não ambientes físicos em 3D.
-Participantes devem ser identificados por códigos e consentir antes da câmera.
-Não persistir frames ou vídeos faciais por padrão.
+Ainda é necessário validar precisão e usabilidade com pessoas e webcam real.
+O relatório PDF versionado é provisório e identifica a ausência de validação
+humana desta reconstrução. Consulte README para instalação, testes e reprodução.
 
-## Etapas e critérios de aceite
-
-1. **Fundação matemática e API (implementada):** ajuste de nove pontos,
-   avaliação independente, rejeição de entradas inválidas e métricas por AOI.
-   Testar transformação conhecida, erro de validação, perda de rastreamento,
-   reentrada na AOI e tempos inválidos; executar requisições reais à API.
-2. **Captura e calibração (software validado; nova validação humana pendente):**
-   React e MediaPipe WASM locais. Um alvo móvel percorre uma trajetória de 12 segundos; cinco alvos posteriores
-   de 1.5 segundo fazem validação independente. Sem passos de mudança de postura;
-   as features da cabeça são capturadas junto com os olhos durante movimentos naturais.
-   Tela cheia obrigatória na coleta e prévia, com campo branco, câmera lateral e
-   controles inferiores fora do campo. Contagem 3–2–1 antes da coleta. Modelo ridge inclui ambos os olhos
-   e posição da cabeça; piscadas, recuperação e movimentos rápidos são pausas.
-   Posições fora da faixa coletada suspendem estimativas. O limite RMSE 0.100
-   permanece. O usuário relatou 0.150 na versão anterior em Chrome/Edge Windows;
-   não há evidência humana de melhoria ainda. Launcher `.cmd` automatiza o início
-   no Windows; o usuário confirmou seu funcionamento. A câmera e as orientações
-   permanecem visíveis também em tela cheia.
-3. **Estudos e sessões:** FastAPI/PostgreSQL, migrações, estudos, imagens,
-   AOIs, participantes por código, consentimento e sessão vinculada à calibração.
-   Restrição de acesso e exclusão de registros antes de dados reais compartilhados.
-   Salvar metadados e coordenadas; nunca aceitar aprovação fornecida pelo cliente.
-4. **Análise visual:** heatmaps individuais e consolidados, filtro de sessões
-   insuficientes, taxas por participante válido e dashboard React/Recharts.
-   Escolher e documentar limite mínimo de cobertura antes da coleta experimental.
-   Diferenciar ausência de observação de rastreamento indisponível.
-5. **Experimento e entrega:** comparar cenários A/B com tarefas equivalentes,
-   contrabalançar ordem e avaliar inicialmente 10–15 participantes voluntários.
-   Gerar gráficos e métricas a partir dos dados reais, scripts/notebooks de
-   reprodução e relatório PDF com contexto, métodos, análise e limitações.
-   Preparar demonstração prática e documentação para arguição individual.
-
-## Decisões técnicas iniciais
-
-- A webcam pertence ao computador do participante. OpenCV no servidor não acessa
-  automaticamente esse dispositivo. A captura e detecção ficam no navegador;
-  esta decisão substitui o envio de frames e reduz exposição de imagens faciais.
-- Olhar estimado por webcam é aproximação. Movimentos da cabeça, iluminação,
-  óculos, resolução e distância podem reduzir a qualidade. Falha de detecção
-  deve produzir amostra inválida, nunca coordenada fictícia.
-- Coordenadas da imagem serão normalizadas em [0, 1]. O frontend deve remover
-  margens da imagem e considerar escala/espelhamento antes de registrar amostras.
-- Validação separada evita aprovar a calibração pelo próprio erro de treinamento.
-  A interface coleta posições relativas das duas íris e descritores da cabeça
-  durante trajetórias; a validação usa amostras posteriores em cinco alvos. A acurácia desse método ainda depende de validação experimental humana.
-- O endpoint de análise atual é stateless e serve ao desenvolvimento dos cálculos.
-  A rota de prévia exige consentimento e aprovação em memória. A futura rota de
-  sessão deverá associar estudo, participante e autorização persistida.
-- Dados sintéticos devem ser identificados como tais e excluídos de conclusões
-  sobre desempenho com participantes.
-
-## Fluxo Git
-
-O checkout inicial veio na branch local `work`. `develop` foi criada nesse mesmo
-commit, seguida de `feature/calibration-analysis-foundation`. Não houve alteração
-de `main` remoto, push ou publicação. Integrar features em `develop`, preparar
-`release/*` e promover versões para `main` após validação. Não adicionar assinaturas
-automáticas de ferramentas aos commits.
+Git Flow: a implementação está em `feature/mvp-study-workflow`; não altera `main`
+automaticamente. Commits não incluem assinatura automática de ferramentas.

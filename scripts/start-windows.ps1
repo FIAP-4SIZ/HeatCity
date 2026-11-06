@@ -125,6 +125,8 @@ try {
     Write-Host 'Conferindo dependencias Python...'
     Run-Checked $venvPython @('-m','pip','install','-r','backend/requirements.lock','--disable-pip-version-check')
     Run-Checked $venvPython @('-m','pip','check')
+    Write-Host 'Verificando processamento de imagem e relatorios...'
+    Run-Checked $venvPython @('-c','import cv2; import numpy; import reportlab')
     Set-Location (Join-Path $root 'frontend')
     $hash = (Get-FileHash 'package-lock.json' -Algorithm SHA256).Hash
     $stamp = 'node_modules/.heatcity-lock'

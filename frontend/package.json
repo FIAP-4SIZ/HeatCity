@@ -1,13 +1,16 @@
 {
   "name": "heatcity-web",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
+    "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "test": "node src/gaze.test.js",
-    "postinstall": "node scripts/copy-model.mjs"
+    "postinstall": "node scripts/copy-model.mjs",
+    "test:e2e": "node scripts/mvp-smoke.mjs",
+    "format": "prettier --write src scripts vite.config.js index.html package.json",
+    "format:check": "prettier --check src scripts vite.config.js index.html package.json"
   },
   "dependencies": {
     "@mediapipe/face_mesh": "0.4.1633559619",
@@ -16,6 +19,7 @@
   },
   "devDependencies": {
     "playwright": "1.62.1",
+    "prettier": "3.9.10",
     "vite": "7.2.2"
   }
 }

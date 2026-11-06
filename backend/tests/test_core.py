@@ -10,8 +10,8 @@ class CalibrationTests(unittest.TestCase):
         self.validation = [[0.2, 0.2], [0.8, 0.2], [0.5, 0.5], [0.2, 0.8], [0.8, 0.8]]
 
     def test_recovers_affine_transform_with_independent_validation(self):
-        features = [[2*x + 3, 4*y - 1] for x, y in self.grid]
-        validation = [[2*x + 3, 4*y - 1] for x, y in self.validation]
+        features = [[2 * x + 3, 4 * y - 1] for x, y in self.grid]
+        validation = [[2 * x + 3, 4 * y - 1] for x, y in self.validation]
         result = fit_calibration(features, self.grid, validation, self.validation)
         self.assertTrue(result.approved)
         self.assertLess(result.validation_rmse, 1e-10)
@@ -30,18 +30,23 @@ class AnalysisTests(unittest.TestCase):
         self.area = Area("recepcao", 0, 0, 0.5, 0.5)
 
     def test_counts_reentry_and_excludes_invalid_time(self):
-        samples = [Sample(0, .2, .2), Sample(.1, .2, .2), Sample(.2, .2, .2, False),
-                   Sample(.3, .2, .2), Sample(.4, .8, .8)]
-        result = analyze(samples, [self.area], .5)
+        samples = [
+            Sample(0, 0.2, 0.2),
+            Sample(0.1, 0.2, 0.2),
+            Sample(0.2, 0.2, 0.2, False),
+            Sample(0.3, 0.2, 0.2),
+            Sample(0.4, 0.8, 0.8),
+        ]
+        result = analyze(samples, [self.area], 0.5)
         metric = result["areas"]["recepcao"]
-        self.assertAlmostEqual(metric["attention_seconds"], .3)
+        self.assertAlmostEqual(metric["attention_seconds"], 0.3)
         self.assertEqual(metric["observation_events"], 2)
         self.assertEqual(metric["first_observation_seconds"], 0)
-        self.assertAlmostEqual(result["valid_fraction"], .8)
+        self.assertAlmostEqual(result["valid_fraction"], 0.8)
 
     def test_caps_tracking_gaps(self):
-        result = analyze([Sample(0, .2, .2), Sample(1, .2, .2)], [self.area], 1.1)
-        self.assertAlmostEqual(result["areas"]["recepcao"]["attention_seconds"], .3)
+        result = analyze([Sample(0, 0.2, 0.2), Sample(1, 0.2, 0.2)], [self.area], 1.1)
+        self.assertAlmostEqual(result["areas"]["recepcao"]["attention_seconds"], 0.3)
         self.assertEqual(result["areas"]["recepcao"]["observation_events"], 2)
 
     def test_empty_session_has_no_observations(self):
@@ -51,7 +56,32 @@ class AnalysisTests(unittest.TestCase):
 
     def test_rejects_unordered_timestamps(self):
         with self.assertRaises(ValueError):
-            analyze([Sample(.2, .2, .2), Sample(.1, .2, .2)], [self.area], 1)
+            analyze([Sample(0.2, 0.2, 0.2), Sample(0.1, 0.2, 0.2)], [self.area], 1)
+
+
+class NonlinearCalibrationTests(unittest.TestCase):
+    def test_training_cv_selects_quadratic_without_using_validation(self):
+        import math
+
+        from heatcity.calibration import fit_calibration
+
+        grid = [[x, y] for x in (0.1, 0.5, 0.9) for y in (0.1, 0.5, 0.9)]
+        held = [[0.2, 0.2], [0.8, 0.2], [0.5, 0.5], [0.2, 0.8], [0.8, 0.8]]
+
+        def inverse(point):
+            x, y = point
+            return [
+                (-0.7 + math.sqrt(0.49 + 0.8 * x)) / 0.4,
+                (-0.8 + math.sqrt(0.64 + 0.4 * y)) / 0.2,
+            ]
+
+        result = fit_calibration(list(map(inverse, grid)), grid, list(map(inverse, held)), held)
+        self.assertEqual(result.basis, "quadratic")
+        self.assertLess(result.validation_rmse, 1e-10)
+        shifted = [[p[0] + 1, p[1] + 1] for p in map(inverse, held)]
+        rejected = fit_calibration(list(map(inverse, grid)), grid, shifted, held)
+        self.assertEqual(rejected.basis, result.basis)
+        self.assertFalse(rejected.approved)
 
 
 if __name__ == "__main__":
