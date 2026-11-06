@@ -102,8 +102,8 @@ servir esse build em produção será necessário configurar o encaminhamento de
 
 1. Use Chrome ou Edge. Posicione a câmera à altura dos olhos, a 40–70 cm,
    com luz frontal difusa. Evite contraluz, reflexos nos óculos e olhos muito
-   pequenos na imagem. As orientações aparecem em tempo real junto da prévia da câmera, inclusive
-   durante a calibração e a prévia em tela cheia.
+   pequenos na imagem. As orientações aparecem junto da prévia na preparação e no resultado; durante
+   a medição, câmera e controles ficam ocultos e ESC permite interromper.
 2. Marque o consentimento, ative a câmera e inicie a calibração. A aplicação
    solicita **tela cheia real**; permita-a. Ela é obrigatória também na prévia.
 3. Acompanhe um único alvo contínuo por **12 segundos**, na sua posição
@@ -189,11 +189,19 @@ continuam sendo rejeitadas imediatamente, sem congelar uma estimativa válida.
 
 ### Campo visual e controles
 
-A calibração e a prévia usam um campo branco nos dois temas. Câmera e orientações
-ficam numa coluna à direita, e botões numa barra inferior, sem sobrepor o alvo.
-Coordenadas são normalizadas somente dentro desse campo visual, excluindo a
-coluna da câmera e a barra. A contagem 3–2–1 não coleta amostras.
+A calibração e a prévia usam um campo branco nos dois temas. Durante a medição,
+o campo ocupa toda a tela: câmera e barra não aparecem nem reservam espaço.
+Na preparação e no resultado, câmera e controles ficam em áreas próprias.
+A contagem 3–2–1 aprende a referência palpebral, mas não coleta pares de gaze.
 Piscadas não desativam os botões: uma perda contínua de detecção precisa atingir
 1.2 segundo; a câmera desligada, coleta em andamento ou ausência de calibração
 aprovada continuam bloqueando as ações correspondentes. Essa tolerância não
 torna amostras de piscadas válidas.
+
+### Olhos com menor abertura e campo completo
+
+A referência de abertura das pálpebras é individual por olho, aprendida durante
+preparação e contagem; não é necessário forçar os olhos abertos. A captura continua
+em segundo plano durante calibração e teste, mas a prévia da câmera e os botões
+ficam ocultos para não sobrepor nem reservar uma faixa da tela. Use ESC para sair.
+Veja [a pesquisa de MediaPipe e alternativas](docs/pesquisa-rastreamento-ocular.md).

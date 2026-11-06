@@ -8,21 +8,36 @@ export function trajectory(elapsed) {
   return path[index].map((value,axis)=>value+(path[index+1][axis]-value)*fraction);
 }
 
-export function inspectEyes(faces) {
+export class EyelidProfile {
+  samples=[[],[]]; closed=[false,false];
+  isClosed(index,openness,learn=true) {
+    const samples=this.samples[index];
+    if(learn && openness>=.03 && openness<=.6){samples.push(openness);if(samples.length>120)samples.shift();}
+    const ordered=[...samples].sort((a,b)=>a-b);
+    const reference=ordered.length>=8?ordered[Math.floor((ordered.length-1)*.8)]:.08;
+    const threshold=Math.max(.018,reference*(this.closed[index]?.6:.45));
+    this.closed[index]=openness<threshold;
+    return this.closed[index];
+  }
+}
+export function inspectEyes(faces,profile=null,learn=true,aspect=1) {
+  if(!Number.isFinite(aspect)||aspect<=0)return {reason:'Aguarde a câmera estabilizar.'};
   if (faces?.length !== 1) return {reason:faces?.length>1?'Mantenha apenas um rosto na câmera.':'Centralize o rosto e ilumine-o pela frente.'};
   const points=faces[0];
   if(points.length<478) return {reason:'Íris não detectadas. Aproxime-se e evite reflexos nos óculos.'};
   const valid=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y);
   const features=[];
+  let eyeIndex=0;
   for(const [a,b,upper,lower,iris] of [[33,133,159,145,468],[362,263,386,374,473]]) {
     const [p,q,u,l,i]=[a,b,upper,lower,iris].map(index=>points[index]);
     if(![p,q,u,l,i].every(valid)) return {reason:'Olhos encobertos. Ajuste o enquadramento.'};
-    const dx=q.x-p.x,dy=q.y-p.y,width=Math.hypot(dx,dy);
+    const dx=q.x-p.x,dy=(q.y-p.y)*aspect,width=Math.hypot(dx,dy);
     if(width<.022) return {reason:'Aproxime-se: os olhos estão pequenos na imagem.'};
-    const openness=Math.hypot(u.x-l.x,u.y-l.y)/width;
-    if(openness<.14) return {reason:'Piscada ou olhos parcialmente fechados: coleta pausada.',blink:true};
-    features.push(((i.x-p.x)*dx+(i.y-p.y)*dy)/(width*width),
-      ((i.y-(p.y+q.y)/2)*dx-(i.x-(p.x+q.x)/2)*dy)/(width*width));
+    const openness=Math.hypot(u.x-l.x,(u.y-l.y)*aspect)/width;
+    const closed=profile?profile.isClosed(eyeIndex++,openness,learn):openness<.035;
+    if(closed) return {reason:'Piscada ou olhos parcialmente fechados: coleta pausada.',blink:true};
+    features.push(((i.x-p.x)*dx+(i.y-p.y)*aspect*dy)/(width*width),
+      ((i.y-(p.y+q.y)/2)*aspect*dx-(i.x-(p.x+q.x)/2)*dy)/(width*width));
   }
   const [left,right,nose]=[33,263,1].map(i=>points[i]);
   if(![left,right,nose].every(valid)) return {reason:'Rosto parcialmente encoberto.'};

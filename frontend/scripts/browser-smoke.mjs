@@ -86,11 +86,13 @@ try {
   assert.equal(await page.getByText(/Desloque levemente/).count(),0);
   await page.locator('.fullscreen-panel').getByRole('button',{name:'Iniciar prévia',exact:true}).click();
   await page.locator('.gaze').waitFor();
-  assert.equal(await page.locator('.visual-field').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(255, 255, 255)');
-  const boxes=await page.evaluate(()=>['.visual-field','.camera-preview','.fullscreen-panel'].map(s=>{const r=document.querySelector(s).getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom};}));
-  assert.ok(boxes[0].right<=boxes[1].x,'Câmera deve ficar fora do campo visual');
-  assert.ok(boxes[0].bottom<=boxes[2].y,'Controles devem ficar abaixo do campo visual');
-
+  const field=await page.locator('.visual-field').boundingBox();
+  const viewport=page.viewportSize();
+  assert.equal(field.width,viewport.width);
+  assert.equal(field.height,viewport.height);
+  assert.equal(await page.locator('.camera-preview').isVisible(),false);
+  assert.equal(await page.locator('.fullscreen-panel').isVisible(),false);
+  assert.equal(await page.locator('video').evaluate(v=>v.srcObject.getVideoTracks()[0].readyState),'live');
   await page.evaluate(()=>{window.testBlink=true;});
   await page.waitForFunction(()=>!document.querySelector('.gaze'));
   assert.equal(await page.locator('.camera-preview.warning').count(),0);
