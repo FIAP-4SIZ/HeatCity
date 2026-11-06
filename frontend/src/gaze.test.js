@@ -55,3 +55,24 @@ test('head posture beyond the calibrated range requires recalibration', async()=
   assert.equal(supportedHead([0,0,0,0,.05,.05,.5,.5,.25,.05],model),true);
   assert.equal(supportedHead([0,0,0,0,.05,.05,.9,.5,.25,.05],model),false);
 });
+
+test('natural blink and recovery do not change guidance or show a warning',async()=>{
+  const {GuidanceFilter}=await import('./gaze.js');
+  const guide=new GuidanceFilter();
+  guide.update(null,0);const healthy=guide.update(null,600);
+  for(const t of [800,900,1000])assert.deepEqual(guide.update('Olhos fechados',t),healthy);
+  assert.deepEqual(guide.update(null,1100),healthy);
+  assert.deepEqual(guide.update(null,1800),healthy);
+});
+test('persistent problem warns, text is held and recovery is stable',async()=>{
+  const {GuidanceFilter}=await import('./gaze.js');
+  const guide=new GuidanceFilter();
+  guide.update('Sem rosto',0);
+  assert.equal(guide.update('Sem rosto',1199).warning,false);
+  const warning=guide.update('Sem rosto',1200);
+  assert.equal(warning.warning,true);
+  assert.deepEqual(guide.update('Aproxime-se',1300),warning);
+  guide.update(null,1400);
+  assert.deepEqual(guide.update(null,2000),warning);
+  assert.equal(guide.update(null,3200).warning,false);
+});

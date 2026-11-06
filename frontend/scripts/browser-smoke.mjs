@@ -57,7 +57,7 @@ try {
   await page.locator('.gaze').waitFor();
   await page.evaluate(()=>{window.testBlink=true;});
   await page.waitForFunction(()=>!document.querySelector('.gaze'));
-  await page.locator('.camera-guidance').filter({hasText:'Piscada'}).waitFor();
+  assert.equal(await page.locator('.camera-preview.warning').count(),0);
   await page.evaluate(()=>{window.testBlink=false;});
   await page.locator('.gaze').waitFor();
   await page.evaluate(()=>document.exitFullscreen());

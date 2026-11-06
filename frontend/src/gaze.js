@@ -58,3 +58,25 @@ export function predict(feature,coefficients) {
 export function medianFeature(samples) {
   return samples[0].map((_,axis)=>samples.map(s=>s[axis]).sort((a,b)=>a-b)[Math.floor(samples.length/2)]);
 }
+
+// Presentation timing is independent of frame validity and never admits bad data.
+export class GuidanceFilter {
+  badSince=null; goodSince=null; shownAt=-Infinity;
+  current={text:'Enquadrando o rosto. Pisque naturalmente.',warning:false};
+  update(issue,time) {
+    if(issue) {
+      this.goodSince=null;
+      this.badSince ??= time;
+      if(time-this.badSince>=1200 && time-this.shownAt>=2000 && this.current.text!==issue) {
+        this.current={text:issue,warning:true};this.shownAt=time;
+      }
+    } else {
+      this.badSince=null;
+      this.goodSince ??= time;
+      if(time-this.goodSince>=600 && time-this.shownAt>=2000 && this.current.text!=='Olhos detectados. Continue acompanhando o alvo e pisque naturalmente.') {
+        this.current={text:'Olhos detectados. Continue acompanhando o alvo e pisque naturalmente.',warning:false};this.shownAt=time;
+      }
+    }
+    return this.current;
+  }
+}

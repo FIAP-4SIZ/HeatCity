@@ -178,3 +178,11 @@ ChatGPT/Codex nem trailer de coautoria automática nos commits.
 As tentativas de consultar esses links retornaram HTTP 403 na rede do ambiente;
 seu conteúdo ainda precisa ser conferido. O relatório final deverá separar método, resultados
 experimentais, limitações e evidências reproduzíveis.
+
+### Orientações estáveis na câmera
+
+Piscadas naturais e sua recuperação não trocam a orientação nem acionam amarelo.
+Problemas devem persistir por pelo menos 1.2 segundo para gerar aviso; mensagens
+exibidas ficam por pelo menos dois segundos. A recuperação visual exige 600 ms
+de detecção estável. Essas regras afetam somente a apresentação: amostras inválidas
+continuam sendo rejeitadas imediatamente, sem congelar uma estimativa válida.

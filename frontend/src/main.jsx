@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { validationTargets, inspectEyes, predict, trajectory, PASS_MS, EyeGate, supportedHead } from './gaze.js';
+import { validationTargets, inspectEyes, predict, trajectory, PASS_MS, EyeGate, supportedHead, GuidanceFilter } from './gaze.js';
 import './style.css';
 
 async function api(path, body, method = 'POST') {
@@ -22,6 +22,7 @@ function App() {
   const [quality, setQuality] = useState(false), [target, setTarget] = useState(null);
   const [progress, setProgress] = useState(0), [result, setResult] = useState(null);
   const [gaze, setGaze] = useState(null);
+  const [visualWarning,setVisualWarning]=useState(false);
   const [guidance, setGuidance] = useState('Centralize o rosto e ilumine-o pela frente.');
 
   function invalidate(text) {
@@ -76,6 +77,8 @@ function App() {
       state.mesh ??= new window.FaceMesh({locateFile: file=>`/mediapipe/${file}`});
       state.mesh.setOptions({maxNumFaces:2,refineLandmarks:true,minDetectionConfidence:.6,minTrackingConfidence:.6});
       state.gate=new EyeGate();
+      state.guide=new GuidanceFilter();
+      setVisualWarning(false);
       state.mesh.onResults(results=> {
         if (!state.running) return;
         const inspection=inspectEyes(results.multiFaceLandmarks);
@@ -83,7 +86,7 @@ function App() {
         const now=state.frameTime;
         const accepted=state.gate.update(feature,now);
         setQuality(Boolean(feature));
-        setGuidance(accepted?inspection.reason:feature?'Movimento ocular rápido ou recuperação de piscada: aguarde.':inspection.reason);
+        let issue=feature?null:inspection.blink?'Olhos fechados por mais tempo. Abra-os quando estiver confortável.':inspection.reason;
         const collection=state.collection;
         if(collection && accepted && now-collection.since>900 && now-(collection.last || 0)>=50) {
           collection.last=now;
@@ -92,11 +95,13 @@ function App() {
         }
         if(state.tracking && state.calibration) {
           const inRange=feature && supportedHead(feature,state.calibration);
-          if(feature && !inRange) setGuidance('Cabeça fora da faixa calibrada. Retorne à postura anterior ou recalibre.');
+          if(feature && !inRange) issue='Cabeça fora da faixa calibrada. Retorne à postura anterior ou recalibre.';
           const point=accepted && inRange?predict(feature,state.calibration.coefficients):null;
           // No smoothing across invalid intervals: a blink never freezes a valid gaze.
           setGaze(point?.every(v=>Number.isFinite(v)&&v>=0&&v<=1)?point:null);
         }
+        const display=state.guide.update(issue,now);
+        setGuidance(display.text);setVisualWarning(display.warning);
       });
       state.running=true;
       const cameraRun=state.cameraRun=(state.cameraRun || 0)+1;
@@ -191,7 +196,7 @@ function App() {
       <section className="experiment"><div className="stage-head"><h2>{phase==='tracking'?'Prévia do olhar':'Calibração individual'}</h2><span>{progress}/6 etapas · cerca de 20 s</span></div>
         <div ref={stage} className="stage" aria-label="Área de calibração">
           {target ? <div className="target" style={{left:`${target[0]*100}%`,top:`${target[1]*100}%`}}/> : phase==='tracking' ? <>{gaze && <div className="gaze" style={{left:`${gaze[0]*100}%`,top:`${gaze[1]*100}%`}}/>}<span className="stage-note">{gaze?'Estimativa em tempo real':'Sem estimativa válida'}</span></> : <div className="placeholder"><span>＋</span><h3>Olhe. Calibre. Avalie.</h3><p>Um alvo móvel por 12 segundos.<br/>Cinco alvos de validação independente.</p></div>}
-          <div className={`camera-preview ${quality?'ready':''}`} aria-label="Câmera com orientação em tempo real">
+          <div className={`camera-preview ${visualWarning?'warning':'ready'}`} aria-label="Câmera com orientação em tempo real">
             <video ref={video} muted playsInline aria-label="Prévia da webcam"/>
             <p className="camera-guidance" aria-live="polite">{camera?guidance:'Câmera desligada'}</p>
           </div>
