@@ -2,6 +2,8 @@ import { loadFaceMesh } from '../camera.js';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   targets,
+  precisionSequence,
+  precisionValidation,
   validationTargets,
   medianFeature,
   predict,
@@ -177,7 +179,7 @@ export default function CalibrationLab({
         if (!state.running) return;
         const inspection = inspectEyes(
           results.multiFaceLandmarks,
-          state.featureMode === 'fixed',
+          state.featureMode !== 'motion',
           diagnosticsOnly ? { minOpenness: state.dev.minOpenness } : {},
         );
         const feature = inspection.feature;
@@ -308,6 +310,7 @@ export default function CalibrationLab({
     const id = runId.current,
       state = runtime.current;
     state.featureMode = calibrationMode;
+    const captureDetails = [];
     const payload = {
       mode: calibrationMode,
       participant_code: participantCode,
@@ -375,19 +378,26 @@ export default function CalibrationLab({
         if (runId.current !== id) return null;
         return collection;
       };
-      if (calibrationMode === 'fixed') {
-        for (let index = 0; index < targets.length; index++) {
+      const fixedPoints = calibrationMode === 'precision' ? precisionSequence() : targets;
+      const heldPoints = calibrationMode === 'precision' ? precisionValidation : validationTargets;
+      if (calibrationMode !== 'motion') {
+        for (let index = 0; index < fixedPoints.length; index++) {
           setMessage(
-            `Calibração clássica ${index + 1}/9: olhe para o ponto e mantenha a posição confortável.`,
+            `Calibração ${index + 1}/${fixedPoints.length}: olhe para o ponto, sem seguir com a cabeça.`,
           );
-          const collection = await collect(false, targets[index], 2200, 20);
+          const collection = await collect(false, fixedPoints[index], 2200, 20);
           if (!collection) return;
           payload.features.push(
             medianFeature(
-              collection.features.map((feature) => calibrationFeature(feature, 'fixed')),
+              collection.features.map((feature) => calibrationFeature(feature, calibrationMode)),
             ),
           );
-          payload.targets.push(targets[index]);
+          payload.targets.push(fixedPoints[index]);
+          captureDetails.push({
+            phase: 'training',
+            target: fixedPoints[index],
+            samples: collection.features,
+          });
           setProgress(index + 1);
         }
       } else {
@@ -398,12 +408,12 @@ export default function CalibrationLab({
         payload.targets.push(...training.targets);
         setProgress(1);
       }
-      for (let index = 0; index < validationTargets.length; index++) {
-        setMessage(`Validação ${index + 1}/5: mantenha o olhar no ponto.`);
-        const classic = calibrationMode === 'fixed';
+      for (let index = 0; index < heldPoints.length; index++) {
+        setMessage(`Validação ${index + 1}/${heldPoints.length}: mantenha o olhar no ponto.`);
+        const classic = calibrationMode !== 'motion';
         const collection = await collect(
           false,
-          validationTargets[index],
+          heldPoints[index],
           classic ? 2200 : 1500,
           classic ? 20 : 6,
         );
@@ -411,15 +421,20 @@ export default function CalibrationLab({
         if (classic) {
           payload.validation_features.push(
             medianFeature(
-              collection.features.map((feature) => calibrationFeature(feature, 'fixed')),
+              collection.features.map((feature) => calibrationFeature(feature, calibrationMode)),
             ),
           );
-          payload.validation_targets.push(validationTargets[index]);
+          payload.validation_targets.push(heldPoints[index]);
         } else {
           payload.validation_features.push(...collection.features);
           payload.validation_targets.push(...collection.targets);
         }
-        setProgress(index + (classic ? 10 : 2));
+        captureDetails.push({
+          phase: 'validation',
+          target: heldPoints[index],
+          samples: collection.features,
+        });
+        setProgress(index + (classic ? fixedPoints.length + 1 : 2));
       }
       setTarget(null);
       setMessage('Avaliando erro em amostras independentes…');
@@ -443,7 +458,9 @@ export default function CalibrationLab({
       delete quality.calibration_id;
       delete quality.expires_in_seconds;
       const detailed = {
-        version: 1,
+        version: 2,
+        capture_details: captureDetails,
+        feature_schema: 'separate eyes x/y + nose yaw/pitch + eye midpoint x/y + eye span + roll',
         purpose: 'diagnóstico experimental, não comprovação de precisão humana',
         ...payload,
         quality,
@@ -608,6 +625,7 @@ export default function CalibrationLab({
                 setCalibrationMode(e.target.value);
               }}
             >
+              <option value="precision">Precisão · pontos aleatórios + deriva</option>
               <option value="fixed">Pontos fixos · validação independente</option>
               <option value="motion">Rápida · alvo móvel</option>
             </select>
@@ -645,8 +663,13 @@ export default function CalibrationLab({
           <div className="stage-head">
             <h2>Calibração individual</h2>
             <span>
-              {progress}/{calibrationMode === 'fixed' ? 14 : 6} etapas ·{' '}
-              {calibrationMode === 'fixed' ? 'cerca de 35 s' : 'tempo adaptativo'}
+              {progress}/
+              {calibrationMode === 'precision' ? 38 : calibrationMode === 'fixed' ? 14 : 6} etapas ·{' '}
+              {calibrationMode === 'precision'
+                ? 'cerca de 90 s'
+                : calibrationMode === 'fixed'
+                  ? 'cerca de 35 s'
+                  : 'tempo adaptativo'}
             </span>
           </div>
           <div
@@ -686,11 +709,15 @@ export default function CalibrationLab({
                   <span>＋</span>
                   <h3>Olhe. Calibre. Avalie.</h3>
                   <p>
-                    {calibrationMode === 'fixed'
-                      ? 'Nove pontos fixos para comparar com o método inicial.'
-                      : 'Um alvo móvel por 12 segundos.'}
+                    {calibrationMode === 'precision'
+                      ? '25 posições aleatórias e quatro repetições do centro.'
+                      : calibrationMode === 'fixed'
+                        ? 'Nove pontos fixos para comparar com o método inicial.'
+                        : 'Um alvo móvel por 12 segundos.'}
                     <br />
-                    Cinco alvos de validação independente.
+                    {calibrationMode === 'precision'
+                      ? 'Nove alvos de validação independente.'
+                      : 'Cinco alvos de validação independente.'}
                   </p>
                 </div>
               )}

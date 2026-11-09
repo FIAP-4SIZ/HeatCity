@@ -219,3 +219,16 @@ Teste de navegador específico, com API e Vite ativos:
 ```bash
 CHROMIUM_PATH=/usr/bin/chromium node frontend/scripts/diagnostics-smoke.mjs
 ```
+
+## Protocolo de precisão e validação real
+
+A análise dos cinco diagnósticos mais recentes está em
+[validacao-calibracao-2026-11-09.md](docs/validacao-calibracao-2026-11-09.md).
+Nenhum arquivo bruto de participante foi versionado.
+
+Em **Diagnósticos / DEV**, selecione **Precisão · pontos aleatórios + deriva**.
+São 25 posições aleatórias, quatro âncoras de centro e nove alvos posteriores
+independentes (cerca de 90 s). O modelo preserva dez features e seleciona ridge
+por CV agrupada por alvo. O diagnóstico versão 2 inclui amostras individuais de
+cada ponto, erros por eixo, viés e percentil 90. Não há aprovação garantida: o
+protocolo ainda precisa de validação humana, e o limite permanece 0.100.

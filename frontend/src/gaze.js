@@ -180,3 +180,31 @@ export function calibrationFeature(feature, mode) {
     ? [(feature[0] + feature[2]) / 2, (feature[1] + feature[3]) / 2]
     : feature;
 }
+
+export const precisionTargets = [0.1, 0.3, 0.5, 0.7, 0.9].flatMap((y) =>
+  [0.1, 0.3, 0.5, 0.7, 0.9].map((x) => [x, y]),
+);
+export const precisionValidation = [
+  [0.2, 0.2],
+  [0.8, 0.2],
+  [0.2, 0.8],
+  [0.8, 0.8],
+  [0.4, 0.4],
+  [0.6, 0.4],
+  [0.4, 0.6],
+  [0.6, 0.6],
+  [0.5, 0.2],
+];
+export function precisionSequence(random = Math.random) {
+  const shuffled = precisionTargets.map((point) => [...point]);
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  const output = [];
+  shuffled.forEach((point, i) => {
+    output.push(point);
+    if ((i + 1) % 5 === 0 && i < 24) output.push([0.5, 0.5]);
+  });
+  return output;
+}

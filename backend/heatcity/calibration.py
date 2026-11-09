@@ -148,3 +148,100 @@ def fit_motion_calibration(features, targets, validation_features, validation_ta
         x[:, 4:].max(axis=0).tolist(),
         float(np.percentile(distances, 90)),
     )
+
+
+@dataclass(frozen=True)
+class PrecisionCalibration:
+    coefficients: list[list[float]]
+    validation_rmse: float
+    approved: bool
+    basis: str
+    training_cv_rmse: float
+    ridge_alpha: float
+    validation_axis_rmse: list[float]
+    validation_bias: list[float]
+    validation_p90: float
+    head_min: list[float]
+    head_max: list[float]
+
+
+def fit_precision_calibration(features, targets, validation_features, validation_targets):
+    """Grouped target CV prevents repeated frames/anchors leaking across folds.
+
+    Uses only training targets for regularization selection. The independent
+    validation is never used to change weights, offset, alpha or approval limit.
+    """
+    x = np.asarray(features, dtype=float)
+    vx = np.asarray(validation_features, dtype=float)
+    y = _pairs(targets, 25)
+    vy = _pairs(validation_targets, 9)
+    if (
+        x.shape != (len(y), 10)
+        or vx.shape != (len(vy), 10)
+        or not np.isfinite(x).all()
+        or not np.isfinite(vx).all()
+        or np.abs(x).max() > 100
+        or np.abs(vx).max() > 100
+    ):
+        raise ValueError("O protocolo de precisão exige dez features finitas por ponto.")
+    if (y < 0).any() or (y > 1).any() or (vy < 0).any() or (vy > 1).any():
+        raise ValueError("Alvos fora da tela.")
+    expected = {(a, b) for a in (0.1, 0.3, 0.5, 0.7, 0.9) for b in (0.1, 0.3, 0.5, 0.7, 0.9)}
+    labels = np.round(y, 6)
+    if not expected.issubset(set(map(tuple, labels))):
+        raise ValueError("Complete a grade de 25 posições antes de validar.")
+    if np.ptp(x[:, :4], axis=0).max() < 0.01:
+        raise ValueError("Sinal ocular insuficiente; ajuste não identificável.")
+
+    held_expected = {
+        (0.2, 0.2),
+        (0.8, 0.2),
+        (0.2, 0.8),
+        (0.8, 0.8),
+        (0.4, 0.4),
+        (0.6, 0.4),
+        (0.4, 0.6),
+        (0.6, 0.6),
+        (0.5, 0.2),
+    }
+    if not held_expected.issubset(set(map(tuple, np.round(vy, 6)))):
+        raise ValueError("A validação exige os nove alvos espaciais independentes.")
+
+    def solve(a, b, alpha):
+        mean = a.mean(axis=0)
+        scale = np.maximum(a.std(axis=0), 1e-4)
+        design = np.column_stack(((a - mean) / scale, np.ones(len(a))))
+        regularizer = np.eye(11) * (len(a) * alpha)
+        regularizer[-1, -1] = 0
+        weights = np.linalg.solve(design.T @ design + regularizer, design.T @ b)
+        raw = weights[:-1] / scale[:, None]
+        return np.vstack((raw, weights[-1] - mean @ raw))
+
+    scores = []
+    for alpha in (0.01, 0.1, 1.0, 10.0):
+        errors = []
+        for target in sorted(expected):
+            test = np.all(labels == target, axis=1)
+            weights = solve(x[~test], y[~test], alpha)
+            predicted = np.column_stack((x[test], np.ones(test.sum()))) @ weights
+            errors.append(np.mean(np.sum((predicted - y[test]) ** 2, axis=1)))
+        scores.append(float(np.sqrt(np.mean(errors))))
+    best = int(np.argmin(scores))
+    alpha = (0.01, 0.1, 1.0, 10.0)[best]
+    weights = solve(x, y, alpha)
+    residual = np.column_stack((vx, np.ones(len(vx)))) @ weights - vy
+    distances = np.linalg.norm(residual, axis=1)
+    rmse = float(np.sqrt(np.mean(distances**2)))
+    return PrecisionCalibration(
+        weights.tolist(),
+        rmse,
+        rmse <= 0.1,
+        "affine",
+        scores[best],
+        alpha,
+        np.sqrt(np.mean(residual**2, axis=0)).tolist(),
+        residual.mean(axis=0).tolist(),
+        float(np.percentile(distances, 90)),
+        x[:, 4:].min(axis=0).tolist(),
+        x[:, 4:].max(axis=0).tolist(),
+    )

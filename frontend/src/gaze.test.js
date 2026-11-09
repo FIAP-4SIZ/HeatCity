@@ -188,3 +188,17 @@ test('malformed diagnostic data cannot be rendered as a report', async () => {
     }),
   );
 });
+
+test('precision protocol randomizes a complete grid, repeats drift anchors and keeps spatial validation separate', async () => {
+  const { precisionSequence, precisionTargets, precisionValidation, calibrationFeature } =
+    await import('./gaze.js');
+  const order = precisionSequence(() => 0.37);
+  assert.equal(order.length, 29);
+  assert.equal(new Set(order.map((p) => p.join(','))).size, 25);
+  assert.equal(order.filter((p) => p[0] === 0.5 && p[1] === 0.5).length, 5);
+  assert.equal(precisionValidation.length, 9);
+  assert.ok(
+    precisionValidation.every((p) => !precisionTargets.some((t) => t[0] === p[0] && t[1] === p[1])),
+  );
+  assert.equal(calibrationFeature(Array(10).fill(0.1), 'precision').length, 10);
+});

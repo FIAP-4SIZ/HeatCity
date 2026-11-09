@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from .analysis import Area, Sample, analyze
-from .calibration import fit_calibration, fit_motion_calibration
+from .calibration import fit_calibration, fit_motion_calibration, fit_precision_calibration
 from .workflow import calibration_models, router
 
 app = FastAPI(title="HeatCity", version="1.0.0")
@@ -39,7 +39,7 @@ def revoke(calibration_id: str):
 
 
 class CalibrationRequest(BaseModel):
-    mode: Literal["fixed", "motion"] = "fixed"
+    mode: Literal["fixed", "motion", "precision"] = "fixed"
     participant_code: str | None = Field(default=None, pattern=r"^[A-Z0-9][A-Z0-9_-]{1,23}$")
     scenario_id: str | None = None
     viewport_width: int | None = Field(default=None, ge=200, le=16000)
@@ -68,7 +68,11 @@ def diagnostic_calibration(body: CalibrationRequest):
         values = body.model_dump(
             exclude={"mode", "participant_code", "scenario_id", "viewport_width", "viewport_height"}
         )
-        fit = fit_motion_calibration if body.mode == "motion" else fit_calibration
+        fit = {
+            "fixed": fit_calibration,
+            "motion": fit_motion_calibration,
+            "precision": fit_precision_calibration,
+        }[body.mode]
         return {**asdict(fit(**values)), "diagnostic_only": True}
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
@@ -80,7 +84,11 @@ def calibrate(body: CalibrationRequest):
         values = body.model_dump(
             exclude={"mode", "participant_code", "scenario_id", "viewport_width", "viewport_height"}
         )
-        fit = fit_motion_calibration if body.mode == "motion" else fit_calibration
+        fit = {
+            "fixed": fit_calibration,
+            "motion": fit_motion_calibration,
+            "precision": fit_precision_calibration,
+        }[body.mode]
         result = asdict(fit(**values))
         now = monotonic()
         for key, expires in list(approvals.items()):

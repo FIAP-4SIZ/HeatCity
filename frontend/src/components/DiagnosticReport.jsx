@@ -7,7 +7,12 @@ export default function DiagnosticReport({ report }) {
       <div className="section-heading">
         <div>
           <p className="eyebrow">
-            {report.mode === 'fixed' ? 'PONTOS FIXOS' : 'ALVO MÓVEL'} · {report.basis}
+            {report.mode === 'precision'
+              ? 'PROTOCOLO DE PRECISÃO'
+              : report.mode === 'fixed'
+                ? 'PONTOS FIXOS'
+                : 'ALVO MÓVEL'}{' '}
+            · {report.basis}
           </p>
           <h3>{report.name}</h3>
         </div>
@@ -18,6 +23,10 @@ export default function DiagnosticReport({ report }) {
       <p className="small">
         Ajuste: {report.training} amostras · Validação: {report.validation} · CV do ajuste:{' '}
         {number(report.cv, 3)} · Fora da tela: {report.outside}
+      </p>
+      <p className="small">
+        RMSE X/Y: {report.axisRmse.map((v) => number(v, 3)).join(' / ')} · Viés X/Y:{' '}
+        {report.bias.map((v) => number(v, 3)).join(' / ')}
       </p>
       <svg
         viewBox="-20 -20 540 340"

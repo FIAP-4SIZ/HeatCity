@@ -2,7 +2,7 @@
 export function summarizeDiagnostic(data, name = 'Calibração atual') {
   if (
     !data ||
-    !['fixed', 'motion'].includes(data.mode) ||
+    !['fixed', 'motion', 'precision'].includes(data.mode) ||
     !Number.isFinite(data.quality?.validation_rmse) ||
     data.quality.validation_rmse < 0 ||
     data.quality.validation_rmse > 100 ||
@@ -13,6 +13,10 @@ export function summarizeDiagnostic(data, name = 'Calibração atual') {
   const groups = new Map();
   let total = 0,
     outside = 0;
+  let sx = 0,
+    sy = 0,
+    bx = 0,
+    by = 0;
   for (const item of data.residuals) {
     if (
       ![item.expected, item.estimated].every(
@@ -27,6 +31,12 @@ export function summarizeDiagnostic(data, name = 'Calibração atual') {
       item.expected[1] - item.estimated[1],
     );
     total += error ** 2;
+    const dx = item.estimated[0] - item.expected[0],
+      dy = item.estimated[1] - item.expected[1];
+    sx += dx * dx;
+    sy += dy * dy;
+    bx += dx;
+    by += dy;
     outside += Number(item.estimated.some((v) => v < 0 || v > 1));
     const key = item.expected.map((v) => v.toFixed(6)).join(',');
     if (!groups.has(key))
@@ -44,6 +54,8 @@ export function summarizeDiagnostic(data, name = 'Calibração atual') {
     mode: data.mode,
     rmse: data.quality.validation_rmse,
     recomputed: Math.sqrt(total / data.residuals.length),
+    axisRmse: [Math.sqrt(sx / data.residuals.length), Math.sqrt(sy / data.residuals.length)],
+    bias: [bx / data.residuals.length, by / data.residuals.length],
     basis: ['affine', 'quadratic'].includes(data.quality.basis)
       ? data.quality.basis
       : data.mode === 'motion'

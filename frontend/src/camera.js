@@ -46,7 +46,7 @@ export async function createCamera(video, onSample, onStatus, featureMode = 'fix
     });
     mesh.onResults((result) => {
       if (!running) return;
-      const inspection = inspectEyes(result.multiFaceLandmarks, featureMode === 'fixed');
+      const inspection = inspectEyes(result.multiFaceLandmarks, featureMode !== 'motion');
       const time = performance.now();
       const valid = gate.update(inspection.feature, time);
       onStatus?.(inspection.reason);

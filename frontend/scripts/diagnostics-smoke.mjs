@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 const base = process.env.HEATCITY_BASE_URL || 'http://127.0.0.1:5173';
@@ -31,6 +32,8 @@ try {
   });
   await page.getByRole('heading', { name: 'comparacao.json', exact: true }).waitFor();
   await page.getByLabel('Abertura mínima das pálpebras', { exact: true }).fill('0.08');
+  if (process.env.HEATCITY_TEST_PRECISION)
+    await page.getByLabel('Método de calibração').selectOption('precision');
   await page.evaluate(() => {
     window.FaceMesh = class {
       setOptions() {}
@@ -80,8 +83,21 @@ try {
   await page.getByRole('timer').filter({ hasText: '3' }).waitFor();
   await page
     .getByRole('button', { name: 'Mostrar tracking experimental', exact: true })
-    .waitFor({ timeout: 90000 });
+    .waitFor({ timeout: process.env.HEATCITY_TEST_PRECISION ? 150000 : 90000 });
   assert.ok(await page.locator('.fullscreen-panel p').filter({ hasText: 'Reprovada' }).count());
+  if (process.env.HEATCITY_TEST_PRECISION) {
+    const waiting = page.waitForEvent('download');
+    await page
+      .getByRole('button', { name: 'Baixar diagnóstico da calibração', exact: true })
+      .click();
+    const file = await waiting;
+    const data = JSON.parse(await readFile(await file.path(), 'utf8'));
+    assert.equal(data.mode, 'precision');
+    assert.equal(data.features.length, 29);
+    assert.equal(data.validation_features.length, 9);
+    assert.equal(data.capture_details.length, 38);
+    assert.equal(data.features[0].length, 10);
+  }
   await page.getByRole('button', { name: 'Mostrar tracking experimental', exact: true }).click();
   await page.locator('.gaze').waitFor();
   assert.ok(await page.getByText(/PRÉVIA DEV.*CALIBRAÇÃO REPROVADA/).count());
