@@ -64,14 +64,20 @@ export default function Preparation({ study, onFinished }) {
     <div className="preparation-grid">
       <section className="panel">
         <p className="eyebrow">ETAPA 1 · PREPARAR SESSÃO</p>
-        <h2>Quem vai avaliar a sinalização?</h2>
+        <h2>Identifique a sessão com um código</h2>
         <p className="muted">
-          Use um código, sem nome ou documento. Cada participante faz sua própria calibração.
+          O único dado de identificação solicitado é o código do participante. Não informe nome,
+          e-mail, CPF, telefone ou outros dados pessoais.
         </p>
         <div className="form-stack">
           <label>
-            Código do participante
+            Código do participante (obrigatório)
             <input
+              required
+              autoComplete="off"
+              spellCheck={false}
+              minLength={2}
+              aria-describedby="participant-code-help"
               placeholder="Ex.: P01"
               value={participant}
               maxLength={24}
@@ -81,6 +87,11 @@ export default function Preparation({ study, onFinished }) {
               }}
             />
           </label>
+          <p id="participant-code-help" className="small">
+            Use de 2 a 24 caracteres: letras, números, hífen ou sublinhado. Exemplo: P01. Reutilize
+            o mesmo código nas sessões da mesma pessoa. Cada participante faz sua própria
+            calibração.
+          </p>
           <label>
             Cenário
             <select
