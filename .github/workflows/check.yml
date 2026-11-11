@@ -1,8 +1,20 @@
 name: MVP quality
 on: [push, pull_request]
+concurrency:
+  group: mvp-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
+  delivery-gate:
+    name: Main reserved for final delivery
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reject promotion before final authorization
+        if: github.event_name == 'pull_request' && github.base_ref == 'main'
+        run: |
+          echo "::error::main está reservada para a entrega final. Direcione este PR para develop."
+          exit 1
   verify:
     runs-on: ubuntu-latest
     steps:

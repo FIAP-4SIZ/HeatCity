@@ -98,6 +98,12 @@ Em outro terminal: `npm --prefix frontend run dev`. API em localhost:8000 e pág
 em localhost:5173. HEATCITY_DATA_DIR configura o diretório SQLite (padrão data/).
 HEATCITY_API_URL configura o destino do proxy Vite.
 
+## Desenvolvimento e entrega
+
+Use branches curtas a partir de `develop`, com PRs para `develop`.
+A `main` está reservada à entrega final em aula, após autorização explícita do usuário.
+Veja [as regras do fluxo](docs/fluxo-desenvolvimento.md) e [AGENTS.md](AGENTS.md).
+
 ## Conferências de software
 
 ```bash
