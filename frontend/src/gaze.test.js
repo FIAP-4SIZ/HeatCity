@@ -5,6 +5,7 @@ import {
   calibrationFeature,
   sweepTargets,
   validationTargets,
+  sweepDuration,
   EyeGate,
   EyeReadiness,
 } from './gaze.js';
@@ -27,8 +28,8 @@ test('geometric interpolation preserves references, interior points and rejects 
   assert.ok(predict([1.5, 0.5], geometry).every(Number.isNaN));
   assert.deepEqual(calibrationFeature([0.2, 0.4, 0.4, 0.6]), [0.30000000000000004, 0.5]);
 });
-test('moving sweep visits nine distinct references at center, edges and corners', () => {
-  assert.equal(new Set(sweepTargets.map((p) => p.join(','))).size, 9);
+test('moving sweep visits 25 distinct references at center, edges and corners', () => {
+  assert.equal(new Set(sweepTargets.map((p) => p.join(','))).size, 25);
   for (const p of [
     [0.05, 0.05],
     [0.95, 0.95],
@@ -39,7 +40,7 @@ test('moving sweep visits nine distinct references at center, edges and corners'
     [0.05, 0.5],
   ])
     assert.ok(sweepTargets.some((q) => q.every((v, i) => v === p[i])));
-  assert.equal(validationTargets.length, 5);
+  assert.equal(validationTargets.length, 13);
 });
 test('blink rejection is temporary and button readiness survives a natural blink', () => {
   const gate = new EyeGate(),
@@ -93,4 +94,27 @@ test('page diagnostic retains rejected samples and tracking with bounded history
   assert.equal(result.samples[0].accepted, false);
   assert.equal(result.calibrations.length, 5);
   assert.equal(result.calibrations[0].index, 2);
+});
+
+test('sweep motion takes at least one second and slows down long moves', () => {
+  assert.equal(sweepDuration([0.5, 0.5], [0.5, 0.5]), 1000);
+  assert.ok(sweepDuration([0.05, 0.05], [0.95, 0.95]) > 3800);
+});
+test('a reference waits indefinitely for confirmation and excludes stale samples', async () => {
+  const { ReferenceCapture } = await import('./reference-capture.js');
+  const c = new ReferenceCapture([0.05, 0.05], 0);
+  assert.equal(c.confirm(100, 'space'), false);
+  for (let t = 300; t <= 1300; t += 50) c.push([t, t], t);
+  assert.equal(c.ready(1300), true);
+  assert.equal(c.confirmed, false);
+  assert.equal(c.ready(4000), false);
+  assert.equal(c.confirm(4000, 'space'), false);
+  for (let t = 4050; t <= 4700; t += 50) c.push([t, t], t);
+  assert.equal(c.confirm(4700, 'enter'), true);
+  assert.equal(c.confirmedBy, 'enter');
+  assert.ok(c.features.every((f) => f[0] >= 4050));
+  const n = c.features.length;
+  c.push([9000, 9000], 9000);
+  assert.equal(c.features.length, n);
+  assert.equal(c.confirm(4800, 'button'), false);
 });

@@ -1,8 +1,19 @@
+import { confirmSweep } from './confirm-sweep.mjs';
 import { readFile } from 'node:fs/promises';
 // Software-only E2E: real WASM/no-face gate, then synthetic landmarks. No human accuracy claims.
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 async function checkContrast(page) {
+  // Inspect settled theme colors rather than the intermediate background transition.
+  await page.evaluate(async () => {
+    getComputedStyle(document.body).backgroundColor;
+    await Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => Number.isFinite(a.effect.getComputedTiming().endTime))
+        .map((a) => a.finished.catch(() => {})),
+    );
+  });
   const ratios = await page.evaluate(() => {
     const light = (color) => {
       const values = color
@@ -143,6 +154,7 @@ try {
   await page.getByRole('button', { name: 'Iniciar calibração', exact: true }).click();
   await page.getByRole('timer').filter({ hasText: '3' }).waitFor();
   assert.equal(await page.locator('.target').count(), 0);
+  await confirmSweep(page);
   await page
     .getByRole('button', { name: 'Usar calibração no estudo', exact: true })
     .waitFor({ state: 'visible', timeout: 90000 });
@@ -156,11 +168,11 @@ try {
   await page.getByRole('button', { name: 'Baixar diagnóstico da calibração', exact: true }).click();
   const diagnosticFile = await diagnosticDownload;
   const diagnostic = JSON.parse(await readFile(await diagnosticFile.path(), 'utf8'));
-  assert.equal(diagnostic.targets.length, 9);
+  assert.equal(diagnostic.targets.length, 25);
   assert.equal(diagnostic.mode, 'sweep');
   assert.equal(diagnostic.quality.basis, 'mesh');
   assert.equal('coefficients' in diagnostic.quality, false);
-  assert.equal(diagnostic.residuals.length, 5);
+  assert.equal(diagnostic.residuals.length, 13);
   assert.equal('calibration_id' in diagnostic.quality, false);
   await page.getByRole('button', { name: 'Usar calibração no estudo', exact: true }).click();
   await page.getByRole('button', { name: 'Continuar para o teste de 15 s', exact: true }).click();

@@ -41,3 +41,25 @@ class GeometryTests(unittest.TestCase):
             fit_calibration(self.grid[:-1], self.grid[:-1], self.held, self.held)
         with self.assertRaises(ValueError):
             fit_calibration(self.grid, self.grid, self.held, [[0.5, 0.5]] * 5)
+
+    def test_a_bad_corner_cannot_hide_behind_low_overall_rmse(self):
+        shifted = [p[:] for p in self.held]
+        shifted[0][0] += 0.15
+        result = fit_calibration(self.grid, self.grid, shifted, self.held)
+        self.assertLess(result.validation_rmse, 0.1)
+        self.assertAlmostEqual(result.max_target_rmse, 0.15)
+        self.assertFalse(result.approved)
+        self.assertEqual(result.target_errors[0]["expected"], [0.2, 0.2])
+
+    def test_dense_grid_keeps_upper_corners_separate_from_top_center(self):
+        levels = [0.05, 0.275, 0.5, 0.725, 0.95]
+        grid = [[x, y] for y in levels for x in levels]
+        # A mirrored eye coordinate system remains geometric, not learned.
+        eyes = [[1 - x, y] for x, y in grid]
+        held_eyes = [[1 - x, y] for x, y in self.held]
+        result = fit_calibration(eyes, grid, held_eyes, self.held)
+        self.assertTrue(result.approved)
+        for point in [[0.05, 0.05], [0.5, 0.05], [0.95, 0.05]]:
+            np.testing.assert_allclose(
+                project([1 - point[0], point[1]], result.anchors, result.cells), point
+            )

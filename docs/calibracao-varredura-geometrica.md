@@ -15,24 +15,34 @@ percentil com regras fixas para piscadas; não classifica etnia.
 ## Alvo e cálculo
 
 1. A entrada em tela cheia inicia a contagem de três segundos em fundo branco.
-2. O alvo move-se suavemente por três linhas da tela, a 5%, 50% e 95% de altura,
-   cobrindo nove referências no centro, meios das bordas e cantos. Desacelera e
-   permanece brevemente nas referências para coletar ao menos dez quadros válidos.
-3. Passagens diagonais atravessam a área central. Os quadros em deslocamento não
-   são usados como referências, evitando confundir atraso ocular com posição.
-4. A referência ocular é a mediana da posição relativa média das duas íris. As
-   nove correspondências medidas formam oito triângulos. A posição entre três
-   referências é calculada por coordenadas baricêntricas, sem minimizar uma perda,
-   calcular pesos de regressão ou selecionar modelos.
-5. Cinco alvos posteriores (centro e quatro quadrantes) medem o erro, por quadro
-   e pelas medianas. Esses dados não alteram as referências geométricas. O limite
-   0,100 permanece. Um quadro sem previsão na malha reprova a cobertura; RMSE
-   considera apenas previsões existentes e fica indisponível se não houver nenhuma.
-6. Não há extrapolação fora da malha ocular. Regiões dobradas, cruzadas ou
+2. O alvo move-se suavemente por cinco linhas da tela (5%, 27,5%, 50%, 72,5% e
+   95%), em zigue-zague. Há 25 referências, incluindo pontos intermediários entre
+   o centro superior e os cantos. Cada movimento leva no mínimo um segundo; os
+   trajetos longos levam aproximadamente 3 segundos por unidade de tela normalizada.
+3. Ao chegar, o alvo fica parado por tempo indeterminado. Espaço ou Enter confirma
+   sem tirar os olhos do alvo; um botão oferece alternativa. Pressionar antes de
+   haver amostras suficientes não avança. Segurar uma tecla não confirma os próximos
+   pontos. ESC ou Cancelar interrompe a coleta.
+4. A referência usa somente quadros válidos dos últimos 1,2 s, pelo menos dez, com
+   o último a no máximo 0,5 s. Exige ao menos 0,9 s após chegada; não reutiliza quadros
+   do trajeto nem amostras antigas acumuladas durante uma espera longa. A confirmação
+   congela esse conjunto e registra seu horário e meio de acionamento no diagnóstico.
+5. As medianas das posições relativas médias das íris formam 32 triângulos. A
+   interpolação baricêntrica continua geométrica, sem regressão, treino ou seleção
+   de modelos. Cada confirmação acrescenta uma referência medida; não há correção
+   automática por assumir onde a pessoa olhou durante o tracking livre.
+6. Treze alvos posteriores, também confirmados, conferem centro, quadrantes, meios
+   das bordas e proximidade dos quatro cantos. Os dados só medem erro, sem alterar a
+   malha. O limite 0,100 é exigido globalmente e em cada alvo. Assim, um canto ruim
+   não é compensado por uma boa média no restante da tela. Quadros fora da malha
+   reprovam a cobertura. RMSE considera somente previsões existentes.
+7. Não há extrapolação fora da malha ocular. Regiões dobradas, cruzadas ou
    indistinguíveis são rejeitadas, em vez de devolver coordenadas arbitrárias.
 
-Duração nominal de cerca de 35 segundos, ampliada somente se faltarem amostras
-válidas. Piscadas pausam a coleta; não exigem manter olhos forçadamente abertos.
+A duração depende das confirmações do participante. Não há avanço por temporizador
+nem tempo máximo de espera em um alvo. Isso aumenta o controle e a cobertura, mas
+não comprova que os pontos cegos foram resolvidos em pessoas. A nova varredura
+precisa ser testada com a webcam real. A cabeça deve permanecer confortável e estável.
 O filtro de abertura e a recuperação temporal continuam funcionando.
 
 A câmera permanece fora do campo durante coleta/tracking. ESC interrompe a coleta

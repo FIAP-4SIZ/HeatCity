@@ -186,3 +186,34 @@
   background: #fff;
   color: #172b21;
 }
+.reference-confirmation {
+  position: absolute;
+  z-index: 3;
+  width: min(310px, 70vw);
+  text-align: center;
+  color: #172b21;
+  background: #fff;
+  padding: 10px;
+  border-radius: 8px;
+}
+.reference-confirmation p,
+.reference-confirmation span {
+  display: block;
+  margin: 4px 0 8px;
+  font-size: 13px;
+}
+.reference-confirmation button {
+  color: #fff;
+  background: #17633d;
+  border: 1px solid #17633d;
+  margin: 4px;
+}
+.reference-confirmation button:disabled {
+  color: #374b41;
+  background: #e3e9e5;
+  border-color: #809587;
+}
+.reference-confirmation button.secondary {
+  color: #172b21;
+  background: #fff;
+}

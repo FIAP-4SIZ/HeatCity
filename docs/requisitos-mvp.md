@@ -15,7 +15,7 @@ participantes, sessões, heatmaps e dashboard. O usuário confirmou **somente ol
 | Cenas e placas | Upload validado, desenho de AOIs sem sobreposição, cenário imutável | Testes de imagem e contrato; interface de edição |
 | Participantes | Código, tarefa e consentimento obrigatório | Contrato e teste de rejeição |
 | Captura | Webcam local via navegador; MediaPipe com íris refinadas | E2E com detector real/sem rosto; câmera real pendente |
-| Calibração | Alvo móvel, nove referências geométricas e conferência separada | Testes de interpolação, malhas inválidas e reprovação |
+| Calibração | Alvo lento, 25 referências confirmadas e 13 conferências regionais | Testes de interpolação, malhas inválidas e reprovação |
 | Bloqueio de qualidade | Aprovação da API, vínculo a código/cenário/tela, erro compatível com placa | Testes de autorização, vínculo e geometria |
 | Sessão ocular | 15 s, coordenadas normalizadas na imagem, intervalos inválidos e interrupção | E2E sintético completo; não há modo por clique |
 | Avaliação | Métricas por tarefa/cenário, exclusão por qualidade, deduplicação de participantes | Testes de sucesso/falha/repetição/cobertura/bordas |
@@ -30,7 +30,7 @@ participantes, sessões, heatmaps e dashboard. O usuário confirmou **somente ol
 
 - Não confundir funcionamento do software com precisão do rastreamento.
 - RMSE ≤ 0.100 e cobertura ≥ 60% são critérios heurísticos declarados antes da coleta.
-- A malha geométrica não usa regressão ou seleção de modelos. Cinco alvos posteriores
+- A malha geométrica não usa regressão ou seleção de modelos. Treze alvos posteriores
   medem o erro por quadro, sem mudar as referências. Não há extrapolação.
 - Borda da AOI recuada pelo RMSE reduz atribuições ambíguas; não é probabilidade de
   confiança e não prova que todos os pontos internos estejam corretos.

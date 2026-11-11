@@ -1,3 +1,4 @@
+import { confirmSweep } from './confirm-sweep.mjs';
 import { readFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
@@ -84,6 +85,7 @@ try {
   );
   await page.getByRole('button', { name: 'Iniciar calibração', exact: true }).click();
   await page.getByRole('timer').filter({ hasText: '3' }).waitFor();
+  await confirmSweep(page, { verifyWait: !!process.env.HEATCITY_TEST_APPROVED });
   await page
     .locator('.fullscreen-panel p')
     .filter({ hasText: /^RMSE / })
@@ -102,13 +104,20 @@ try {
     const file = await waiting;
     const data = JSON.parse(await readFile(await file.path(), 'utf8'));
     assert.equal(data.mode, 'sweep');
-    assert.equal(data.features.length, 9);
-    assert.equal(data.validation_features.length, 5);
-    assert.equal(data.capture_details.length, 14);
+    assert.equal(data.features.length, 25);
+    assert.equal(data.validation_features.length, 13);
+    assert.equal(data.capture_details.length, 38);
     assert.equal(data.features[0].length, 2);
     assert.equal(data.quality.basis, 'mesh');
+    assert.equal(data.confirmation_required, true);
+    assert.ok(
+      data.capture_details.every((c) => ['button', 'space', 'enter'].includes(c.confirmed_by)),
+    );
+    assert.ok(data.capture_details.some((c) => c.confirmed_by === 'button'));
+    assert.ok(data.capture_details.some((c) => c.confirmed_by === 'space'));
+    assert.ok(data.capture_details.some((c) => c.confirmed_by === 'enter'));
     assert.equal('coefficients' in data.quality, false);
-    assert.equal(data.validation_samples.length, 5);
+    assert.equal(data.validation_samples.length, 13);
   }
   await page.getByRole('button', { name: 'Mostrar tracking experimental', exact: true }).click();
   await page.locator('.gaze').waitFor();

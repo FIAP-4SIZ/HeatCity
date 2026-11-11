@@ -35,6 +35,8 @@ class Calibration:
     unsupported_validation_samples: int = 0
     validation_axis_rmse: list[float] | None = None
     validation_p90: float = 0
+    max_target_rmse: float | None = None
+    target_errors: list[dict] | None = None
 
 
 def _pairs(values, minimum):
@@ -147,30 +149,47 @@ def fit_calibration(
     median_rmse = (
         float(np.sqrt(np.mean(np.sum(med_errors**2, axis=1)))) if len(med_errors) else None
     )
-    if validation_samples is not None:
-        if len(validation_samples) != len(vy):
-            raise ValueError("Grupos de validação incompletos.")
-        values, labels = [], []
-        for group, t in zip(validation_samples, vy):
-            a = _pairs(group, 6)
-            if len(a) > 120:
-                raise ValueError("Limite de 120 quadros por alvo.")
-            values.extend(a)
-            labels.extend([t] * len(a))
-        residuals, missing = errors(values, labels)
-    else:
-        residuals, missing = med_errors, med_missing
+    if validation_samples is not None and len(validation_samples) != len(vy):
+        raise ValueError("Grupos de conferência incompletos.")
+    values, labels, target_errors = [], [], []
+    for index, t in enumerate(vy):
+        a = (
+            _pairs(validation_samples[index], 6)
+            if validation_samples is not None
+            else vx[index : index + 1]
+        )
+        if len(a) > 120:
+            raise ValueError("Limite de 120 quadros por alvo.")
+        rows, absent = errors(a, [t] * len(a))
+        error = float(np.sqrt(np.mean(np.sum(rows**2, axis=1)))) if len(rows) else None
+        target_errors.append(
+            {"expected": t.tolist(), "count": len(a), "unsupported": absent, "rmse": error}
+        )
+        values.extend(a)
+        labels.extend([t] * len(a))
+    residuals, missing = errors(values, labels)
+    max_target_rmse = max((r["rmse"] for r in target_errors if r["rmse"] is not None), default=None)
+    target_passed = all(
+        r["unsupported"] == 0 and r["rmse"] is not None and r["rmse"] <= max_rmse
+        for r in target_errors
+    )
     distances = np.linalg.norm(residuals, axis=1)
     rmse = float(np.sqrt(np.mean(distances**2))) if len(distances) else None
     return Calibration(
         anchors,
         cells,
         rmse,
-        not missing and not med_missing and rmse <= max_rmse and median_rmse <= max_rmse,
+        not missing
+        and not med_missing
+        and target_passed
+        and rmse <= max_rmse
+        and median_rmse <= max_rmse,
         validation_median_rmse=median_rmse,
         unsupported_validation_samples=missing,
         validation_axis_rmse=np.sqrt(np.mean(residuals**2, axis=0)).tolist()
         if len(residuals)
         else None,
         validation_p90=float(np.percentile(distances, 90)) if len(distances) else 0,
+        max_target_rmse=max_target_rmse,
+        target_errors=target_errors,
     )

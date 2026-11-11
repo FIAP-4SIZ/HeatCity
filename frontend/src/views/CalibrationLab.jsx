@@ -1,9 +1,11 @@
+import { ReferenceCapture } from '../reference-capture.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { createDetector } from '../detector.js';
 import { EyeProfile } from '../eye-profile.js';
 import { DiagnosticLog } from '../diagnostic-log.js';
 import {
   sweepTargets,
+  sweepDuration,
   validationTargets,
   calibrationFeature,
   medianFeature,
@@ -55,6 +57,7 @@ export default function CalibrationLab({
   const [result, setResult] = useState(null),
     [diagnostic, setDiagnostic] = useState(null),
     [metrics, setMetrics] = useState(null);
+  const [confirmation, setConfirmation] = useState(null);
   const [consent, setConsent] = useState(false),
     [progress, setProgress] = useState(0);
   const [dev, setDev] = useState({
@@ -72,6 +75,7 @@ export default function CalibrationLab({
     const s = state.current;
     s.generation++;
     s.collection = null;
+    setConfirmation(null);
     s.tracking = false;
     s.reference = null;
     s.displayTarget = null;
@@ -87,6 +91,13 @@ export default function CalibrationLab({
     setCountdown(null);
     setPhase('idle');
     if (text) setMessage(text);
+  }
+  function confirmReference(source = 'button') {
+    const s = state.current;
+    if (s.collection?.confirm(performance.now(), source)) {
+      s.log.event('reference_confirmed');
+      setConfirmation(null);
+    }
   }
   async function stop(text = 'Câmera desligada. Recalibre ao reiniciar.') {
     invalidate(text);
@@ -147,6 +158,13 @@ export default function CalibrationLab({
     const hidden = () => {
       if (document.hidden) stop('Captura interrompida ao sair da página.');
     };
+    const key = (event) => {
+      if (!state.current.collection || !['Space', 'Enter'].includes(event.code)) return;
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(event.target?.tagName)) return;
+      event.preventDefault();
+      if (!event.repeat) confirmReference(event.code === 'Space' ? 'space' : 'enter');
+    };
+    document.addEventListener('keydown', key);
     document.addEventListener('fullscreenchange', full);
     window.addEventListener('resize', resize);
     document.addEventListener('visibilitychange', hidden);
@@ -161,6 +179,7 @@ export default function CalibrationLab({
         request(`/calibrations/${state.current.calibration.calibration_id}`, null, 'DELETE').catch(
           () => {},
         );
+      document.removeEventListener('keydown', key);
       document.removeEventListener('fullscreenchange', full);
       window.removeEventListener('resize', resize);
       document.removeEventListener('visibilitychange', hidden);
@@ -214,15 +233,7 @@ export default function CalibrationLab({
             ? 'Olhos fechados por mais tempo. Abra-os quando confortável.'
             : inspection.reason;
         setGuidance(s.guide.update(issue, now).text);
-        if (
-          s.collection &&
-          accepted &&
-          now - s.collection.since >= 300 &&
-          now - (s.collection.last || 0) >= 50
-        ) {
-          s.collection.last = now;
-          s.collection.features.push(f);
-        }
+        if (s.collection && accepted) s.collection.push(f, now);
         const point = s.tracking && accepted ? predict(calibrationFeature(f), s.calibration) : null;
         if (point?.every(Number.isFinite)) {
           const alpha = s.dev.smoothing;
@@ -363,7 +374,7 @@ export default function CalibrationLab({
       const move = async (next) => {
         const from = last,
           start = performance.now(),
-          duration = Math.max(250, Math.hypot(next[0] - from[0], next[1] - from[1]) * 1100);
+          duration = sweepDuration(from, next);
         await new Promise((resolve, reject) => {
           const step = () => {
             try {
@@ -385,50 +396,55 @@ export default function CalibrationLab({
       const collect = async (point) => {
         await move(point);
         current();
-        const c = { target: point, since: performance.now(), features: [] };
+        const c = new ReferenceCapture(point, performance.now());
         s.collection = c;
-        while (performance.now() - c.since < 950 || c.features.length < 10) {
+        while (!c.confirmed) {
           current();
-          if (performance.now() - c.since > 4500)
-            throw new Error(
-              `Coleta insuficiente: ${c.features.length} amostras válidas. Confira olhos, iluminação e enquadramento.`,
-            );
-          await pause(30);
+          setConfirmation({ ready: c.ready(performance.now()), count: c.samples.length });
+          await pause(80);
         }
+        current();
         s.collection = null;
-        return c.features;
+        setConfirmation(null);
+        return c;
       };
       for (let i = 0; i < sweepTargets.length; i++) {
         setMessage(
-          `Varredura ${i + 1}/9: acompanhe o alvo com os olhos; ele desacelera nas referências.`,
+          `Referência ${i + 1}/${sweepTargets.length}: acompanhe o alvo. Confirme quando estiver olhando para ele.`,
         );
         const p = sweepTargets[i],
-          samples = await collect(p);
+          capture = await collect(p),
+          samples = capture.features;
         payload.features.push(medianFeature(samples.map(calibrationFeature)));
         payload.targets.push(p);
-        details.push({ phase: 'reference', target: p, samples });
+        details.push({
+          phase: 'reference',
+          target: p,
+          samples,
+          confirmed_by: capture.confirmedBy,
+          confirmed_at_ms: Math.round(capture.confirmedAt - s.began),
+        });
         setProgress(i + 1);
       }
-      // Diagonal passes cover the central field between row sweeps, without fitting to moving samples.
-      setMessage('Acompanhe as diagonais e o centro.');
-      for (const p of [
-        [0.05, 0.05],
-        [0.95, 0.95],
-        [0.95, 0.05],
-        [0.05, 0.95],
-        [0.5, 0.5],
-      ])
-        await move(p);
       for (let i = 0; i < validationTargets.length; i++) {
-        setMessage(`Conferência ${i + 1}/5: olhe para o alvo. Estes dados só medem erro.`);
+        setMessage(
+          `Conferência ${i + 1}/${validationTargets.length}: olhe para o alvo e confirme. Estes dados só medem erro.`,
+        );
         const p = validationTargets[i],
-          samples = await collect(p),
+          capture = await collect(p),
+          samples = capture.features,
           pairs = samples.map(calibrationFeature);
         payload.validation_features.push(medianFeature(pairs));
         payload.validation_targets.push(p);
         payload.validation_samples.push(pairs);
-        details.push({ phase: 'validation', target: p, samples });
-        setProgress(10 + i);
+        details.push({
+          phase: 'validation',
+          target: p,
+          samples,
+          confirmed_by: capture.confirmedBy,
+          confirmed_at_ms: Math.round(capture.confirmedAt - s.began),
+        });
+        setProgress(sweepTargets.length + i + 1);
       }
       s.displayTarget = null;
       setTarget(null);
@@ -451,7 +467,8 @@ export default function CalibrationLab({
       delete quality.calibration_id;
       delete quality.expires_in_seconds;
       const report = {
-        version: 3,
+        version: 4,
+        confirmation_required: true,
         mode: 'sweep',
         detector: s.mesh.engine,
         ...payload,
@@ -667,7 +684,10 @@ export default function CalibrationLab({
         <section className="experiment">
           <div className="stage-head">
             <h2>Calibração por varredura geométrica</h2>
-            <span>{progress}/14 referências · cerca de 35 s</span>
+            <span>
+              {progress}/{sweepTargets.length + validationTargets.length} · avanço somente ao
+              confirmar
+            </span>
           </div>
           <div
             ref={stage}
@@ -702,8 +722,48 @@ export default function CalibrationLab({
                 <div className="placeholder">
                   <span>＋</span>
                   <h3>Acompanhe o alvo móvel.</h3>
-                  <p>Varredura em linhas, bordas, cantos, diagonais e centro.</p>
+                  <p>
+                    Alvo lento, 25 referências e conferência dos cantos e bordas. Você controla o
+                    avanço.
+                  </p>
                   <p>Sem regressão, classificação ou treinamento.</p>
+                </div>
+              )}
+              {confirmation && target && (
+                <div
+                  className="reference-confirmation"
+                  style={{
+                    left: `clamp(min(165px, 45%), ${target[0] * 100}%, max(calc(100% - 165px), 55%))`,
+                    top: `${target[1] * 100}%`,
+                    transform:
+                      target[1] > 0.65
+                        ? 'translate(-50%, calc(-100% - 35px))'
+                        : 'translate(-50%, 35px)',
+                  }}
+                >
+                  <p>{message}</p>
+                  <button
+                    data-confirm-reference
+                    disabled={!confirmation.ready}
+                    onClick={() => confirmReference('button')}
+                  >
+                    Confirmar referência · Espaço ou Enter
+                  </button>
+                  <span role="status">
+                    {confirmation.ready
+                      ? 'Continue olhando para o alvo e confirme, sem olhar para o botão.'
+                      : 'Aguardando amostras recentes dos olhos. Pisque naturalmente.'}
+                  </span>
+                  {!confirmation.ready && <span>{guidance}</span>}
+                  <button
+                    className="secondary"
+                    onClick={() => {
+                      invalidate('Coleta cancelada.');
+                      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+                    }}
+                  >
+                    Cancelar
+                  </button>
                 </div>
               )}
             </div>
@@ -722,6 +782,12 @@ export default function CalibrationLab({
             </div>
             <div className="fullscreen-panel">
               <strong>{message}</strong>
+              {Number.isFinite(result?.max_target_rmse) && (
+                <p>
+                  Maior erro por alvo: {result.max_target_rmse.toFixed(3)} · cada região precisa
+                  atender ao limite 0,100.
+                </p>
+              )}
               {result?.unsupported_validation_samples > 0 && (
                 <p>
                   {result.unsupported_validation_samples} quadros sem previsão na malha. O RMSE,

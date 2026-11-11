@@ -1,22 +1,26 @@
-export const targets = [0.05, 0.5, 0.95].flatMap((y) => [0.05, 0.5, 0.95].map((x) => [x, y]));
-export const sweepTargets = [
-  targets[0],
-  targets[1],
-  targets[2],
-  targets[5],
-  targets[4],
-  targets[3],
-  targets[6],
-  targets[7],
-  targets[8],
-];
+export const referenceLevels = [0.05, 0.275, 0.5, 0.725, 0.95];
+export const targets = referenceLevels.flatMap((y) => referenceLevels.map((x) => [x, y]));
+export const sweepTargets = referenceLevels.flatMap((y, row) =>
+  (row % 2 ? [...referenceLevels].reverse() : referenceLevels).map((x) => [x, y]),
+);
 export const validationTargets = [
   [0.2, 0.2],
   [0.8, 0.2],
   [0.5, 0.5],
   [0.2, 0.8],
   [0.8, 0.8],
+  [0.08, 0.08],
+  [0.5, 0.08],
+  [0.92, 0.08],
+  [0.08, 0.5],
+  [0.92, 0.5],
+  [0.08, 0.92],
+  [0.5, 0.92],
+  [0.92, 0.92],
 ];
+export function sweepDuration(from, to) {
+  return Math.max(1000, Math.hypot(to[0] - from[0], to[1] - from[1]) * 3000);
+}
 export function predict(feature, geometry) {
   if (!feature || geometry?.basis !== 'mesh') return [NaN, NaN];
   for (const cell of geometry.cells || []) {
