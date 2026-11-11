@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from .analysis import Area, Sample, analyze
-from .calibration import fit_calibration
+from .calibration import GeometryIssue, build_mesh, fit_calibration
 from .workflow import calibration_models, router
 
 app = FastAPI(title="HeatCity", version="1.0.0")
@@ -53,6 +53,22 @@ class CalibrationRequest(BaseModel):
     validation_features: list[list[float]] = Field(max_length=5000)
     validation_targets: list[list[float]] = Field(max_length=5000)
     validation_samples: list[ValidationGroup] | None = Field(default=None, max_length=25)
+
+
+class GeometryRequest(BaseModel):
+    features: list[EyePair] = Field(min_length=1, max_length=25)
+    targets: list[EyePair] = Field(min_length=1, max_length=25)
+
+
+@app.post("/diagnostics/geometry")
+def geometry_check(body: GeometryRequest):
+    try:
+        _, cells = build_mesh(body.features, body.targets, partial=True)
+        return {"valid": True, "checked_cells": len(cells)}
+    except GeometryIssue as error:
+        return {"valid": False, "message": str(error), "reference_indices": error.reference_indices}
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
 
 
 class AnalysisRequest(BaseModel):

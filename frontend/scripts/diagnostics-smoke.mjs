@@ -18,6 +18,25 @@ try {
   await page.route('**/mediapipe/face_landmarker.task', (route) =>
     route.fulfill({ status: 404, body: '' }),
   );
+  let injectedGeometryFault = false;
+  if (process.env.HEATCITY_TEST_APPROVED || process.env.HEATCITY_TEST_EARLY_FAILURE) {
+    await page.route('**/api/diagnostics/geometry', async (route) => {
+      const data = route.request().postDataJSON();
+      if (
+        data.features.length === 10 &&
+        (process.env.HEATCITY_TEST_EARLY_FAILURE || !injectedGeometryFault)
+      ) {
+        injectedGeometryFault = true;
+        await route.fulfill({
+          json: {
+            valid: false,
+            message: 'Região inconsistente no teste sintético.',
+            reference_indices: [0, 1, 8, 9],
+          },
+        });
+      } else await route.continue();
+    });
+  }
   const before = await (await page.request.get(`${base}/api/studies`)).json();
   await page.goto(base);
   await page.getByRole('button', { name: 'Diagnósticos', exact: true }).click();
@@ -85,6 +104,40 @@ try {
   );
   await page.getByRole('button', { name: 'Iniciar calibração', exact: true }).click();
   await page.getByRole('timer').filter({ hasText: '3' }).waitFor();
+  if (process.env.HEATCITY_TEST_EARLY_FAILURE) {
+    await page
+      .locator('.fullscreen-panel strong')
+      .filter({ hasText: /Coleta interrompida na linha 2/ })
+      .waitFor({ timeout: 100000 });
+    await page.waitForFunction(() => !document.fullscreenElement);
+    assert.equal(
+      await page
+        .getByRole('button', { name: 'Baixar diagnóstico da calibração', exact: true })
+        .isVisible(),
+      true,
+    );
+    const waiting = page.waitForEvent('download');
+    await page
+      .getByRole('button', { name: 'Baixar diagnóstico completo da página', exact: true })
+      .click();
+    const file = await waiting;
+    const data = JSON.parse(await readFile(await file.path(), 'utf8'));
+    const partial = data.page_diagnostic.incomplete_calibration;
+    assert.equal(partial.status, 'failed');
+    assert.equal(partial.features.length, 10);
+    assert.equal(partial.validation_features.length, 0);
+    assert.ok(partial.motion_capture.samples.length > 0);
+    assert.deepEqual(partial.affected_references, [0, 1, 8, 9]);
+    assert.equal(data.page_diagnostic.calibrations.at(-1).status, 'failed');
+    assert.ok(partial.geometry_checks.some((c) => c.retry === 2));
+    assert.deepEqual(await (await page.request.get(`${base}/api/studies`)).json(), before);
+    assert.deepEqual(errors, []);
+    console.log(
+      'PASS: inconsistent region stops before held-out targets; local retries and all partial measurements remain downloadable without registration.',
+    );
+    await browser.close();
+    process.exit(0);
+  }
   await waitForAutomaticSweep(page, { verifyWait: !!process.env.HEATCITY_TEST_APPROVED });
   await page
     .locator('.fullscreen-panel p')
@@ -111,6 +164,24 @@ try {
     assert.equal(data.quality.basis, 'mesh');
     assert.equal(data.confirmation_required, false);
     assert.equal(data.automatic_advance, true);
+    assert.ok(data.motion_capture.samples.length > 0);
+    assert.ok(
+      data.capture_details
+        .filter((c) => c.phase === 'reference')
+        .some((c) => c.motion_samples_used > 0),
+    );
+    assert.ok(
+      data.capture_details
+        .filter((c) => c.phase === 'validation')
+        .every((c) => c.motion_samples_used === 0),
+    );
+    assert.ok(data.geometry_checks.length >= 5);
+    assert.equal(data.geometry_checks.at(-1).valid, true);
+    if (process.env.HEATCITY_TEST_APPROVED) {
+      assert.ok(injectedGeometryFault);
+      assert.ok(data.geometry_checks.some((c) => !c.valid));
+      assert.ok(data.capture_details.some((c) => (c.retry || 0) > 0));
+    }
     assert.ok(data.capture_details.every((c) => c.accepted_by === 'automatic_stability'));
     assert.ok(data.capture_details.every((c) => c.stability.eye_p90 <= 0.035));
     assert.equal('coefficients' in data.quality, false);

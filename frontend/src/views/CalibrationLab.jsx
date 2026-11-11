@@ -1,3 +1,4 @@
+import { MotionCapture } from '../motion-capture.js';
 import { ReferenceCapture } from '../reference-capture.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { createDetector } from '../detector.js';
@@ -74,7 +75,18 @@ export default function CalibrationLab({
   function invalidate(text) {
     const s = state.current;
     s.generation++;
+    if (s.pending?.status === 'collecting') {
+      s.pending = {
+        ...s.pending,
+        status: 'interrupted',
+        error: text || 'Coleta interrompida.',
+        motion_capture: s.motion?.snapshot(),
+      };
+      if (s.pending.features.length || s.pending.motion_capture?.samples.length)
+        s.log.calibration(s.pending);
+    }
     s.collection = null;
+    if (s.motion) s.motion.enabled = false;
     setCaptureStatus(null);
     s.tracking = false;
     s.reference = null;
@@ -109,6 +121,9 @@ export default function CalibrationLab({
   useEffect(() => {
     registerSnapshot?.(() => ({
       ...state.current.log.snapshot(),
+      incomplete_calibration: state.current.pending
+        ? { ...state.current.pending, motion_capture: state.current.motion?.snapshot() }
+        : null,
       detector: state.current.mesh?.engine || null,
       eye_profile: state.current.profile?.baseline || null,
       developer_options: { ...state.current.dev },
@@ -134,6 +149,9 @@ export default function CalibrationLab({
           setGaze(null);
           setTarget(null);
           setPhase('result');
+        } else if (s.pending?.status === 'failed') {
+          invalidate(s.pending.error);
+          setDiagnostic(s.pending);
         } else invalidate('Tela cheia encerrada. A coleta foi interrompida.');
       }
     };
@@ -218,6 +236,7 @@ export default function CalibrationLab({
             ? 'Olhos fechados por mais tempo. Abra-os quando confortável.'
             : inspection.reason;
         setGuidance(s.guide.update(issue, now).text);
+        if (accepted) s.motion?.add(f, now);
         if (s.collection && accepted) s.collection.push(f, now);
         const point = s.tracking && accepted ? predict(calibrationFeature(f), s.calibration) : null;
         if (point?.every(Number.isFinite)) {
@@ -338,6 +357,17 @@ export default function CalibrationLab({
         validation_targets: [],
         validation_samples: [],
       };
+    s.motion = new MotionCapture();
+    s.pending = {
+      version: 6,
+      record_type: 'incomplete_calibration',
+      detector: s.mesh?.engine,
+      eye_profile: s.profile?.baseline,
+      status: 'collecting',
+      ...payload,
+      capture_details: details,
+      geometry_checks: [],
+    };
     const current = () => {
       if (s.generation !== id || !s.running) throw new Error('Coleta interrompida.');
     };
@@ -367,6 +397,7 @@ export default function CalibrationLab({
               const t = Math.min(1, (performance.now() - start) / duration),
                 ease = t * t * (3 - 2 * t);
               s.displayTarget = next.map((v, i) => from[i] + ease * (v - from[i]));
+              s.motion.target(s.displayTarget, performance.now(), t < 1);
               setTarget(s.displayTarget);
               if (t < 1) requestAnimationFrame(step);
               else resolve();
@@ -378,10 +409,15 @@ export default function CalibrationLab({
         });
         last = next;
       };
-      const collect = async (point) => {
+      const collect = async (point, reuseMotion = true) => {
         await move(point);
         current();
-        const c = new ReferenceCapture(point, performance.now());
+        const arrived = performance.now();
+        const c = new ReferenceCapture(
+          point,
+          arrived,
+          reuseMotion ? s.motion.near(point, arrived) : [],
+        );
         s.collection = c;
         while (!c.complete) {
           current();
@@ -410,16 +446,59 @@ export default function CalibrationLab({
           samples,
           accepted_by: 'automatic_stability',
           stability: capture.stability,
+          motion_samples_used: capture.motionSamplesUsed || 0,
           accepted_at_ms: Math.round(capture.acceptedAt - s.began),
         });
         setProgress(i + 1);
+        if ((i + 1) % 5 === 0) {
+          for (let attempt = 0; attempt <= 2; attempt++) {
+            const check = await request('/diagnostics/geometry', {
+              features: payload.features,
+              targets: payload.targets,
+            });
+            current();
+            s.pending.geometry_checks.push({
+              ...check,
+              references: payload.features.length,
+              retry: attempt,
+            });
+            if (check.valid) break;
+            if (attempt === 2) {
+              s.pending.affected_references = check.reference_indices;
+              throw new Error(
+                `Coleta interrompida na linha ${Math.floor(i / 5) + 1}: ${check.message} Os dados e pontos afetados estão no diagnóstico; não é necessário esperar as conferências finais.`,
+              );
+            }
+            const all = check.reference_indices || [];
+            const recent = all.filter((index) => index >= i - 4);
+            const indices = attempt === 0 && recent.length ? recent : all;
+            if (!indices.length) throw new Error(check.message);
+            for (const index of indices) {
+              setMessage(
+                `Recolhendo somente a região inconsistente: referência ${index + 1}/${payload.features.length}. Continue acompanhando o alvo.`,
+              );
+              const repeated = await collect(payload.targets[index], false);
+              payload.features[index] = medianFeature(repeated.features.map(calibrationFeature));
+              details[index] = {
+                ...details[index],
+                samples: repeated.features,
+                previous_reference: details[index],
+                retry: attempt + 1,
+                stability: repeated.stability,
+                motion_samples_used: 0,
+                accepted_at_ms: Math.round(repeated.acceptedAt - s.began),
+              };
+            }
+          }
+        }
       }
+      s.motion.enabled = false;
       for (let i = 0; i < validationTargets.length; i++) {
         setMessage(
           `Conferência ${i + 1}/${validationTargets.length}: olhe para o alvo; o avanço é automático. Estes dados só medem erro.`,
         );
         const p = validationTargets[i],
-          capture = await collect(p),
+          capture = await collect(p, false),
           samples = capture.features,
           pairs = samples.map(calibrationFeature);
         payload.validation_features.push(medianFeature(pairs));
@@ -431,6 +510,7 @@ export default function CalibrationLab({
           samples,
           accepted_by: 'automatic_stability',
           stability: capture.stability,
+          motion_samples_used: capture.motionSamplesUsed || 0,
           accepted_at_ms: Math.round(capture.acceptedAt - s.began),
         });
         setProgress(sweepTargets.length + i + 1);
@@ -456,7 +536,9 @@ export default function CalibrationLab({
       delete quality.calibration_id;
       delete quality.expires_in_seconds;
       const report = {
-        version: 5,
+        version: 6,
+        motion_capture: s.motion.snapshot(),
+        geometry_checks: s.pending.geometry_checks,
         confirmation_required: false,
         automatic_advance: true,
         mode: 'sweep',
@@ -485,6 +567,7 @@ export default function CalibrationLab({
           };
         }),
       };
+      s.pending = null;
       s.log.calibration(report);
       setDiagnostic(report);
       onDiagnostic?.(report);
@@ -501,7 +584,19 @@ export default function CalibrationLab({
           response.expires_in_seconds * 1000,
         );
     } catch (e) {
-      if (s.generation === id) invalidate(e.message);
+      if (s.generation === id) {
+        s.pending = {
+          ...s.pending,
+          status: 'failed',
+          error: e.message,
+          motion_capture: s.motion.snapshot(),
+        };
+        s.log.calibration(s.pending);
+        invalidate(e.message);
+        setDiagnostic(s.pending);
+        if (document.fullscreenElement === stage.current)
+          await document.exitFullscreen().catch(() => {});
+      }
     } finally {
       if (s.generation === id) {
         s.collection = null;

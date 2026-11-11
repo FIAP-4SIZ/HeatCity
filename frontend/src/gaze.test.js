@@ -121,3 +121,34 @@ test('references advance automatically only with fresh stable eyes and head', as
   for (let t = 300; t <= 1300; t += 50) head.push([...base.slice(0, 6), 0.5 + t * 0.00002, 0.5], t);
   assert.equal(head.evaluate(1300), false);
 });
+
+test('movement uses the acquisition timestamp and seeds only nearby references', async () => {
+  const { MotionCapture } = await import('./motion-capture.js');
+  const { ReferenceCapture } = await import('./reference-capture.js');
+  const motion = new MotionCapture();
+  const f = [0.4, 0.1, 0.4, 0.1, 0, 0, 0.5, 0.5];
+  for (let t = 0; t <= 1000; t += 50) {
+    motion.target([0.4 + (0.1 * t) / 1000, 0.5], t, true);
+    motion.add(f, t);
+  }
+  const seed = motion.near([0.5, 0.5], 1000);
+  assert.ok(seed.length >= 3);
+  assert.ok(seed.every((s) => Math.hypot(s.target[0] - 0.5, s.target[1] - 0.5) <= 0.025));
+  assert.deepEqual(motion.near([0.9, 0.9], 1000), []);
+  assert.deepEqual(motion.near([0.5, 0.5], 3000), []);
+  const capture = new ReferenceCapture([0.5, 0.5], 1000, seed);
+  for (let t = 1150; t <= 1500; t += 50) capture.push(f, t);
+  assert.equal(capture.evaluate(1500), true);
+  assert.ok(capture.motionSamplesUsed >= 3);
+  const stationary = new ReferenceCapture([0.5, 0.5], 1000);
+  for (let t = 1150; t <= 1500; t += 50) stationary.push(f, t);
+  assert.equal(stationary.evaluate(1500), false);
+  const delayed = new MotionCapture();
+  delayed.target([0.1, 0.1], 100, true);
+  delayed.target([0.9, 0.9], 200, true);
+  delayed.add(f, 150);
+  assert.deepEqual(delayed.snapshot().samples[0].target, [0.1, 0.1]);
+  delayed.enabled = false;
+  delayed.add(f, 250);
+  assert.equal(delayed.snapshot().samples.length, 1);
+});

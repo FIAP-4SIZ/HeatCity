@@ -3,11 +3,13 @@ const median = (values) => [...values].sort((a, b) => a - b)[Math.floor(values.l
 const center = (rows) => [0, 1, 2, 3].map((axis) => median(rows.map((r) => r.feature[axis])));
 const distance = (a, b) => Math.hypot(...a.map((v, i) => v - b[i])) / Math.SQRT2;
 export class ReferenceCapture {
-  constructor(target, since) {
+  constructor(target, since, motionSamples = []) {
     this.target = target;
-    this.since = since;
-    this.last = -Infinity;
-    this.samples = [];
+    this.arrived = since;
+    this.since = motionSamples.length ? Math.min(since, motionSamples[0].time - 300) : since;
+    this.collectAfter = since + (motionSamples.length ? 150 : 300);
+    this.last = motionSamples.at(-1)?.time ?? -Infinity;
+    this.samples = motionSamples.map((s) => ({ ...s, feature: [...s.feature], moving: true }));
     this.complete = false;
     this.reason = 'Aguardando amostras recentes dos olhos.';
   }
@@ -16,7 +18,7 @@ export class ReferenceCapture {
   }
   push(feature, time) {
     if (!Array.isArray(feature) || feature.length < 4 || !feature.every(Number.isFinite)) return;
-    if (this.complete || time - this.since < 300 || time - this.last < 50) return;
+    if (this.complete || time < this.collectAfter || time - this.last < 50) return;
     this.last = time;
     this.samples.push({ feature: [...feature], time });
     this.prune(time);
@@ -25,6 +27,7 @@ export class ReferenceCapture {
     if (this.complete) return true;
     this.prune(time);
     if (
+      time - this.arrived < 300 ||
       time - this.since < 900 ||
       this.samples.length < 10 ||
       time - this.last > 250 ||
@@ -62,6 +65,7 @@ export class ReferenceCapture {
     this.complete = true;
     this.acceptedAt = time;
     this.features = this.samples.map((s) => s.feature);
+    this.motionSamplesUsed = this.samples.filter((s) => s.moving).length;
     this.reason = 'Referência registrada automaticamente.';
     return true;
   }

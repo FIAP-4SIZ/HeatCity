@@ -23,7 +23,10 @@ branca, com contagem inicial de três segundos. Os deslocamentos levam pelo meno
 um segundo. O sistema registra cada referência e avança automaticamente quando
 há amostras recentes e estabilidade dos olhos e da cabeça. Não exige botão,
 Espaço ou Enter. Se a detecção ou a estabilidade piorar, o alvo espera e retoma
-sozinho quando a coleta melhora. Vinte e cinco correspondências medidas dos olhos
+sozinho quando a coleta melhora. Amostras válidas próximas da próxima referência
+são aproveitadas durante o movimento para reduzir a pausa. A malha é conferida
+a cada linha; regiões inconsistentes são recolhidas localmente, com tentativas
+limitadas, e uma falha preserva os dados parciais no diagnóstico. Vinte e cinco correspondências medidas dos olhos
 formam uma malha; coordenadas intermediárias são interpoladas geometricamente.
 Treze alvos adicionais conferem centro, bordas e cantos sem alterar a malha. Cada
 região deve atender ao limite, além da média geral. Não há regressão,

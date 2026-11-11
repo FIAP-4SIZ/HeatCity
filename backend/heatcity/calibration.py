@@ -52,6 +52,94 @@ def _pairs(values, minimum):
     return a
 
 
+class GeometryIssue(ValueError):
+    def __init__(self, message, indices=()):
+        super().__init__(message)
+        self.reference_indices = sorted(set(int(i) for i in indices))
+
+
+def build_mesh(features, targets, partial=False):
+    x, y = _pairs(features, 1 if partial else 9), _pairs(targets, 1 if partial else 9)
+    if len(x) != len(y) or (y < 0).any() or (y > 1).any():
+        raise ValueError("Cada referência ocular precisa de um alvo dentro da tela.")
+    if partial:
+        levels_x = levels_y = [0.05, 0.275, 0.5, 0.725, 0.95]
+        if any(
+            not any(abs(t[0] - v) < 1e-8 for v in levels_x)
+            or not any(abs(t[1] - v) < 1e-8 for v in levels_y)
+            for t in y
+        ):
+            raise ValueError("Referência fora da grade parcial de cinco linhas.")
+    else:
+        levels_x, levels_y = sorted(set(np.round(y[:, 0], 6))), sorted(set(np.round(y[:, 1], 6)))
+        if (
+            len(levels_x) not in (3, 5)
+            or len(levels_y) != len(levels_x)
+            or len(y) != len(levels_x) ** 2
+        ):
+            raise ValueError("Complete a malha de 3×3 ou 5×5 referências distintas.")
+        if min(levels_x) > 0.1 or max(levels_x) < 0.9 or min(levels_y) > 0.1 or max(levels_y) < 0.9:
+            raise ValueError("O alvo precisa cobrir centro, bordas e cantos da tela.")
+    lookup = {tuple(np.round(t, 6)): i for i, t in enumerate(y)}
+    if len(lookup) != len(y):
+        raise ValueError("As referências da malha não podem se repetir.")
+    anchors = [{"eye": a.tolist(), "screen": b.tolist()} for a, b in zip(x, y)]
+
+    def area(cell):
+        p, q, r = x[cell]
+        return (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])
+
+    quads = []
+    for j in range(len(levels_y) - 1):
+        for i in range(len(levels_x) - 1):
+            keys = [
+                (levels_x[i], levels_y[j]),
+                (levels_x[i + 1], levels_y[j]),
+                (levels_x[i + 1], levels_y[j + 1]),
+                (levels_x[i], levels_y[j + 1]),
+            ]
+            if any(k not in lookup for k in keys):
+                if partial:
+                    continue
+                raise ValueError("Falta uma referência da malha.")
+            nodes = [lookup[k] for k in keys]
+            signed = area(nodes[:3]) + area([nodes[0], nodes[2], nodes[3]])
+            quads.append((nodes, signed))
+    if not quads:
+        return anchors, []
+    signs = [np.sign(a) for _, a in quads if abs(a) > 1e-7]
+    orientation = 1 if sum(signs) > 0 else -1
+    cells = []
+    for (a, b, c, d), _ in quads:
+        options = [[[a, b, c], [a, c, d]], [[a, b, d], [b, c, d]]]
+        usable = [
+            option for option in options if all(area(cell) * orientation > 1e-7 for cell in option)
+        ]
+        if not usable:
+            raise GeometryIssue(
+                "Referências inconsistentes nesta região; recolha os pontos indicados.",
+                [a, b, c, d],
+            )
+        # Either diagonal is valid for a simple concave quadrilateral. Prefer
+        # triangles with a larger minimum area, without fitting any parameters.
+        cells.extend(max(usable, key=lambda option: min(abs(area(cell)) for cell in option)))
+    edges = sorted({tuple(sorted((c[i], c[(i + 1) % 3]))) for c in cells for i in range(3)})
+
+    def side(a, b, c):
+        return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+
+    for k, (a, b) in enumerate(edges):
+        for c, d in edges[k + 1 :]:
+            if len({a, b, c, d}) < 4:
+                continue
+            if (
+                side(x[a], x[b], x[c]) * side(x[a], x[b], x[d]) < 0
+                and side(x[c], x[d], x[a]) * side(x[c], x[d], x[b]) < 0
+            ):
+                raise GeometryIssue("Regiões cruzadas nesta parte da malha.", [a, b, c, d])
+    return anchors, cells
+
+
 def fit_calibration(
     features,
     targets,
@@ -73,66 +161,10 @@ def fit_calibration(
         or (vy > 1).any()
     ):
         raise ValueError("Alvos e limite de erro devem estar dentro da tela normalizada.")
-    levels_x, levels_y = sorted(set(y[:, 0])), sorted(set(y[:, 1]))
     expected_held = {(0.2, 0.2), (0.8, 0.2), (0.5, 0.5), (0.2, 0.8), (0.8, 0.8)}
     if not expected_held.issubset(set(map(tuple, np.round(vy, 6)))):
-        raise ValueError("Valide centro e quatro quadrantes em uma coleta separada.")
-    if (
-        len(levels_x) not in (3, 5)
-        or len(levels_y) != len(levels_x)
-        or len(y) != len(levels_x) ** 2
-    ):
-        raise ValueError("Complete a malha de 3×3 ou 5×5 referências distintas.")
-    if min(levels_x) > 0.1 or max(levels_x) < 0.9 or min(levels_y) > 0.1 or max(levels_y) < 0.9:
-        raise ValueError("O alvo precisa cobrir centro, bordas e cantos da tela.")
-    lookup = {tuple(t): i for i, t in enumerate(y)}
-    if len(lookup) != len(y):
-        raise ValueError("As referências da malha não podem se repetir.")
-    anchors = [{"eye": a.tolist(), "screen": b.tolist()} for a, b in zip(x, y)]
-    cells = []
-    signs = []
-    for j in range(len(levels_y) - 1):
-        for i in range(len(levels_x) - 1):
-            try:
-                a, b, c, d = [
-                    lookup[t]
-                    for t in [
-                        (levels_x[i], levels_y[j]),
-                        (levels_x[i + 1], levels_y[j]),
-                        (levels_x[i + 1], levels_y[j + 1]),
-                        (levels_x[i], levels_y[j + 1]),
-                    ]
-                ]
-            except KeyError as error:
-                raise ValueError("Falta uma referência da malha.") from error
-            for cell in ([a, b, c], [a, c, d]):
-                p, q, r = x[cell]
-                area = (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])
-                if abs(area) < 1e-7:
-                    raise ValueError(
-                        "Referências oculares indistinguíveis. A malha não pode ser interpolada."
-                    )
-                signs.append(area > 0)
-                cells.append(cell)
-    if len(set(signs)) != 1:
-        raise ValueError(
-            "A malha ocular se dobrou: movimento, ruído ou referências inconsistentes. Repita a varredura."
-        )
-    # Local orientation alone is insufficient: reject crossing nonadjacent mesh edges.
-    edges = sorted({tuple(sorted((c[i], c[(i + 1) % 3]))) for c in cells for i in range(3)})
-
-    def side(a, b, c):
-        return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
-
-    for k, (a, b) in enumerate(edges):
-        for c, d in edges[k + 1 :]:
-            if len({a, b, c, d}) < 4:
-                continue
-            if (
-                side(x[a], x[b], x[c]) * side(x[a], x[b], x[d]) < 0
-                and side(x[c], x[d], x[a]) * side(x[c], x[d], x[b]) < 0
-            ):
-                raise ValueError("A malha contém regiões cruzadas. Refaça as referências.")
+        raise ValueError("Confira centro e quatro quadrantes em uma coleta separada.")
+    anchors, cells = build_mesh(x, y)
 
     def errors(values, labels):
         residuals = []

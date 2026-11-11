@@ -58,3 +58,18 @@ class AuthorizationTests(unittest.TestCase):
         self.assertTrue(result["diagnostic_only"])
         self.assertNotIn("calibration_id", result)
         self.assertEqual((set(approvals), set(calibration_models)), before)
+
+    def test_partial_geometry_is_pure_and_does_not_authorize_tracking(self):
+        from heatcity.api import GeometryRequest, geometry_check
+        from heatcity.workflow import calibration_models
+
+        points = [[0.05, 0.05], [0.275, 0.05], [0.275, 0.275], [0.05, 0.275]]
+        before = (set(approvals), set(calibration_models))
+        good = geometry_check(GeometryRequest(features=points, targets=points))
+        self.assertTrue(good["valid"])
+        bad = geometry_check(
+            GeometryRequest(features=[[0, 0], [1, 1], [1, 0], [0, 1]], targets=points)
+        )
+        self.assertFalse(bad["valid"])
+        self.assertEqual(bad["reference_indices"], [0, 1, 2, 3])
+        self.assertEqual((set(approvals), set(calibration_models)), before)

@@ -63,3 +63,22 @@ class GeometryTests(unittest.TestCase):
             np.testing.assert_allclose(
                 project([1 - point[0], point[1]], result.anchors, result.cells), point
             )
+
+    def test_partial_check_detects_fold_before_final_conference(self):
+        from heatcity.calibration import GeometryIssue, build_mesh
+
+        points = [[0.05, 0.05], [0.275, 0.05], [0.275, 0.275], [0.05, 0.275]]
+        with self.assertRaises(GeometryIssue) as error:
+            build_mesh([[0, 0], [1, 1], [1, 0], [0, 1]], points, partial=True)
+        self.assertEqual(error.exception.reference_indices, [0, 1, 2, 3])
+        _, cells = build_mesh([[0, 0], [1, 0]], points[:2], partial=True)
+        self.assertEqual(cells, [])
+
+    def test_concave_simple_region_uses_alternative_diagonal(self):
+        from heatcity.calibration import build_mesh
+
+        points = [[0.05, 0.05], [0.275, 0.05], [0.275, 0.275], [0.05, 0.275]]
+        anchors, cells = build_mesh([[0, 0], [0.2, 0.8], [1, 1], [0, 1]], points, partial=True)
+        self.assertEqual(cells, [[0, 1, 3], [1, 2, 3]])
+        for index, a in enumerate(anchors):
+            np.testing.assert_allclose(project(a["eye"], anchors, cells), points[index])

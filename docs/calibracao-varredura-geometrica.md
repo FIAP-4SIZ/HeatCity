@@ -22,7 +22,7 @@ percentil com regras fixas para piscadas; não classifica etnia.
 3. Ao chegar, o alvo aguarda o sistema obter uma janela recente estável. Não há
    confirmação por botão ou teclado. ESC ou Cancelar interrompe a coleta.
 4. São necessários ao menos dez quadros válidos dos últimos 1,2 s, cobrindo ao
-   menos 0,6 s, depois de 0,9 s da chegada, com o último quadro a no máximo 0,25 s.
+   menos 0,6 s (sem reaproveitamento, após 0,9 s da chegada), com o último quadro a no máximo 0,25 s.
    A dispersão P90 das duas posições oculares deve ser <= 0,035 e a diferença
    entre as medianas das duas metades <= 0,020, em coordenadas relativas dos olhos.
    O deslocamento da posição da cabeça entre as metades deve ser <= 0,005 nas
@@ -54,6 +54,48 @@ O filtro de abertura e a recuperação temporal continuam funcionando.
 A câmera permanece fora do campo durante coleta/tracking. ESC interrompe a coleta
 ou volta da prévia para o diagnóstico. O diagnóstico completo sem cadastro continua
 registrando coordenadas, configurações, rejeições e tracking, sem imagens.
+
+## Aproveitamento em movimento e checagem antecipada
+
+O detector registra coordenadas oculares válidas durante os deslocamentos, no
+máximo a cada 50 ms. Cada amostra é associada à última posição desenhada do alvo
+anterior ao instante de aquisição do frame, evitando usar uma posição posterior
+quando a inferência demora. Não se presume um atraso ocular fixo nem se treina
+um estimador de atraso.
+
+Amostras dos últimos 1,2 s a até 0,025 de distância euclidiana normalizada da
+referência podem iniciar a janela daquele ponto, quando há pelo menos três.
+Esse reaproveitamento admite uma aproximação espacial explícita, não uma
+correspondência exata entre alvo e olhar. Continua exigindo dez quadros, cobertura
+de ao menos 0,6 s e estabilidade. Pode reduzir a parada para até cerca de 0,3 s
+após a chegada, dependendo dos dados; não impõe um avanço mais rápido. Se não
+houver amostras aproveitáveis, usa a coleta parada anterior. Somente referências
+usam essa antecipação: as treze conferências permanecem coletadas separadamente,
+sem reaproveitar o movimento, para detectar também o erro introduzido pela aproximação.
+
+Após cada linha, /diagnostics/geometry confere as regiões já completas. O endpoint
+é puro e não emite autorização. A triangulação testa ambas as diagonais de uma
+região simples e usa uma divisão geometricamente válida, inclusive em casos
+côncavos que a divisão anterior rejeitava. Cruzamentos e regiões degeneradas
+continuam reprovados. Não há regressão ou aumento do limite de erro.
+
+Quando há inconsistência, o sistema recolhe primeiro os pontos afetados da linha
+nova, sem antecipação por movimento. Se necessário, recolhe os demais pontos da
+região indicada. São no máximo duas rodadas de reparo por linha. Uma inconsistência
+persistente interrompe a coleta antes das conferências finais, mostrando a linha
+afetada. Não reinicia as outras referências nem inventa uma malha aprovada.
+
+O diagnóstico v6 contém motion_capture (amostras em movimento e posições do alvo),
+motion_samples_used por referência e geometry_checks com os índices dos pontos
+afetados e as tentativas. Falhas/cancelamentos preservam registros parciais no
+histórico temporário e em page_diagnostic.incomplete_calibration, com status,
+mensagem e dados coletados. Registros incompletos não possuem um RMSE final e não
+são comparáveis a calibrações concluídas. Recarregar/sair da página ainda apaga o
+histórico local; baixe o diagnóstico completo antes disso.
+
+Os testes de software verificam o reaproveitamento, a separação das conferências,
+a detecção antecipada e a preservação da coleta parcial. Não comprovam redução
+de tempo ou precisão em pessoas; é necessária uma nova medição com webcam real.
 
 ## Diagnóstico recebido e limites
 
