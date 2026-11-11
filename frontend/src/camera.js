@@ -1,3 +1,4 @@
+import { openCapture, framePump } from './capture-quality.js';
 import { EyeProfile } from './eye-profile.js';
 import { createDetector } from './detector.js';
 import { inspectEyes, EyeGate, calibrationFeature, predict, supportedHead } from './gaze.js';
@@ -29,21 +30,20 @@ export async function createCamera(
   featureMode = 'fixed',
   expectedEngine,
   eyeBaseline,
+  cameraBinding,
 ) {
   let running = true,
     stream,
     mesh,
-    frame,
+    pump,
+    capture,
+    acquired,
     inflight;
   const gate = new EyeGate();
   const profile = new EyeProfile(eyeBaseline);
   try {
-    if (!navigator.mediaDevices?.getUserMedia)
-      throw new Error('A câmera exige HTTPS ou localhost.');
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
-      audio: false,
-    });
+    capture = await openCapture(cameraBinding);
+    stream = capture.stream;
     video.srcObject = stream;
     await video.play();
     mesh = await createDetector({
@@ -56,7 +56,7 @@ export async function createCamera(
       throw new Error('O detector mudou desde a calibração. Recalibre antes da sessão.');
     mesh.onResults((result) => {
       if (!running) return;
-      const time = performance.now();
+      const time = acquired;
       const eyes = profile.inspect(result.multiFaceLandmarks, time);
       const inspection = eyes.ready
         ? inspectEyes(result.multiFaceLandmarks, featureMode !== 'motion', {
@@ -70,27 +70,31 @@ export async function createCamera(
     stream.getVideoTracks()[0].onended = () => {
       if (running) onStatus?.('Câmera desconectada; finalize e repita a sessão.');
     };
-    const tick = async () => {
-      if (!running) return;
-      try {
+    pump = framePump(
+      video,
+      async (time) => {
+        acquired = time;
         inflight = mesh.send({ image: video });
         await inflight;
-      } catch {
+      },
+      () => {
         onSample(null, performance.now());
         onStatus?.('Falha no detector. Finalize e repita a sessão.');
-      }
-      if (running) frame = requestAnimationFrame(tick);
-    };
-    await tick();
-    return async () => {
+      },
+    );
+    const stop = async () => {
       running = false;
-      cancelAnimationFrame(frame);
+      pump.stop();
       stream.getTracks().forEach((t) => t.stop());
       await inflight?.catch(() => {});
       await mesh.close();
     };
+    stop.stats = () => pump.stats.snapshot();
+    stop.capture = capture;
+    return stop;
   } catch (error) {
     running = false;
+    pump?.stop();
     stream?.getTracks().forEach((t) => t.stop());
     await mesh?.close();
     throw error;

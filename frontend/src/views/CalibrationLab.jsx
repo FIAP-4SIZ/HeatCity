@@ -1,3 +1,4 @@
+import { openCapture, framePump } from '../capture-quality.js';
 import { MotionCapture } from '../motion-capture.js';
 import { ReferenceCapture } from '../reference-capture.js';
 import React, { useEffect, useRef, useState } from 'react';
@@ -108,7 +109,7 @@ export default function CalibrationLab({
     invalidate(text);
     const s = state.current;
     s.running = false;
-    cancelAnimationFrame(s.frame);
+    s.pump?.stop();
     s.stream?.getTracks().forEach((t) => t.stop());
     s.stream = null;
     await s.inflight?.catch(() => {});
@@ -127,7 +128,9 @@ export default function CalibrationLab({
       detector: state.current.mesh?.engine || null,
       eye_profile: state.current.profile?.baseline || null,
       developer_options: { ...state.current.dev },
+      camera_capture: state.current.capture?.metadata,
       telemetry: {
+        ...state.current.pump?.stats.snapshot(),
         frames: state.current.frames || 0,
         valid_frames: state.current.validFrames || 0,
       },
@@ -175,7 +178,7 @@ export default function CalibrationLab({
     return () => {
       state.current.generation++;
       state.current.running = false;
-      cancelAnimationFrame(state.current.frame);
+      state.current.pump?.stop();
       state.current.stream?.getTracks().forEach((t) => t.stop());
       state.current.inflight?.finally(() => state.current.mesh?.close()).catch(() => {});
       clearTimeout(state.current.expiry);
@@ -192,12 +195,8 @@ export default function CalibrationLab({
     setBusy(true);
     const s = state.current;
     try {
-      if (!navigator.mediaDevices?.getUserMedia)
-        throw new Error('A câmera exige HTTPS ou localhost.');
-      s.stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
-        audio: false,
-      });
+      s.capture = await openCapture();
+      s.stream = s.capture.stream;
       video.current.srcObject = s.stream;
       await video.current.play();
       s.mesh = await createDetector({
@@ -275,15 +274,19 @@ export default function CalibrationLab({
             thresholds: adaptive ? eyes.thresholds : [s.dev.minOpenness, s.dev.minOpenness],
             faces: r.multiFaceLandmarks?.length || 0,
             latency_ms: performance.now() - now,
+            processed_fps: s.processingRate ?? null,
+            camera_frame_rate: s.capture.settings.frame_rate ?? null,
             diagnostic_attempt: s.attempt || null,
           },
           now,
         );
         if (now - s.lastStats > 250) {
           s.lastStats = now;
+          s.processingRate = s.pump?.stats.snapshot().processed_fps || 0;
           setMetrics({
             frames: s.frames,
-            fps: (s.frames * 1000) / (now - s.began),
+            fps: s.processingRate,
+            cameraFps: s.capture.settings.frame_rate,
             valid: s.validFrames / s.frames,
             features: f,
             faces: r.multiFaceLandmarks?.length || 0,
@@ -315,19 +318,15 @@ export default function CalibrationLab({
       s.running = true;
       s.stream.getVideoTracks()[0].onended = () => stop('A câmera foi desconectada.');
       s.log.event('camera_start');
-      const tick = async () => {
-        if (!s.running) return;
-        try {
-          s.frameTime = performance.now();
+      s.pump = framePump(
+        video.current,
+        async (time) => {
+          s.frameTime = time;
           s.inflight = s.mesh.send({ image: video.current });
           await s.inflight;
-        } catch {
-          await stop('Falha no detector. Reinicie a câmera.');
-          return;
-        }
-        if (s.running) s.frame = requestAnimationFrame(tick);
-      };
-      await tick();
+        },
+        () => stop('Falha no detector. Reinicie a câmera.'),
+      );
       setCamera(s.running);
       setMessage(`Detector: ${s.mesh.engine}. Mantenha a cabeça confortável e estável.`);
     } catch (e) {
@@ -349,6 +348,7 @@ export default function CalibrationLab({
     const details = [],
       payload = {
         mode: 'sweep',
+        capture_settings: s.capture.settings,
         participant_code: participantCode,
         scenario_id: scenarioId,
         features: [],
@@ -527,6 +527,8 @@ export default function CalibrationLab({
       s.calibration = {
         ...response,
         feature_mode: 'sweep',
+        camera_binding: s.capture.binding,
+        capture_settings: s.capture.settings,
         detector: s.mesh.engine,
         eye_profile: s.profile.baseline,
         viewport_width: payload.viewport_width,
@@ -537,6 +539,7 @@ export default function CalibrationLab({
       delete quality.expires_in_seconds;
       const report = {
         version: 6,
+        camera_capture: s.capture.metadata,
         motion_capture: s.motion.snapshot(),
         geometry_checks: s.pending.geometry_checks,
         confirmation_required: false,
@@ -644,7 +647,7 @@ export default function CalibrationLab({
     s.calibration = null;
     clearTimeout(s.expiry);
     s.running = false;
-    cancelAnimationFrame(s.frame);
+    s.pump?.stop();
     s.stream?.getTracks().forEach((t) => t.stop());
     s.inflight?.finally(() => s.mesh?.close()).catch(() => {});
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
@@ -913,7 +916,10 @@ export default function CalibrationLab({
           </div>
           {diagnosticsOnly && metrics && (
             <div className="live-metrics" aria-label="Telemetria do detector">
-              <span>FPS: {metrics.fps.toFixed(1)}</span>
+              <span>
+                FPS processado: {metrics.fps.toFixed(1)} · Webcam negociada:{' '}
+                {metrics.cameraFps || 'não informado'} fps
+              </span>
               <span>Válidas: {(metrics.valid * 100).toFixed(0)}%</span>
               <span>Rostos: {metrics.faces}</span>
               <span>Frames: {metrics.frames}</span>

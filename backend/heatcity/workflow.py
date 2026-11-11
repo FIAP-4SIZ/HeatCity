@@ -10,6 +10,7 @@ from fastapi import APIRouter, HTTPException, Response
 from . import storage
 from .schemas import FinishInput, ScenarioInput, SessionInput, StudyInput
 from .services.evaluation import evaluate, summarize
+from .services.uncertainty import session_margin
 from .services.vision import decode_scene, demo_scene, heatmap, image_metrics
 
 router = APIRouter()
@@ -113,10 +114,55 @@ def start_session(body: SessionInput):
             raise HTTPException(
                 403, "O tamanho da tela mudou. Refaça a calibração na mesma tela da sessão."
             )
-        if 2 * calibration["validation_rmse"] >= min(plate["width"], plate["height"]):
+        measured = calibration.get("capture_settings")
+        if measured and (
+            not body.capture_settings
+            or any(getattr(body.capture_settings, k) != measured[k] for k in ("width", "height"))
+        ):
+            raise HTTPException(403, "A configuração da câmera mudou. Recalibre antes da sessão.")
+        if any(v is not None for v in (body.stimulus_width, body.stimulus_height)):
+            if not all(
+                (
+                    body.stimulus_width,
+                    body.stimulus_height,
+                    body.viewport_width,
+                    body.viewport_height,
+                )
+            ):
+                raise HTTPException(
+                    422, "Informe dimensões da imagem e da tela para converter a margem."
+                )
+            if (
+                body.stimulus_width > body.viewport_width
+                or body.stimulus_height > body.viewport_height
+                or abs(
+                    (body.stimulus_width / body.stimulus_height)
+                    / (scenario["width"] / scenario["height"])
+                    - 1
+                )
+                > 0.02
+            ):
+                raise HTTPException(
+                    422, "A geometria da imagem não corresponde ao cenário e à tela."
+                )
+        elif calibration.get("error_margin"):
+            raise HTTPException(
+                422, "Informe o tamanho exibido da imagem para aplicar a margem calibrada."
+            )
+        margin = session_margin(
+            calibration,
+            body.viewport_width,
+            body.viewport_height,
+            body.stimulus_width,
+            body.stimulus_height,
+        )
+        if (
+            2 * margin["image_axes"][0] >= plate["width"]
+            or 2 * margin["image_axes"][1] >= plate["height"]
+        ):
             raise HTTPException(
                 422,
-                "Erro espacial incompatível com esta placa. Use uma região maior ou refaça a calibração.",
+                "A margem de erro deixa esta placa sem área conclusiva. Recalibre ou revise o cenário.",
             )
     snapshot = (
         {
@@ -128,6 +174,7 @@ def start_session(body: SessionInput):
                 "feature_mode",
                 "basis",
                 "validation_median_rmse",
+                "error_margin",
                 "viewport_width",
                 "viewport_height",
                 "head_min",
@@ -137,6 +184,8 @@ def start_session(body: SessionInput):
         if calibration
         else None
     )
+    if snapshot is not None:
+        snapshot["uncertainty"] = margin
     return storage.insert(
         "sessions",
         dict(
@@ -160,6 +209,8 @@ def finish(session_id: str, body: FinishInput):
         session["status"] == "completed"
         and session.get("duration") == body.duration
         and session.get("points") == points
+        and session.get("processing_stats")
+        == (body.processing_stats.model_dump() if body.processing_stats else None)
     ):
         return session
     value = {
@@ -167,6 +218,7 @@ def finish(session_id: str, body: FinishInput):
         "status": "completed",
         "duration": body.duration,
         "points": points,
+        "processing_stats": body.processing_stats.model_dump() if body.processing_stats else None,
         "finished_at": now(),
         "metrics": evaluate(session, scenario, body.duration, points),
     }

@@ -37,6 +37,7 @@ class Calibration:
     validation_p90: float = 0
     max_target_rmse: float | None = None
     target_errors: list[dict] | None = None
+    error_margin: dict | None = None
 
 
 def _pairs(values, minimum):
@@ -195,7 +196,13 @@ def fit_calibration(
         rows, absent = errors(a, [t] * len(a))
         error = float(np.sqrt(np.mean(np.sum(rows**2, axis=1)))) if len(rows) else None
         target_errors.append(
-            {"expected": t.tolist(), "count": len(a), "unsupported": absent, "rmse": error}
+            {
+                "expected": t.tolist(),
+                "count": len(a),
+                "unsupported": absent,
+                "rmse": error,
+                "axis_p90": np.percentile(np.abs(rows), 90, axis=0).tolist() if len(rows) else None,
+            }
         )
         values.extend(a)
         labels.extend([t] * len(a))
@@ -224,4 +231,15 @@ def fit_calibration(
         validation_p90=float(np.percentile(distances, 90)) if len(distances) else 0,
         max_target_rmse=max_target_rmse,
         target_errors=target_errors,
+        error_margin={
+            "method": "worst_target_axis_p90_v1",
+            "axes": [
+                max(r["axis_p90"][axis] for r in target_errors if r.get("axis_p90") is not None)
+                for axis in (0, 1)
+            ],
+            "unsupported_samples": missing,
+            "note": "Margem empírica observada, não intervalo de confiança.",
+        }
+        if len(residuals)
+        else None,
     )

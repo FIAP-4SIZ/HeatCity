@@ -52,6 +52,21 @@ de sair da prévia com ESC. Recarregar a página apaga o histórico temporário.
 Vídeos e imagens faciais não são enviados nem persistidos. Sem referência de onde
 a pessoa olhou, o tracking livre não permite calcular precisão real.
 
+## Margem no estudo e webcam
+
+A margem por eixo é convertida da tela para o tamanho da imagem exibida. Casos de
+borda permanecem ambíguos; uma observação conclusiva exige sequência de pelo menos
+0,2 s. Permanência só na faixa de incerteza torna a sessão inconclusiva. A calibração
+reprovada continua bloqueada para o estudo. A política e margens ficam no JSON/PDF.
+
+A webcam recebe pedido inicial de 4K/120 FPS e depois as maiores capacidades que
+informar, com negociação e fallback. O diagnóstico mostra resolução/FPS solicitados,
+negociados e FPS efetivamente processado, sem contar novamente o mesmo quadro.
+A sessão mantém a câmera e a resolução da calibração. Valores máximos solicitados
+não garantem que o hardware ou o processamento alcancem essa taxa.
+
+[Detalhes e análise do diagnóstico recebido](docs/margem-estudo-e-webcam.md).
+
 ## API e desenvolvimento
 
 Python 3.12, Node >=22.12, FastAPI, React e Vite. Dependências congeladas em

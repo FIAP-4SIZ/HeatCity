@@ -66,10 +66,18 @@ export default function RunSession({
     current.active = false;
     clearInterval(current.timer);
     setPhase('saving');
+    const ended = performance.now();
     await current.stop?.();
+    const duration = Math.max(0.1, Math.min(300, (ended - current.started) / 1000));
+    const stats = current.stop?.stats?.();
+    if (stats && current.processingBegin) {
+      stats.processed_frames -= current.processingBegin.processed_frames;
+      stats.average_fps = stats.processed_frames / duration;
+    }
     current.payload = {
-      duration: Math.max(0.1, Math.min(300, (performance.now() - current.started) / 1000)),
+      duration,
       points: current.points,
+      processing_stats: stats,
     };
     await save();
   }
@@ -101,6 +109,14 @@ export default function RunSession({
           current.last = time;
           const gaze = gazePoint(feature, calibration),
             rect = image.current.getBoundingClientRect();
+          if (
+            current.stimulus &&
+            (Math.abs(rect.width - current.stimulus.width) > 1 ||
+              Math.abs(rect.height - current.stimulus.height) > 1)
+          ) {
+            cancel('A imagem mudou de tamanho. Refaça a calibração.');
+            return;
+          }
           const x = gaze ? (gaze[0] * window.innerWidth - rect.left) / rect.width : 0;
           const y = gaze ? (gaze[1] * window.innerHeight - rect.top) / rect.height : 0;
           const valid = !!gaze && x >= 0 && x <= 1 && y >= 0 && y <= 1;
@@ -112,6 +128,7 @@ export default function RunSession({
         calibration.feature_mode,
         calibration.detector,
         calibration.eye_profile,
+        calibration.camera_binding,
       );
       if (current.cancelled) {
         await current.stop();
@@ -123,8 +140,16 @@ export default function RunSession({
         await new Promise((resolve) => setTimeout(resolve, 1000));
         if (current.cancelled) return;
       }
+      setPhase('starting');
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      if (current.cancelled) return;
+      const stimulus = image.current.getBoundingClientRect();
+      current.stimulus = { width: stimulus.width, height: stimulus.height };
       current.session = await post('/sessions', {
         participant,
+        stimulus_width: stimulus.width,
+        stimulus_height: stimulus.height,
+        capture_settings: current.stop.capture.settings,
         scenario_id: scenario.id,
         target,
         consent,
@@ -137,6 +162,7 @@ export default function RunSession({
         await post(`/sessions/${current.session.id}/abort`);
         return;
       }
+      current.processingBegin = current.stop.stats();
       current.started = performance.now();
       current.active = true;
       setPhase('running');
@@ -161,6 +187,10 @@ export default function RunSession({
         <span className="eyebrow">PARTICIPANTE {participant}</span>
         <h2>Encontre a placa “{target}” com os olhos.</h2>
         <p>Não clique nas placas. Mantenha uma posição confortável.</p>
+        <p className="small">
+          A margem medida na calibração será aplicada ao tamanho desta imagem. Passagens ambíguas
+          pelas bordas não contam como acerto; exige observação contínua de pelo menos 0,2 s.
+        </p>
       </div>
       <div className="run-field">
         {phase === 'countdown' ? (

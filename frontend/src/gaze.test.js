@@ -152,3 +152,88 @@ test('movement uses the acquisition timestamp and seeds only nearby references',
   delayed.add(f, 250);
   assert.equal(delayed.snapshot().samples.length, 1);
 });
+
+test('frame pump processes each decoded frame once and stops cleanly', async () => {
+  const { framePump } = await import('./capture-quality.js');
+  let next,
+    processed = 0,
+    canceled = false;
+  const video = {
+    requestVideoFrameCallback(fn) {
+      next = fn;
+      return 1;
+    },
+    cancelVideoFrameCallback() {
+      canceled = true;
+    },
+  };
+  const pump = framePump(video, async () => {
+    processed++;
+  });
+  await next(0, { mediaTime: 0 });
+  await next(0, { mediaTime: 0 });
+  assert.equal(processed, 1);
+  await next(1, { mediaTime: 0.033 });
+  assert.equal(processed, 2);
+  pump.stop();
+  await next(2, { mediaTime: 0.066 });
+  assert.equal(processed, 2);
+  assert.equal(canceled, true);
+});
+
+test('capture requests quality and FPS while excluding identifiers from exported metadata', async () => {
+  const { openCapture } = await import('./capture-quality.js');
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  let requested,
+    advanced,
+    stopped = false;
+  const track = {
+    getCapabilities: () => ({
+      focusMode: ['continuous'],
+      width: { max: 7680 },
+      height: { max: 4320 },
+      frameRate: { max: 240 },
+    }),
+    applyConstraints: async (c) => {
+      advanced = c;
+    },
+    getSettings: () => ({
+      width: 1920,
+      height: 1080,
+      frameRate: 30,
+      deviceId: 'private-camera-id',
+    }),
+    stop() {
+      stopped = true;
+    },
+  };
+  Object.defineProperty(globalThis, 'navigator', {
+    configurable: true,
+    value: {
+      mediaDevices: {
+        async getUserMedia(c) {
+          requested = c;
+          return { getVideoTracks: () => [track], getTracks: () => [track] };
+        },
+      },
+    },
+  });
+  try {
+    const result = await openCapture();
+    assert.equal(requested.video.frameRate.ideal, 120);
+    assert.equal(requested.video.width.ideal, 3840);
+    assert.equal(result.settings.frame_rate, 30);
+    assert.equal(advanced.advanced[0].focusMode, 'continuous');
+    assert.equal(advanced.frameRate.ideal, 240);
+    assert.equal(advanced.width.ideal, 7680);
+    assert.equal(JSON.stringify(result.metadata).includes('private-camera-id'), false);
+    await assert.rejects(
+      openCapture({ deviceId: 'private-camera-id', width: 1280, height: 720 }),
+      /resolução/,
+    );
+    assert.equal(stopped, true);
+  } finally {
+    if (original) Object.defineProperty(globalThis, 'navigator', original);
+    else delete globalThis.navigator;
+  }
+});

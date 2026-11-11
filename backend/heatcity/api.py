@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 
 from .analysis import Area, Sample, analyze
 from .calibration import GeometryIssue, build_mesh, fit_calibration
+from .schemas import CameraSettings
 from .workflow import calibration_models, router
 
 app = FastAPI(title="HeatCity", version="1.0.0")
@@ -44,6 +45,7 @@ ValidationGroup = Annotated[list[EyePair], Field(min_length=6, max_length=120)]
 
 class CalibrationRequest(BaseModel):
     mode: Literal["sweep"] = "sweep"
+    capture_settings: CameraSettings | None = None
     participant_code: str | None = Field(default=None, pattern=r"^[A-Z0-9][A-Z0-9_-]{1,23}$")
     scenario_id: str | None = None
     viewport_width: int | None = Field(default=None, ge=200, le=16000)
@@ -87,7 +89,14 @@ def diagnostic_calibration(body: CalibrationRequest):
     # A pure evaluation: no authorization ID, model registration or persistence.
     try:
         values = body.model_dump(
-            exclude={"mode", "participant_code", "scenario_id", "viewport_width", "viewport_height"}
+            exclude={
+                "mode",
+                "participant_code",
+                "scenario_id",
+                "viewport_width",
+                "viewport_height",
+                "capture_settings",
+            }
         )
         fit = fit_calibration
         return {**asdict(fit(**values)), "diagnostic_only": True}
@@ -99,7 +108,14 @@ def diagnostic_calibration(body: CalibrationRequest):
 def calibrate(body: CalibrationRequest):
     try:
         values = body.model_dump(
-            exclude={"mode", "participant_code", "scenario_id", "viewport_width", "viewport_height"}
+            exclude={
+                "mode",
+                "participant_code",
+                "scenario_id",
+                "viewport_width",
+                "viewport_height",
+                "capture_settings",
+            }
         )
         fit = fit_calibration
         result = asdict(fit(**values))
@@ -117,6 +133,9 @@ def calibrate(body: CalibrationRequest):
             approvals[identifier] = now + 600
             calibration_models[identifier] = {
                 **result,
+                "capture_settings": body.capture_settings.model_dump()
+                if body.capture_settings
+                else None,
                 "expires": now + 600,
                 "participant": body.participant_code,
                 "scenario_id": body.scenario_id,

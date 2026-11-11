@@ -1,3 +1,4 @@
+import { installTestCamera } from './test-camera.mjs';
 import { waitForAutomaticSweep } from './automatic-sweep.mjs';
 import { readFile } from 'node:fs/promises';
 // Software-only E2E: real WASM/no-face gate, then synthetic landmarks. No human accuracy claims.
@@ -55,6 +56,7 @@ const page = await browser.newPage({
   viewport: { width: 1440, height: 1080 },
   permissions: ['camera'],
 });
+await installTestCamera(page);
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 let studyId;
@@ -205,6 +207,12 @@ try {
   assert.equal(data.sessions[0].metrics.eligible, true);
   assert.ok(data.sessions[0].points.length >= 30);
   assert.equal(data.sessions[0].metrics.success, true);
+  assert.equal(data.sessions[0].calibration.uncertainty.policy, 'observed_envelope_v1');
+  assert.ok(data.sessions[0].stimulus_width > 0);
+  assert.ok(data.sessions[0].capture_settings.width > 0);
+  assert.ok(data.sessions[0].processing_stats.processed_frames > 0);
+  assert.equal(data.sessions[0].metrics.outcome, 'observed');
+  assert.ok(data.sessions[0].metrics.confirmed_samples >= 3);
   const pdf = await page.request.get(`${base}/api/studies/${studyId}/report.pdf`);
   assert.ok((await pdf.body()).subarray(0, 5).equals(Buffer.from('%PDF-')));
   const heatmap = await page.request.get(

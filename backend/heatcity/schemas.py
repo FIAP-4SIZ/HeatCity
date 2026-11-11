@@ -9,6 +9,23 @@ class Contract(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False, str_strip_whitespace=True)
 
 
+class CameraSettings(Contract):
+    width: int = Field(ge=1, le=16000)
+    height: int = Field(ge=1, le=16000)
+    frame_rate: float | None = Field(default=None, ge=0, le=1000)
+    focus_mode: str | None = Field(default=None, max_length=40)
+    exposure_mode: str | None = Field(default=None, max_length=40)
+    white_balance_mode: str | None = Field(default=None, max_length=40)
+
+
+class ProcessingStats(Contract):
+    processed_frames: int = Field(ge=0, le=1000000)
+    processed_fps: float = Field(ge=0, le=2000)
+    average_fps: float = Field(ge=0, le=2000)
+    latency_p90_ms: float = Field(ge=0, le=60000)
+    interval_p90_ms: float = Field(ge=0, le=60000)
+
+
 class Plate(Contract):
     name: str = Field(min_length=1, max_length=60)
     x: float = Field(ge=0, lt=1)
@@ -59,6 +76,10 @@ class SessionInput(Contract):
     viewport_width: int | None = Field(default=None, ge=200, le=16000)
     viewport_height: int | None = Field(default=None, ge=200, le=16000)
 
+    stimulus_width: float | None = Field(default=None, ge=1, le=16000)
+    stimulus_height: float | None = Field(default=None, ge=1, le=16000)
+    capture_settings: CameraSettings | None = None
+
 
 class Point(Contract):
     time: float = Field(ge=0, le=300)
@@ -70,6 +91,7 @@ class Point(Contract):
 class FinishInput(Contract):
     duration: float = Field(ge=0.1, le=300)
     points: list[Point] = Field(max_length=12000)
+    processing_stats: ProcessingStats | None = None
 
     @model_validator(mode="after")
     def timeline(self):

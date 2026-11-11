@@ -222,6 +222,27 @@ export default function Results({ studyId, refresh, onError }) {
                             ? 'Elegível'
                             : 'Inconclusiva'}
                     </span>
+                    {s.metrics?.outcome && (
+                      <p className="small">
+                        {
+                          {
+                            observed: 'Observação confirmada',
+                            not_observed: 'Sem observação confirmada',
+                            inconclusive: 'Resultado inconclusivo',
+                          }[s.metrics.outcome]
+                        }
+                      </p>
+                    )}
+                    {s.metrics?.uncertainty && (
+                      <p className="small">
+                        Margem na imagem X/Y:{' '}
+                        {s.metrics.uncertainty.image_axes
+                          .map((v) => `${number(v * 100, 1)}%`)
+                          .join(' / ')}{' '}
+                        · amostras ambíguas: {s.metrics.uncertain_samples} · observação mínima: 0,2
+                        s
+                      </p>
+                    )}
                     {s.metrics?.reason && <p className="small">{s.metrics.reason}</p>}
                   </td>
                   <td>

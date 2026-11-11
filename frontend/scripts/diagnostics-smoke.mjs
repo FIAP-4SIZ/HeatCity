@@ -1,3 +1,4 @@
+import { installTestCamera } from './test-camera.mjs';
 import { waitForAutomaticSweep } from './automatic-sweep.mjs';
 import { readFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
@@ -11,6 +12,7 @@ const page = await browser.newPage({
   viewport: { width: 1440, height: 1080 },
   permissions: ['camera'],
 });
+await installTestCamera(page);
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 try {
@@ -164,6 +166,10 @@ try {
     assert.equal(data.quality.basis, 'mesh');
     assert.equal(data.confirmation_required, false);
     assert.equal(data.automatic_advance, true);
+    assert.ok(data.camera_capture.settings.width > 0);
+    assert.equal(data.camera_capture.initial_request.frameRate, 120);
+    assert.equal(JSON.stringify(data.camera_capture).includes('deviceId'), false);
+    assert.ok(data.quality.error_margin.axes.every(Number.isFinite));
     assert.ok(data.motion_capture.samples.length > 0);
     assert.ok(
       data.capture_details

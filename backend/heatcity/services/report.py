@@ -45,7 +45,7 @@ def build_report(data):
         "A câmera é processada localmente pelo detector pronto MediaPipe. O alvo móvel percorre linhas, bordas, cantos, diagonais e centro. Amostras válidas em movimento próximas das referências podem antecipar a coleta. A geometria é conferida a cada linha, com reparos locais limitados e preservação de dados parciais quando falha. Vinte e cinco referências oculares registradas automaticamente após coleta estável formam uma malha de triângulos, interpolada geometricamente, sem regressão, classificação, treinamento ou seleção de modelo. Treze alvos posteriores, incluindo bordas e cantos, conferem o erro por quadro e por região; cada região deve atender ao limite 0,100; dados fora da malha reprovam a cobertura, sem extrapolação. RMSE <= 0.100, compatibilidade com o tamanho da placa, ao menos 30 amostras válidas e cobertura temporal >= 60% são critérios heurísticos declarados; não comprovam precisão humana."
     )
     paragraph(
-        "Taxa de sucesso = participantes que localizaram o alvo / participantes elegíveis da mesma tarefa, cenário e modo. Tempo até localizar é resumido somente entre sucessos; falhas permanecem no denominador da taxa. Para repetições, seleciona-se a última sessão concluída elegível por participante/grupo. Sessões abortadas e rastreamento insuficiente são excluídos. Pontos próximos da borda da placa, dentro de uma margem igual ao RMSE de validação, são considerados ambíguos e não atribuídos à placa. Essa margem é heurística, não um intervalo de confiança."
+        "Taxa de sucesso = participantes que localizaram o alvo / participantes elegíveis da mesma tarefa, cenário e modo. Tempo até localizar é resumido somente entre sucessos; falhas permanecem no denominador da taxa. Para repetições, seleciona-se a última sessão concluída elegível por participante/grupo. Sessões abortadas e rastreamento insuficiente são excluídos. Nas sessões novas, a margem empírica por eixo usa o maior P90 absoluto observado entre os alvos e é convertida da tela para o tamanho real da imagem exibida. A área de erro deve caber inteiramente na placa e permanecer por pelo menos 0,2 s para confirmar observação. Permanência apenas na faixa ambígua torna o resultado inconclusivo e excluído das taxas; ausências conclusivas continuam no denominador. Uma aquisição com menos de 60% dos intervalos adjacentes válidos dentro de 0,2 s também é inconclusiva, em vez de contar como ausência. Sessões históricas preservam seu método anterior. A margem é heurística, não um intervalo de confiança nem garantia de conter o olhar real."
     )
     paragraph("3. Resultados persistidos", "Heading2")
     paragraph(
@@ -81,6 +81,41 @@ def build_report(data):
         )
     )
     story.append(table)
+    if data["sessions"]:
+        paragraph("Margem e captura por sessão", "Heading2")
+        quality_rows = [
+            ["Código", "Margem imagem X/Y", "Ambíguas", "FPS webcam / processo", "Resultado"]
+        ]
+        for session in data["sessions"]:
+            metrics = session.get("metrics", {})
+            margin = (session.get("calibration") or {}).get("uncertainty")
+            axes = margin.get("image_axes") if margin else None
+            camera = session.get("capture_settings") or {}
+            processing = session.get("processing_stats") or {}
+
+            def rate(value):
+                return f"{value:.1f}" if isinstance(value, (int, float)) else "—"
+
+            values = [
+                session["participant"],
+                " / ".join(f"{v * 100:.1f}%" for v in axes) if axes else "histórico",
+                str(metrics.get("uncertain_samples", "—")),
+                f"{rate(camera.get('frame_rate'))} / {rate(processing.get('average_fps'))}",
+                metrics.get("outcome", session["status"]),
+            ]
+            quality_rows.append([Paragraph(escape(str(v)), styles["BodyText"]) for v in values])
+        quality_table = Table(quality_rows, colWidths=[66, 102, 62, 112, 158], repeatRows=1)
+        quality_table.setStyle(
+            TableStyle(
+                [
+                    ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e4ebe5")),
+                ]
+            )
+        )
+        story.append(quality_table)
+        story.append(Spacer(1, 12))
     selected = set(summary["selected_session_ids"])
     for scenario in study.get("scenarios", []):
         for mode in ("gaze",):

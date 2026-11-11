@@ -226,3 +226,35 @@ class WorkflowTests(unittest.TestCase):
         model["viewport_width"] = None
         model["validation_rmse"] = 0.1
         self.assertEqual(self.session(calibration_id="fixture-P01").status_code, 422)
+
+    def test_margin_uses_image_geometry_and_camera_binding(self):
+        self.session()
+        model = calibration_models["fixture-P01"]
+        model.update(
+            error_margin={"axes": [0.03, 0.04]},
+            viewport_width=1000,
+            viewport_height=800,
+            capture_settings={"width": 1280, "height": 720},
+        )
+        payload = {
+            "participant": "P01",
+            "scenario_id": self.scene["id"],
+            "target": "Recepção",
+            "consent": True,
+            "calibration_id": "fixture-P01",
+            "viewport_width": 1000,
+            "viewport_height": 800,
+            "stimulus_width": 800,
+            "stimulus_height": 800 * self.scene["height"] / self.scene["width"],
+            "capture_settings": {"width": 1280, "height": 720, "frame_rate": 30},
+        }
+        result = self.client.post("/sessions", json=payload)
+        self.assertEqual(result.status_code, 201, result.text)
+        axes = result.json()["calibration"]["uncertainty"]["image_axes"]
+        self.assertAlmostEqual(axes[0], 0.0375)
+        self.assertGreater(axes[1], 0.04)
+        payload["stimulus_width"] = 100
+        payload["stimulus_height"] = 100 * self.scene["height"] / self.scene["width"]
+        self.assertEqual(self.client.post("/sessions", json=payload).status_code, 422)
+        payload["capture_settings"]["width"] = 640
+        self.assertEqual(self.client.post("/sessions", json=payload).status_code, 403)

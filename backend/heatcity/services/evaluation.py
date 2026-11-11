@@ -12,7 +12,7 @@ def contains(plate, point):
     )
 
 
-def evaluate(session, scenario, duration, points):
+def legacy_evaluate(session, scenario, duration, points):
     target = next(p for p in scenario["plates"] if p["name"] == session["target"])
     radius = session["calibration"]["validation_rmse"]
     safe = {
@@ -38,6 +38,105 @@ def evaluate(session, scenario, duration, points):
     if analysis["valid_fraction"] < 0.6 or sum(p["valid"] for p in points) < 30:
         result.update(
             eligible=False,
+            reason="Cobertura de olhar inferior a 60% ou menos de 30 amostras válidas.",
+        )
+    return result
+
+
+def sustained(points, mask, minimum=0.2, maximum_gap=0.2):
+    confirmed = set()
+    run = []
+    for index, (p, inside) in enumerate(zip(points, mask)):
+        if not inside:
+            run = []
+            continue
+        if run and p["time"] - points[run[-1]]["time"] > maximum_gap + 1e-9:
+            run = []
+        run.append(index)
+        if len(run) >= 3 and p["time"] - points[run[0]]["time"] >= minimum - 1e-9:
+            confirmed.update(run)
+    return confirmed
+
+
+def evaluate(session, scenario, duration, points):
+    policy = session["calibration"].get("uncertainty")
+    if not policy:
+        return legacy_evaluate(session, scenario, duration, points)
+    target = next(p for p in scenario["plates"] if p["name"] == session["target"])
+    rx, ry = policy["image_axes"]
+    safe = {
+        **target,
+        "x": target["x"] + rx,
+        "y": target["y"] + ry,
+        "width": target["width"] - 2 * rx,
+        "height": target["height"] - 2 * ry,
+    }
+    if safe["width"] <= 0 or safe["height"] <= 0:
+        return {
+            "success": False,
+            "first_seconds": None,
+            "attention_seconds": 0,
+            "coverage": 0,
+            "eligible": False,
+            "reason": "Placa sem área conclusiva para a margem medida.",
+            "uncertain_samples": 0,
+            "outcome": "inconclusive",
+            "uncertainty": policy,
+        }
+    certain = [p["valid"] and contains(safe, p) for p in points]
+    possible = [
+        p["valid"]
+        and p["x"] + rx >= target["x"]
+        and p["x"] - rx <= target["x"] + target["width"]
+        and p["y"] + ry >= target["y"]
+        and p["y"] - ry <= target["y"] + target["height"]
+        for p in points
+    ]
+    ambiguous = [a and not b for a, b in zip(possible, certain)]
+    observed = sustained(
+        points, certain, policy["minimum_observation_seconds"], policy["maximum_gap_seconds"]
+    )
+    uncertain_runs = sustained(
+        points, ambiguous, policy["minimum_observation_seconds"], policy["maximum_gap_seconds"]
+    )
+    base = analyze([Sample(**p) for p in points], [Area(**safe)], duration)
+    confirmed = analyze(
+        [Sample(**{**p, "valid": i in observed}) for i, p in enumerate(points)],
+        [Area(**safe)],
+        duration,
+    )
+    timely = sum(
+        a["valid"] and b["valid"] and b["time"] - a["time"] <= policy["maximum_gap_seconds"] + 1e-9
+        for a, b in zip(points, points[1:])
+    ) / max(1, len(points) - 1)
+    inconclusive = not observed and bool(uncertain_runs)
+    result = {
+        "success": bool(observed),
+        "first_seconds": points[min(observed)]["time"] if observed else None,
+        "attention_seconds": confirmed["areas"][target["name"]]["attention_seconds"],
+        "coverage": base["valid_fraction"],
+        "eligible": not inconclusive,
+        "reason": "Observação permaneceu na faixa de incerteza; não é possível confirmar localização nem ausência."
+        if inconclusive
+        else None,
+        "outcome": "observed" if observed else "inconclusive" if inconclusive else "not_observed",
+        "uncertain_samples": sum(ambiguous),
+        "certain_samples": sum(certain),
+        "confirmed_samples": len(observed),
+        "isolated_certain_samples": sum(certain) - len(observed),
+        "uncertainty": policy,
+        "timely_interval_fraction": timely,
+    }
+    if timely < 0.6:
+        result.update(
+            eligible=False,
+            outcome="inconclusive",
+            reason="Aquisição irregular: menos de 60% dos intervalos válidos atendem ao limite de 0,2 s.",
+        )
+    if base["valid_fraction"] < 0.6 or sum(p["valid"] for p in points) < 30:
+        result.update(
+            eligible=False,
+            outcome="inconclusive",
             reason="Cobertura de olhar inferior a 60% ou menos de 30 amostras válidas.",
         )
     return result
