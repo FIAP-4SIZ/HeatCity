@@ -100,21 +100,24 @@ test('sweep motion takes at least one second and slows down long moves', () => {
   assert.equal(sweepDuration([0.5, 0.5], [0.5, 0.5]), 1000);
   assert.ok(sweepDuration([0.05, 0.05], [0.95, 0.95]) > 3800);
 });
-test('a reference waits indefinitely for confirmation and excludes stale samples', async () => {
+test('references advance automatically only with fresh stable eyes and head', async () => {
   const { ReferenceCapture } = await import('./reference-capture.js');
+  const base = [0.4, 0.1, 0.4, 0.1, 0, 0, 0.5, 0.5];
   const c = new ReferenceCapture([0.05, 0.05], 0);
-  assert.equal(c.confirm(100, 'space'), false);
-  for (let t = 300; t <= 1300; t += 50) c.push([t, t], t);
-  assert.equal(c.ready(1300), true);
-  assert.equal(c.confirmed, false);
-  assert.equal(c.ready(4000), false);
-  assert.equal(c.confirm(4000, 'space'), false);
-  for (let t = 4050; t <= 4700; t += 50) c.push([t, t], t);
-  assert.equal(c.confirm(4700, 'enter'), true);
-  assert.equal(c.confirmedBy, 'enter');
-  assert.ok(c.features.every((f) => f[0] >= 4050));
-  const n = c.features.length;
-  c.push([9000, 9000], 9000);
-  assert.equal(c.features.length, n);
-  assert.equal(c.confirm(4800, 'button'), false);
+  assert.equal(c.evaluate(200), false);
+  for (let t = 300; t <= 1300; t += 50) c.push(base, t);
+  assert.equal(c.evaluate(1300), true);
+  assert.equal(c.complete, true);
+  assert.equal(c.features.length, 21);
+  const noisy = new ReferenceCapture([0.05, 0.05], 0);
+  for (let t = 300; t <= 1300; t += 50)
+    noisy.push([t % 100 === 0 ? 0.6 : 0.2, 0.1, 0.4, 0.1, 0, 0, 0.5, 0.5], t);
+  assert.equal(noisy.evaluate(1300), false);
+  assert.equal(noisy.evaluate(4000), false); // elapsed time never forces progress
+  for (let t = 4050; t <= 4750; t += 50) noisy.push(base, t);
+  assert.equal(noisy.evaluate(4750), true);
+  assert.ok(noisy.features.every((f) => f[0] === 0.4));
+  const head = new ReferenceCapture([0.05, 0.05], 0);
+  for (let t = 300; t <= 1300; t += 50) head.push([...base.slice(0, 6), 0.5 + t * 0.00002, 0.5], t);
+  assert.equal(head.evaluate(1300), false);
 });

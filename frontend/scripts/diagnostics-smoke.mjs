@@ -1,4 +1,4 @@
-import { confirmSweep } from './confirm-sweep.mjs';
+import { waitForAutomaticSweep } from './automatic-sweep.mjs';
 import { readFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
@@ -85,7 +85,7 @@ try {
   );
   await page.getByRole('button', { name: 'Iniciar calibração', exact: true }).click();
   await page.getByRole('timer').filter({ hasText: '3' }).waitFor();
-  await confirmSweep(page, { verifyWait: !!process.env.HEATCITY_TEST_APPROVED });
+  await waitForAutomaticSweep(page, { verifyWait: !!process.env.HEATCITY_TEST_APPROVED });
   await page
     .locator('.fullscreen-panel p')
     .filter({ hasText: /^RMSE / })
@@ -109,18 +109,17 @@ try {
     assert.equal(data.capture_details.length, 38);
     assert.equal(data.features[0].length, 2);
     assert.equal(data.quality.basis, 'mesh');
-    assert.equal(data.confirmation_required, true);
-    assert.ok(
-      data.capture_details.every((c) => ['button', 'space', 'enter'].includes(c.confirmed_by)),
-    );
-    assert.ok(data.capture_details.some((c) => c.confirmed_by === 'button'));
-    assert.ok(data.capture_details.some((c) => c.confirmed_by === 'space'));
-    assert.ok(data.capture_details.some((c) => c.confirmed_by === 'enter'));
+    assert.equal(data.confirmation_required, false);
+    assert.equal(data.automatic_advance, true);
+    assert.ok(data.capture_details.every((c) => c.accepted_by === 'automatic_stability'));
+    assert.ok(data.capture_details.every((c) => c.stability.eye_p90 <= 0.035));
     assert.equal('coefficients' in data.quality, false);
     assert.equal(data.validation_samples.length, 13);
   }
   await page.getByRole('button', { name: 'Mostrar tracking experimental', exact: true }).click();
   await page.locator('.gaze').waitFor();
+  // Let the 10 Hz diagnostic stream record the visible tracking state.
+  await page.waitForTimeout(350);
   assert.ok(
     await page
       .getByText(
@@ -134,10 +133,13 @@ try {
     window.mockBlink = true;
   });
   await page.waitForFunction(() => !document.querySelector('.gaze'));
+  await page.waitForTimeout(250);
   await page.evaluate(() => {
     window.mockBlink = false;
   });
   await page.locator('.gaze').waitFor();
+  // Let the 10 Hz diagnostic stream record the visible tracking state.
+  await page.waitForTimeout(350);
   await page.evaluate(() => document.exitFullscreen());
   await page.getByRole('button', { name: 'Mostrar tracking experimental', exact: true }).waitFor();
   assert.equal(

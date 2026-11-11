@@ -44,10 +44,10 @@ function Methodology() {
           <span className="step-number">02</span>
           <h2>Calibre e confira o erro.</h2>
           <p>
-            O alvo móvel percorre a tela e registra 25 referências geométricas confirmadas. Treze
-            alvos posteriores conferem o erro, sem treinamento. A autorização exige RMSE ≤ 0,100 e
-            erro menor que metade da menor dimensão da placa escolhida. São critérios experimentais,
-            não limites clínicos.
+            O alvo móvel percorre a tela e registra 25 referências geométricas registradas
+            automaticamente. Treze alvos posteriores conferem o erro, sem treinamento. A autorização
+            exige RMSE ≤ 0,100 e erro menor que metade da menor dimensão da placa escolhida. São
+            critérios experimentais, não limites clínicos.
           </p>
         </article>
         <article className="panel">

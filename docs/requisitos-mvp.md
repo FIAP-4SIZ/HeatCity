@@ -15,7 +15,7 @@ participantes, sessões, heatmaps e dashboard. O usuário confirmou **somente ol
 | Cenas e placas | Upload validado, desenho de AOIs sem sobreposição, cenário imutável | Testes de imagem e contrato; interface de edição |
 | Participantes | Código, tarefa e consentimento obrigatório | Contrato e teste de rejeição |
 | Captura | Webcam local via navegador; MediaPipe com íris refinadas | E2E com detector real/sem rosto; câmera real pendente |
-| Calibração | Alvo lento, 25 referências confirmadas e 13 conferências regionais | Testes de interpolação, malhas inválidas e reprovação |
+| Calibração | Alvo lento, 25 referências automáticas por estabilidade e 13 conferências regionais | Testes de interpolação, malhas inválidas e reprovação |
 | Bloqueio de qualidade | Aprovação da API, vínculo a código/cenário/tela, erro compatível com placa | Testes de autorização, vínculo e geometria |
 | Sessão ocular | 15 s, coordenadas normalizadas na imagem, intervalos inválidos e interrupção | E2E sintético completo; não há modo por clique |
 | Avaliação | Métricas por tarefa/cenário, exclusão por qualidade, deduplicação de participantes | Testes de sucesso/falha/repetição/cobertura/bordas |

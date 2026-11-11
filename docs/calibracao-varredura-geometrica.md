@@ -19,19 +19,24 @@ percentil com regras fixas para piscadas; não classifica etnia.
    95%), em zigue-zague. Há 25 referências, incluindo pontos intermediários entre
    o centro superior e os cantos. Cada movimento leva no mínimo um segundo; os
    trajetos longos levam aproximadamente 3 segundos por unidade de tela normalizada.
-3. Ao chegar, o alvo fica parado por tempo indeterminado. Espaço ou Enter confirma
-   sem tirar os olhos do alvo; um botão oferece alternativa. Pressionar antes de
-   haver amostras suficientes não avança. Segurar uma tecla não confirma os próximos
-   pontos. ESC ou Cancelar interrompe a coleta.
-4. A referência usa somente quadros válidos dos últimos 1,2 s, pelo menos dez, com
-   o último a no máximo 0,5 s. Exige ao menos 0,9 s após chegada; não reutiliza quadros
-   do trajeto nem amostras antigas acumuladas durante uma espera longa. A confirmação
-   congela esse conjunto e registra seu horário e meio de acionamento no diagnóstico.
+3. Ao chegar, o alvo aguarda o sistema obter uma janela recente estável. Não há
+   confirmação por botão ou teclado. ESC ou Cancelar interrompe a coleta.
+4. São necessários ao menos dez quadros válidos dos últimos 1,2 s, cobrindo ao
+   menos 0,6 s, depois de 0,9 s da chegada, com o último quadro a no máximo 0,25 s.
+   A dispersão P90 das duas posições oculares deve ser <= 0,035 e a diferença
+   entre as medianas das duas metades <= 0,020, em coordenadas relativas dos olhos.
+   O deslocamento da posição da cabeça entre as metades deve ser <= 0,005 nas
+   coordenadas normalizadas da câmera. São regras fixas de coleta, não treinamento.
+   Se faltarem dados ou houver instabilidade, permanece no alvo e tenta novamente
+   com a janela móvel. O tempo decorrido não força avanço nem aceita dados antigos.
+   Ao passar nos critérios, congela a referência e avança automaticamente. O
+   diagnóstico registra accepted_by=automatic_stability, horário e medidas de
+   estabilidade de cada referência.
 5. As medianas das posições relativas médias das íris formam 32 triângulos. A
    interpolação baricêntrica continua geométrica, sem regressão, treino ou seleção
-   de modelos. Cada confirmação acrescenta uma referência medida; não há correção
+   de modelos. Cada aceite automático acrescenta uma referência medida; não há correção
    automática por assumir onde a pessoa olhou durante o tracking livre.
-6. Treze alvos posteriores, também confirmados, conferem centro, quadrantes, meios
+6. Treze alvos posteriores, também registrados automaticamente, conferem centro, quadrantes, meios
    das bordas e proximidade dos quatro cantos. Os dados só medem erro, sem alterar a
    malha. O limite 0,100 é exigido globalmente e em cada alvo. Assim, um canto ruim
    não é compensado por uma boa média no restante da tela. Quadros fora da malha
@@ -39,10 +44,11 @@ percentil com regras fixas para piscadas; não classifica etnia.
 7. Não há extrapolação fora da malha ocular. Regiões dobradas, cruzadas ou
    indistinguíveis são rejeitadas, em vez de devolver coordenadas arbitrárias.
 
-A duração depende das confirmações do participante. Não há avanço por temporizador
-nem tempo máximo de espera em um alvo. Isso aumenta o controle e a cobertura, mas
-não comprova que os pontos cegos foram resolvidos em pessoas. A nova varredura
-precisa ser testada com a webcam real. A cabeça deve permanecer confortável e estável.
+A duração depende da qualidade e estabilidade da coleta. O avanço é automático,
+mas não é uma corrida por temporizador. Não há tempo máximo de espera em um alvo;
+é possível cancelar. Estabilidade não comprova que a pessoa olhou para o alvo:
+a conferência de erro ao final continua necessária. Os pontos cegos ainda precisam
+ser avaliados com webcam real. A cabeça deve permanecer confortável e estável.
 O filtro de abertura e a recuperação temporal continuam funcionando.
 
 A câmera permanece fora do campo durante coleta/tracking. ESC interrompe a coleta

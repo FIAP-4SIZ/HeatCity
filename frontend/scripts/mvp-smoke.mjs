@@ -1,4 +1,4 @@
-import { confirmSweep } from './confirm-sweep.mjs';
+import { waitForAutomaticSweep } from './automatic-sweep.mjs';
 import { readFile } from 'node:fs/promises';
 // Software-only E2E: real WASM/no-face gate, then synthetic landmarks. No human accuracy claims.
 import { chromium } from 'playwright';
@@ -154,7 +154,7 @@ try {
   await page.getByRole('button', { name: 'Iniciar calibração', exact: true }).click();
   await page.getByRole('timer').filter({ hasText: '3' }).waitFor();
   assert.equal(await page.locator('.target').count(), 0);
-  await confirmSweep(page);
+  await waitForAutomaticSweep(page);
   await page
     .getByRole('button', { name: 'Usar calibração no estudo', exact: true })
     .waitFor({ state: 'visible', timeout: 90000 });

@@ -20,9 +20,11 @@ uso do detector MediaPipe previamente treinado por seus autores.
 
 Um alvo móvel percorre linhas, bordas, cantos, diagonais e centro em tela cheia
 branca, com contagem inicial de três segundos. Os deslocamentos levam pelo menos
-um segundo e cada referência só avança ao confirmar por Espaço, Enter ou botão.
-Prefira o teclado para manter o olhar no alvo. A duração é controlada pelo
-participante. Vinte e cinco correspondências medidas dos olhos formam uma malha; coordenadas intermediárias são interpoladas geometricamente.
+um segundo. O sistema registra cada referência e avança automaticamente quando
+há amostras recentes e estabilidade dos olhos e da cabeça. Não exige botão,
+Espaço ou Enter. Se a detecção ou a estabilidade piorar, o alvo espera e retoma
+sozinho quando a coleta melhora. Vinte e cinco correspondências medidas dos olhos
+formam uma malha; coordenadas intermediárias são interpoladas geometricamente.
 Treze alvos adicionais conferem centro, bordas e cantos sem alterar a malha. Cada
 região deve atender ao limite, além da média geral. Não há regressão,
 ajuste de pesos ou extrapolação fora da região de referência.
