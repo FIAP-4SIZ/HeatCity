@@ -89,6 +89,19 @@ de sair da prévia com ESC. Recarregar a página apaga o histórico temporário.
 Vídeos e imagens faciais não são enviados nem persistidos. Sem referência de onde
 a pessoa olhou, o tracking livre não permite calcular precisão real.
 
+## Prática na seção DEV e regra dos cantos
+
+Em **Diagnósticos / DEV**, a prévia pode ser aberta antes da calibração (somente
+landmarks e sinais), ou após importar uma malha concluída, inclusive reprovada.
+A opção de referência pelo mouse registra posições autodeclaradas separadamente
+da estimativa ocular; não ajusta modelos nem gera observações oficiais.
+[Passo a passo para a máquina da apresentação](docs/pratica-dev-e-maquina-apresentacao.md).
+
+Novas calibrações usam geometria corrigida pela proporção da câmera e confirmação
+com pelo menos oito quadros parados. Os quatro cantos externos não têm limite
+individual de RMSE; continuam no erro global e na margem. RMSE global, demais alvos
+e cobertura continuam exigidos. Malhas antigas mantêm seu cálculo original.
+
 ## Análise do sinal ocular e histórico oficial
 
 A calibração mostra dispersão por alvo, mudança ao longo da coleta e separação

@@ -246,6 +246,8 @@ def start_session(body: SessionInput):
                 "anchors",
                 "cells",
                 "feature_mode",
+                "eye_geometry",
+                "quality_policy",
                 "basis",
                 "validation_median_rmse",
                 "error_margin",

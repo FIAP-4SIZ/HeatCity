@@ -26,14 +26,19 @@ export class ReferenceCapture {
   evaluate(time) {
     if (this.complete) return true;
     this.prune(time);
+    const stationary = this.samples.filter((s) => !s.moving);
+    const stationarySpan = stationary.length ? stationary.at(-1).time - stationary[0].time : 0;
     if (
-      time - this.arrived < 300 ||
+      time - this.arrived < 600 ||
+      stationary.length < 8 ||
+      stationarySpan < 400 ||
       time - this.since < 900 ||
       this.samples.length < 10 ||
       time - this.last > 250 ||
       this.samples.at(-1).time - this.samples[0].time < 600
     ) {
-      this.reason = 'Aguardando amostras recentes dos olhos. Pisque naturalmente.';
+      this.reason =
+        'Aguardando ao menos 8 quadros recentes com o alvo parado. Pisque naturalmente.';
       return false;
     }
     const middle = center(this.samples);
@@ -53,6 +58,8 @@ export class ReferenceCapture {
         )
       : 0;
     this.stability = {
+      stationary_samples: stationary.length,
+      stationary_span_ms: stationarySpan,
       eye_p90: p90,
       eye_drift: drift,
       head_shift: headShift,

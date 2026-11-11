@@ -10,6 +10,9 @@ export default function Diagnostics() {
     [current, setCurrent] = useState(null),
     [error, setError] = useState('');
   const [signalReports, setSignalReports] = useState([]);
+  const [previewFile, setPreviewFile] = useState(null),
+    [loadingPreview, setLoadingPreview] = useState(false);
+  const previewLoader = useRef(null);
   const snapshot = useRef(() => ({}));
   function exportPage() {
     const page = snapshot.current();
@@ -35,12 +38,18 @@ export default function Diagnostics() {
     setError('');
     const incoming = [],
       signals = [];
+    let candidate = null;
     try {
       const files = [...event.target.files];
       if (files.length > 20) throw new Error('Selecione até 20 arquivos por vez.');
       for (const file of files) {
         if (file.size > 10000000) throw new Error(`${file.name}: limite de 10 MB.`);
         const data = JSON.parse(await file.text());
+        const all = data.page_diagnostic?.calibrations || [data];
+        const completed = all.filter(
+          (c) => c.mode === 'sweep' && c.quality?.basis === 'mesh' && Array.isArray(c.features),
+        );
+        if (completed.length) candidate = { source: completed.at(-1), name: file.name };
         const attempts = signalAttempts(data);
         signals.push(...attempts.map((a) => ({ ...a, name: file.name })));
         if (data.quality && Array.isArray(data.residuals))
@@ -50,6 +59,7 @@ export default function Diagnostics() {
       }
       setReports((previous) => [...previous, ...incoming].slice(-20));
       setSignalReports((previous) => [...previous, ...signals].slice(-20));
+      setPreviewFile(candidate);
     } catch (e) {
       setError(e.message);
     }
@@ -88,6 +98,9 @@ export default function Diagnostics() {
       </div>
       <CalibrationLab
         diagnosticsOnly
+        registerPreviewLoader={(loader) => {
+          previewLoader.current = loader;
+        }}
         registerSnapshot={(getter) => {
           snapshot.current = getter;
         }}
@@ -111,6 +124,7 @@ export default function Diagnostics() {
               setReports([]);
               setCurrent(null);
               setSignalReports([]);
+              setPreviewFile(null);
             }}
           >
             Limpar comparação
@@ -124,6 +138,33 @@ export default function Diagnostics() {
           Importar diagnósticos
           <input type="file" multiple accept="application/json,.json" onChange={load} />
         </label>
+        {previewFile && (
+          <div className="notice">
+            <p>
+              {previewFile.name}: última malha concluída disponível, inclusive se reprovada. Usá-la
+              na prévia não reconfirma a postura atual e não libera o estudo.
+            </p>
+            <button
+              className="secondary"
+              disabled={loadingPreview}
+              onClick={async () => {
+                setLoadingPreview(true);
+                setError('');
+                try {
+                  await previewLoader.current(previewFile.source);
+                } catch (e) {
+                  setError(e.message);
+                } finally {
+                  setLoadingPreview(false);
+                }
+              }}
+            >
+              {loadingPreview
+                ? 'Recalculando malha…'
+                : 'Usar última malha do arquivo na prévia DEV'}
+            </button>
+          </div>
+        )}
         {error && (
           <p className="error" role="alert">
             {error}

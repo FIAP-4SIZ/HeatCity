@@ -31,6 +31,7 @@ export async function createCamera(
   expectedEngine,
   eyeBaseline,
   cameraBinding,
+  eyeGeometry = 'legacy_v1',
 ) {
   let running = true,
     stream,
@@ -57,10 +58,12 @@ export async function createCamera(
     mesh.onResults((result) => {
       if (!running) return;
       const time = acquired;
-      const eyes = profile.inspect(result.multiFaceLandmarks, time);
+      const frameAspect = eyeGeometry === 'pixel_v2' ? video.videoWidth / video.videoHeight : 1;
+      const eyes = profile.inspect(result.multiFaceLandmarks, time, frameAspect);
       const inspection = eyes.ready
         ? inspectEyes(result.multiFaceLandmarks, featureMode !== 'motion', {
             thresholds: eyes.thresholds,
+            frameAspect,
           })
         : { reason: 'Ajustando abertura individual: olhe à frente e pisque naturalmente.' };
       const valid = gate.update(inspection.feature, time);

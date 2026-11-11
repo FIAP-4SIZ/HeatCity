@@ -47,6 +47,7 @@ export default function CalibrationLab({
   exploratory = false,
   onDiagnostic,
   registerSnapshot,
+  registerPreviewLoader,
 }) {
   const localArchive = useRef(new CalibrationArchive());
   const archive = attemptArchive || localArchive.current;
@@ -68,6 +69,8 @@ export default function CalibrationLab({
     [diagnostic, setDiagnostic] = useState(null),
     [metrics, setMetrics] = useState(null);
   const [captureStatus, setCaptureStatus] = useState(null);
+  const [mouseReference, setMouseReference] = useState(null),
+    [practiceStats, setPracticeStats] = useState(null);
   const [signalAnalysis, setSignalAnalysis] = useState(null);
   const [consent, setConsent] = useState(false),
     [progress, setProgress] = useState(0);
@@ -78,6 +81,7 @@ export default function CalibrationLab({
     filter: true,
     smoothing: 0.25,
     overlay: 'iris',
+    mouseReference: false,
   });
   state.current.dev = dev;
   state.current.phase = phase;
@@ -140,6 +144,7 @@ export default function CalibrationLab({
     setQuality(false);
   }
   useEffect(() => {
+    registerPreviewLoader?.(loadPreviewCalibration);
     registerSnapshot?.(() => ({
       ...state.current.log.snapshot(),
       incomplete_calibration: state.current.pending
@@ -150,6 +155,8 @@ export default function CalibrationLab({
           }
         : null,
       detector: state.current.mesh?.engine || null,
+      eye_geometry: state.current.eyeGeometry || 'pixel_v2',
+      mouse_practice: state.current.practice || null,
       eye_profile: state.current.profile?.baseline || null,
       developer_options: { ...state.current.dev },
       camera_capture: state.current.capture?.metadata,
@@ -169,13 +176,15 @@ export default function CalibrationLab({
       const s = state.current;
       s.log.event(document.fullscreenElement ? 'fullscreen_enter' : 'fullscreen_exit');
       if (document.fullscreenElement !== stage.current) {
-        if (diagnosticsOnly && s.calibration && !s.collection && s.phase !== 'countdown') {
+        if (diagnosticsOnly && s.tracking && !s.collection && s.phase !== 'countdown') {
           s.tracking = false;
           s.reference = null;
           s.geometry = null;
           setGaze(null);
           setTarget(null);
-          setPhase('result');
+          s.mouse = null;
+          setMouseReference(null);
+          setPhase(s.calibration ? 'result' : 'idle');
         } else if (s.pending?.status === 'failed') {
           invalidate(s.pending.error);
           setDiagnostic(s.pending);
@@ -197,6 +206,16 @@ export default function CalibrationLab({
     const hidden = () => {
       if (document.hidden) stop('Captura interrompida ao sair da página.');
     };
+    const escapePreview = (e) => {
+      if (
+        e.key === 'Escape' &&
+        diagnosticsOnly &&
+        state.current.tracking &&
+        document.fullscreenElement === stage.current
+      )
+        document.exitFullscreen().catch(() => {});
+    };
+    document.addEventListener('keydown', escapePreview);
     document.addEventListener('fullscreenchange', full);
     window.addEventListener('resize', resize);
     document.addEventListener('visibilitychange', hidden);
@@ -211,6 +230,7 @@ export default function CalibrationLab({
         request(`/calibrations/${state.current.calibration.calibration_id}`, null, 'DELETE').catch(
           () => {},
         );
+      document.removeEventListener('keydown', escapePreview);
       document.removeEventListener('fullscreenchange', full);
       window.removeEventListener('resize', resize);
       document.removeEventListener('visibilitychange', hidden);
@@ -228,6 +248,7 @@ export default function CalibrationLab({
         minDetectionConfidence: diagnosticsOnly ? dev.confidence : 0.6,
         minTrackingConfidence: diagnosticsOnly ? dev.confidence : 0.6,
       });
+      s.eyeGeometry = s.calibration?.eye_geometry || 'pixel_v2';
       s.profile = new EyeProfile();
       s.gate = new EyeGate();
       s.ready = new EyeReadiness();
@@ -239,7 +260,9 @@ export default function CalibrationLab({
       s.mesh.onResults((r) => {
         if (!s.running) return;
         const now = s.frameTime,
-          eyes = s.profile.inspect(r.multiFaceLandmarks, now),
+          frameAspect =
+            s.eyeGeometry === 'pixel_v2' ? video.current.videoWidth / video.current.videoHeight : 1,
+          eyes = s.profile.inspect(r.multiFaceLandmarks, now, frameAspect),
           adaptive = !diagnosticsOnly || s.dev.adaptive;
         const inspection =
           adaptive && !eyes.ready
@@ -247,7 +270,9 @@ export default function CalibrationLab({
             : inspectEyes(
                 r.multiFaceLandmarks,
                 true,
-                adaptive ? { thresholds: eyes.thresholds } : { minOpenness: s.dev.minOpenness },
+                adaptive
+                  ? { thresholds: eyes.thresholds, frameAspect }
+                  : { minOpenness: s.dev.minOpenness, frameAspect },
               );
         const f = inspection.feature,
           accepted = diagnosticsOnly && !s.dev.filter ? !!f : s.gate.update(f, now);
@@ -261,6 +286,9 @@ export default function CalibrationLab({
             : inspection.reason;
         setGuidance(s.guide.update(issue, now).text);
         if (accepted) s.motion?.add(f, now);
+        const declaredMouse =
+          diagnosticsOnly && s.tracking && s.dev.mouseReference ? s.mouse : null;
+        const mouseSettled = !!declaredMouse && now - declaredMouse.since >= 600;
         if (s.collection && accepted) s.collection.push(f, now);
         const point = s.tracking && accepted ? predict(calibrationFeature(f), s.calibration) : null;
         if (point?.every(Number.isFinite)) {
@@ -280,6 +308,23 @@ export default function CalibrationLab({
           now - s.reference.since >= 600
         )
           s.reference.predictions.push(point);
+        const declaredError =
+          mouseSettled && accepted && point?.every(Number.isFinite)
+            ? Math.hypot(point[0] - declaredMouse.target[0], point[1] - declaredMouse.target[1])
+            : null;
+        if (declaredError !== null && now - (s.lastPractice || 0) >= 100) {
+          s.lastPractice = now;
+          s.practice ||= {
+            samples: 0,
+            error_sum: 0,
+            mean_distance: null,
+            reference_type: 'mouse_declared',
+            use: 'diagnostic_only_no_training',
+          };
+          s.practice.samples++;
+          s.practice.error_sum += declaredError;
+          s.practice.mean_distance = s.practice.error_sum / s.practice.samples;
+        }
         s.log.add(
           {
             phase: s.tracking ? 'tracking' : s.phase,
@@ -288,7 +333,21 @@ export default function CalibrationLab({
             raw_prediction: point?.every(Number.isFinite) ? point : null,
             prediction_supported: s.tracking ? !!point?.every(Number.isFinite) : null,
             filtered_prediction: s.tracking ? s.smoothed : null,
-            expected: s.reference?.target || s.collection?.target || s.displayTarget || null,
+            expected:
+              declaredMouse?.target ||
+              s.reference?.target ||
+              s.collection?.target ||
+              s.displayTarget ||
+              null,
+            reference_source: declaredMouse
+              ? 'mouse_declared'
+              : s.collection || s.displayTarget
+                ? 'calibration_target'
+                : null,
+            mouse_reference: declaredMouse?.target || null,
+            mouse_stationary: mouseSettled,
+            declared_reference_distance: declaredError,
+            eye_geometry: s.eyeGeometry,
             reference_stationary: !!s.collection,
             reason: accepted
               ? null
@@ -308,6 +367,7 @@ export default function CalibrationLab({
         if (now - s.lastStats > 250) {
           s.lastStats = now;
           s.processingRate = s.pump?.stats.snapshot().processed_fps || 0;
+          setPracticeStats(s.practice ? { ...s.practice } : null);
           setMetrics({
             frames: s.frames,
             fps: s.processingRate,
@@ -368,12 +428,19 @@ export default function CalibrationLab({
     invalidate();
     const s = state.current,
       id = s.generation;
+    s.eyeGeometry = 'pixel_v2';
+    s.profile = new EyeProfile();
+    s.practice = null;
+    s.mouse = null;
+    setPracticeStats(null);
+    setMouseReference(null);
     setBusy(true);
     setSignalAnalysis(null);
     setPhase('countdown');
     const details = [],
       payload = {
         mode: 'sweep',
+        eye_geometry: s.eyeGeometry || 'pixel_v2',
         capture_settings: s.capture.settings,
         participant_code: participantCode,
         scenario_id: scenarioId,
@@ -413,6 +480,7 @@ export default function CalibrationLab({
         viewport_width: payload.viewport_width,
         viewport_height: payload.viewport_height,
         camera_capture: s.capture.metadata,
+        eye_profile: s.profile.baseline,
       });
       setCountdown(null);
       setPhase('collecting');
@@ -575,6 +643,7 @@ export default function CalibrationLab({
       s.calibration = {
         ...response,
         feature_mode: 'sweep',
+        eye_geometry: s.eyeGeometry || 'pixel_v2',
         camera_binding: s.capture.binding,
         capture_settings: s.capture.settings,
         detector: s.mesh.engine,
@@ -661,26 +730,100 @@ export default function CalibrationLab({
       } else setBusy(false);
     }
   }
+  async function loadPreviewCalibration(source) {
+    if (!diagnosticsOnly) throw new Error('Importação disponível somente no DEV.');
+    const s = state.current;
+    if (['collecting', 'countdown'].includes(s.phase))
+      throw new Error('Encerre a coleta antes de importar uma malha.');
+    setBusy(true);
+    try {
+      const payload = { mode: 'sweep', eye_geometry: source.eye_geometry || 'legacy_v1' };
+      for (const key of [
+        'features',
+        'targets',
+        'validation_features',
+        'validation_targets',
+        'validation_samples',
+      ])
+        if (source[key]) payload[key] = source[key];
+      const response = await request('/diagnostics/calibration', payload);
+      if (s.mesh && source.detector && s.mesh.engine !== source.detector)
+        throw new Error('Detector diferente do arquivo. A malha não foi aplicada.');
+      invalidate();
+      s.eyeGeometry = payload.eye_geometry;
+      s.profile = new EyeProfile();
+      s.calibration = {
+        ...response,
+        eye_geometry: payload.eye_geometry,
+        feature_mode: 'sweep',
+        imported_preview: true,
+        detector: source.detector,
+      };
+      s.practice = null;
+      s.mouse = null;
+      setPracticeStats(null);
+      setMouseReference(null);
+      s.attempt = (s.attempt || 0) + 1;
+      s.log.calibration({
+        ...payload,
+        detector: source.detector,
+        quality: response,
+        record_type: 'imported_preview',
+        diagnostic_attempt: s.attempt,
+        capture_details: source.capture_details || [],
+        source: 'imported_diagnostic',
+        preview_only: true,
+      });
+      s.log.event('preview_geometry_imported');
+      setResult(response);
+      setMessage(
+        'Malha importada apenas para inspeção DEV. Postura e precisão atuais não foram reconferidas; não libera sessão oficial.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  function indicateMouse(event) {
+    const s = state.current;
+    if (!diagnosticsOnly || !s.tracking || !s.dev.mouseReference) return;
+    const rect = field.current.getBoundingClientRect();
+    const point = [
+      Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width)),
+      Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height)),
+    ];
+    const now = performance.now();
+    const changed =
+      !s.mouse || Math.hypot(point[0] - s.mouse.target[0], point[1] - s.mouse.target[1]) > 0.003;
+    s.mouse = { target: point, since: changed ? now : s.mouse.since };
+    if (now - (s.lastMouseDraw || 0) > 40) {
+      s.lastMouseDraw = now;
+      setMouseReference(point);
+    }
+  }
   async function preview() {
     const s = state.current;
     try {
+      if (!diagnosticsOnly || !s.running) return false;
       await fullScreen();
       setPhase('tracking');
       await pause(50);
-      if (!s.calibration) return false;
       if (
-        field.current.clientWidth !== s.calibration.viewport_width ||
-        field.current.clientHeight !== s.calibration.viewport_height
+        s.calibration &&
+        !s.calibration.imported_preview &&
+        (field.current.clientWidth !== s.calibration.viewport_width ||
+          field.current.clientHeight !== s.calibration.viewport_height)
       )
         throw new Error('A área da tela mudou. Refaça a varredura.');
       s.geometry = [field.current.clientWidth, field.current.clientHeight];
       s.tracking = true;
       s.smoothed = null;
-      s.log.event('tracking_start');
+      s.mouse = null;
+      setMouseReference(null);
+      s.log.event(s.calibration ? 'tracking_start' : 'raw_eye_tracking_start');
       return true;
     } catch (e) {
       s.tracking = false;
-      setPhase('result');
+      setPhase(s.calibration ? 'result' : 'idle');
       setMessage(e.message);
       return false;
     }
@@ -796,6 +939,36 @@ export default function CalibrationLab({
               </label>
             </fieldset>
           )}
+          {diagnosticsOnly && (
+            <div className="dev-practice-controls">
+              <label className="checkbox">
+                <input
+                  type="checkbox"
+                  checked={dev.mouseReference}
+                  onChange={(e) => {
+                    setDev({ ...dev, mouseReference: e.target.checked });
+                    state.current.mouse = null;
+                    setMouseReference(null);
+                  }}
+                />
+                Referência com mouse para prática e diagnóstico
+              </label>
+              <p className="small">
+                Funciona na prévia DEV. O mouse registra onde você indica estar olhando; não
+                substitui o olhar, não entra no estudo e não treina modelos.
+              </p>
+              <button
+                className="secondary"
+                onClick={() => {
+                  state.current.practice = null;
+                  setPracticeStats(null);
+                  state.current.log.event('mouse_practice_reset');
+                }}
+              >
+                Reiniciar medidas da prática
+              </button>
+            </div>
+          )}
           <p>
             Olhe à frente por dois segundos, sem forçar a abertura dos olhos. Use luz frontal e
             mantenha a cabeça estável. Não há compensação aprendida de postura.
@@ -833,10 +1006,19 @@ export default function CalibrationLab({
           </div>
           <div
             ref={stage}
-            className={`stage ${collecting || phase === 'tracking' ? 'immersive' : ''}`}
+            className={`stage ${collecting || (phase === 'tracking' && !!state.current.calibration) ? 'immersive' : ''}`}
             aria-label="Área de calibração"
           >
-            <div ref={field} className="visual-field" aria-label="Campo visual branco">
+            <div
+              ref={field}
+              className="visual-field"
+              aria-label="Campo visual branco"
+              onPointerMove={indicateMouse}
+              onPointerLeave={() => {
+                state.current.mouse = null;
+                setMouseReference(null);
+              }}
+            >
               {countdown !== null ? (
                 <div className="countdown" role="timer" aria-label="Contagem regressiva">
                   {countdown}
@@ -854,10 +1036,60 @@ export default function CalibrationLab({
                       style={{ left: `${gaze[0] * 100}%`, top: `${gaze[1] * 100}%` }}
                     />
                   )}
+                  {diagnosticsOnly && dev.mouseReference && mouseReference && (
+                    <div
+                      className="mouse-reference"
+                      aria-label="Referência indicada pelo mouse"
+                      style={{
+                        left: `${mouseReference[0] * 100}%`,
+                        top: `${mouseReference[1] * 100}%`,
+                      }}
+                    />
+                  )}
+                  {!state.current.calibration && (
+                    <div className="raw-eye-tracking">
+                      <h3>Olhos detectados, sem posição de olhar calibrada.</h3>
+                      <p>Veja os landmarks na câmera e acompanhe as coordenadas abaixo.</p>
+                      <p>
+                        Íris:{' '}
+                        {metrics?.features
+                          ?.slice(0, 4)
+                          .map((v) => v.toFixed(3))
+                          .join(' / ') || 'aguardando detecção'}
+                      </p>
+                    </div>
+                  )}
+                  {diagnosticsOnly && dev.mouseReference && (
+                    <div className="mouse-practice-note">
+                      <strong>Azul: mouse indicado · verde: olhar estimado</strong>
+                      <p>
+                        Acompanhe o cursor com os olhos e pare por pelo menos 0,6 s. É referência
+                        autodeclarada, não medição do olhar real. Não altera nem treina a
+                        calibração.
+                      </p>
+                      <p>
+                        {practiceStats?.samples
+                          ? `${practiceStats.samples} comparações · distância média à referência: ${practiceStats.mean_distance.toFixed(3)} (tela normalizada)`
+                          : 'Sem comparações disponíveis. É necessária uma malha e previsões válidas.'}
+                      </p>
+                    </div>
+                  )}
+                  <button
+                    className="dev-exit-preview"
+                    onClick={() => document.exitFullscreen().catch(() => {})}
+                  >
+                    Sair da prévia
+                  </button>
                   <span className="diagnostic-watermark">
                     PRÉVIA DEV ·{' '}
-                    {result?.approved ? 'Conferência aprovada' : 'CALIBRAÇÃO REPROVADA'} · fora da
-                    malha, a previsão é ocultada · ESC volta
+                    {!state.current.calibration
+                      ? 'SEM CALIBRAÇÃO · somente sinais e landmarks'
+                      : state.current.calibration.imported_preview
+                        ? 'MALHA IMPORTADA · postura não reconferida'
+                        : result?.approved
+                          ? 'Conferência aprovada'
+                          : 'CALIBRAÇÃO REPROVADA'}{' '}
+                    · sem previsão, nenhum ponto de olhar é desenhado · ESC volta
                   </span>
                 </>
               ) : (
@@ -917,8 +1149,8 @@ export default function CalibrationLab({
               <strong>{message}</strong>
               {Number.isFinite(result?.max_target_rmse) && (
                 <p>
-                  Maior erro por alvo: {result.max_target_rmse.toFixed(3)} · cada região precisa
-                  atender ao limite 0,100.
+                  Maior erro por alvo: {result.max_target_rmse.toFixed(3)} · cantos externos sem
+                  limite individual; RMSE global, demais alvos e cobertura continuam exigidos.
                 </p>
               )}
               {result?.unsupported_validation_samples > 0 && (
@@ -949,7 +1181,7 @@ export default function CalibrationLab({
                 {result ? 'Refazer calibração' : 'Iniciar calibração'}
               </button>
               {diagnosticsOnly ? (
-                <button disabled={!result || !camera || busy || collecting} onClick={preview}>
+                <button disabled={!camera || busy || collecting} onClick={preview}>
                   Mostrar tracking experimental
                 </button>
               ) : (

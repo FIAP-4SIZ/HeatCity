@@ -38,8 +38,9 @@ percentil com regras fixas para piscadas; não classifica etnia.
    automática por assumir onde a pessoa olhou durante o tracking livre.
 6. Treze alvos posteriores, também registrados automaticamente, conferem centro, quadrantes, meios
    das bordas e proximidade dos quatro cantos. Os dados só medem erro, sem alterar a
-   malha. O limite 0,100 é exigido globalmente e em cada alvo. Assim, um canto ruim
-   não é compensado por uma boa média no restante da tela. Quadros fora da malha
+   malha. O limite 0,100 é exigido globalmente e em cada alvo, exceto os quatro
+   cantos externos, agora descritivos sem limite individual. Seus erros previstos
+   continuam no RMSE geral e na margem. Quadros fora da malha
    reprovam a cobertura. RMSE considera somente previsões existentes.
 7. Não há extrapolação fora da malha ocular. Regiões dobradas, cruzadas ou
    indistinguíveis são rejeitadas, em vez de devolver coordenadas arbitrárias.

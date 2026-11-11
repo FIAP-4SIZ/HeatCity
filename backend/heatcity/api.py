@@ -56,6 +56,7 @@ ValidationGroup = Annotated[list[EyePair], Field(min_length=6, max_length=120)]
 class CalibrationRequest(BaseModel):
     mode: Literal["sweep"] = "sweep"
     source: Literal["live", "imported_diagnostic"] = "live"
+    eye_geometry: Literal["legacy_v1", "pixel_v2"] = "legacy_v1"
     capture_settings: CameraSettings | None = None
     participant_code: str | None = Field(default=None, pattern=r"^[A-Z0-9][A-Z0-9_-]{1,23}$")
     scenario_id: str | None = None
@@ -103,6 +104,7 @@ def diagnostic_calibration(body: CalibrationRequest):
             exclude={
                 "mode",
                 "source",
+                "eye_geometry",
                 "participant_code",
                 "scenario_id",
                 "viewport_width",
@@ -125,6 +127,7 @@ def calibrate(body: CalibrationRequest):
             exclude={
                 "mode",
                 "source",
+                "eye_geometry",
                 "participant_code",
                 "scenario_id",
                 "viewport_width",
@@ -155,6 +158,7 @@ def calibrate(body: CalibrationRequest):
                 "participant": body.participant_code,
                 "scenario_id": body.scenario_id,
                 "feature_mode": body.mode,
+                "eye_geometry": body.eye_geometry,
                 "viewport_width": body.viewport_width,
                 "viewport_height": body.viewport_height,
             }
@@ -173,6 +177,7 @@ def exploratory_calibration(body: CalibrationRequest):
             exclude={
                 "mode",
                 "source",
+                "eye_geometry",
                 "participant_code",
                 "scenario_id",
                 "viewport_width",
@@ -194,6 +199,7 @@ def exploratory_calibration(body: CalibrationRequest):
             "participant": body.participant_code,
             "scenario_id": body.scenario_id,
             "feature_mode": "sweep",
+            "eye_geometry": body.eye_geometry,
             "viewport_width": body.viewport_width,
             "viewport_height": body.viewport_height,
             "capture_settings": body.capture_settings.model_dump()

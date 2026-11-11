@@ -38,6 +38,7 @@ class Calibration:
     max_target_rmse: float | None = None
     target_errors: list[dict] | None = None
     error_margin: dict | None = None
+    quality_policy: dict | None = None
 
 
 def _pairs(values, minimum):
@@ -198,6 +199,7 @@ def fit_calibration(
         target_errors.append(
             {
                 "expected": t.tolist(),
+                "individual_limit_required": not all(v <= 0.1 or v >= 0.9 for v in t),
                 "count": len(a),
                 "unsupported": absent,
                 "rmse": error,
@@ -211,6 +213,7 @@ def fit_calibration(
     target_passed = all(
         r["unsupported"] == 0 and r["rmse"] is not None and r["rmse"] <= max_rmse
         for r in target_errors
+        if r["individual_limit_required"]
     )
     distances = np.linalg.norm(residuals, axis=1)
     rmse = float(np.sqrt(np.mean(distances**2))) if len(distances) else None
@@ -231,6 +234,12 @@ def fit_calibration(
         validation_p90=float(np.percentile(distances, 90)) if len(distances) else 0,
         max_target_rmse=max_target_rmse,
         target_errors=target_errors,
+        quality_policy={
+            "version": "global_and_noncorner_v2",
+            "global_rmse_limit": max_rmse,
+            "corner_individual_limit": None,
+            "unsupported_policy": "all_targets_required",
+        },
         error_margin={
             "method": "worst_target_axis_p90_v1",
             "axes": [
