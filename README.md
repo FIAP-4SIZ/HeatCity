@@ -25,6 +25,15 @@ roteiro de fala, demonstração e plano B. No Windows, o atalho
 **docs/apresentacao/Abrir-apresentacao.cmd** abre os slides no navegador padrão. Não inclui vetores oculares do usuário;
 as estatísticas dos diagnósticos são agregadas e identificadas como tentativas.
 
+## Exemplo hospitalar A/B
+
+Na página de estudos, use **Exemplo hospitalar A/B** para selecionar as duas
+imagens de IA, conferir/ajustar as AOIs e criar o estudo completo sem dados humanos.
+O par é ilustrativo: outras placas, seta e pessoas também mudam.
+Veja o [guia do exemplo e da base compartilhada](docs/estudo-exemplo-hospital.md).
+O fluxo possui teste de navegador executado pela CI; os arquivos exatos das imagens
+inline do chat ainda precisam ser fornecidos para uma base visual já incluída.
+
 ## PDI visual
 
 No estudo, abra **PDI visual**. Selecione o cenário e a placa para explorar a cena

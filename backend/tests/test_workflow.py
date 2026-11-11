@@ -47,6 +47,49 @@ class WorkflowTests(unittest.TestCase):
         )
         self.assertEqual(self.client.get("/scenarios/nonexistent/pdi").status_code, 404)
 
+    def hospital_input(self):
+        labels = ["Recepção", "Pronto Socorro", "Ambulatório", "Triagem"]
+        scene = {
+            **self.scene_input,
+            "plates": [
+                {"name": label, "x": 0.05 + i * 0.23, "y": 0.2, "width": 0.2, "height": 0.15}
+                for i, label in enumerate(labels)
+            ],
+        }
+        return {"scenarios": [scene, {**scene, "name": "B"}]}
+
+    def test_hospital_example_creates_two_scenes_without_human_results(self):
+        response = self.client.post("/study-examples/hospital", json=self.hospital_input())
+        self.assertEqual(response.status_code, 201, response.text)
+        data = response.json()
+        self.assertEqual(len(data["scenarios"]), 2)
+        self.assertEqual(data["example_protocol"]["comparison"], "illustrative_multifactor")
+        result = self.client.get(f"/studies/{data['id']}/results").json()
+        self.assertEqual(result["sessions"], [])
+        self.assertEqual(len(result["study"]["scenarios"]), 2)
+        self.assertTrue(all(r["participants"] == 0 for r in result["summary"]["rows"]))
+        self.assertIn("image_metrics", data["scenarios"][0])
+        self.assertEqual(self.client.get(f"/studies/{data['id']}/report.pdf").status_code, 200)
+
+    def test_invalid_second_hospital_image_leaves_no_partial_study(self):
+        data = self.hospital_input()
+        data["scenarios"][1] = {**data["scenarios"][1], "image": "invalid"}
+        before = self.client.get("/studies").json()
+        response = self.client.post("/study-examples/hospital", json=data)
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(self.client.get("/studies").json(), before)
+
+    def test_hospital_example_requires_both_scenes_and_reception(self):
+        data = self.hospital_input()
+        data["scenarios"][0] = {
+            **data["scenarios"][0],
+            "plates": data["scenarios"][0]["plates"][1:],
+        }
+        self.assertEqual(self.client.post("/study-examples/hospital", json=data).status_code, 422)
+        self.assertEqual(
+            self.client.post("/study-examples/hospital", json={"scenarios": []}).status_code, 422
+        )
+
     def session(self, code="P01", mode="gaze", calibration_id=None):
         if calibration_id is None:
             import time

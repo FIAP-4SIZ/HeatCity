@@ -66,6 +66,17 @@ class ScenarioInput(Contract):
         return self
 
 
+class HospitalExampleInput(Contract):
+    scenarios: tuple[ScenarioInput, ScenarioInput]
+
+    @model_validator(mode="after")
+    def reception_task(self):
+        expected = {"Recepção", "Pronto Socorro", "Ambulatório", "Triagem"}
+        if any({p.name for p in scene.plates} != expected for scene in self.scenarios):
+            raise ValueError("Cada cenário deve conter as quatro placas do exemplo hospitalar.")
+        return self
+
+
 class SessionInput(Contract):
     participant: str = Field(pattern=r"^[A-Z0-9][A-Z0-9_-]{1,23}$")
     scenario_id: str

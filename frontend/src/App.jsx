@@ -4,6 +4,7 @@ import { api, post, route, number } from './api.js';
 import ScenarioEditor from './views/ScenarioEditor.jsx';
 import Preparation from './views/Preparation.jsx';
 import Results from './views/Results.jsx';
+import HospitalExample from './views/HospitalExample.jsx';
 import PdiView from './views/PdiView.jsx';
 import Scene from './components/Scene.jsx';
 
@@ -100,6 +101,7 @@ export default function App() {
     [notice, setNotice] = useState(''),
     [revision, setRevision] = useState(0),
     [creating, setCreating] = useState(false),
+    [hospitalExample, setHospitalExample] = useState(false),
     [title, setTitle] = useState(''),
     [objective, setObjective] = useState(''),
     [busy, setBusy] = useState(false),
@@ -280,6 +282,16 @@ export default function App() {
                     </a>
                   ))}
                 </nav>
+                {study.example_protocol && (
+                  <div className="notice">
+                    <strong>Estudo de exemplo · imagens geradas por IA.</strong>
+                    <p>
+                      Comparação ilustrativa: há mudanças de placas, seta e pessoas. Tarefa:
+                      “Localize a placa Recepção”. Não isola o efeito da posição nem contém
+                      resultados humanos pré-preenchidos.
+                    </p>
+                  </div>
+                )}
                 {tab === 'overview' && (
                   <>
                     <div className="study-hero">
@@ -463,7 +475,22 @@ export default function App() {
                 <button className="secondary" onClick={() => route('/diagnostics')}>
                   Diagnósticos
                 </button>
-                <button className="primary" onClick={() => setCreating(true)}>
+                <button
+                  className="secondary"
+                  onClick={() => {
+                    setHospitalExample(true);
+                    setCreating(false);
+                  }}
+                >
+                  Exemplo hospitalar A/B
+                </button>
+                <button
+                  className="primary"
+                  onClick={() => {
+                    setCreating(true);
+                    setHospitalExample(false);
+                  }}
+                >
                   + Criar estudo
                 </button>
               </div>
@@ -485,6 +512,19 @@ export default function App() {
                 <small>Qualidade antes de conclusões</small>
               </div>
             </div>
+            {hospitalExample && (
+              <HospitalExample
+                onCancel={() => setHospitalExample(false)}
+                onSaved={(value) => {
+                  setHospitalExample(false);
+                  setRevision((r) => r + 1);
+                  route(`/studies/${value.id}/scenarios`);
+                  setNotice(
+                    'Exemplo hospitalar criado com imagens de IA e sem resultados humanos.',
+                  );
+                }}
+              />
+            )}
             {creating && (
               <form className="panel create-form" onSubmit={create}>
                 <div className="section-heading">

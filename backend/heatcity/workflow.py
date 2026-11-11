@@ -2,13 +2,14 @@
 
 import csv
 import io
+import json
 from datetime import datetime, timezone
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, Response
 
 from . import storage
-from .schemas import FinishInput, ScenarioInput, SessionInput, StudyInput
+from .schemas import FinishInput, HospitalExampleInput, ScenarioInput, SessionInput, StudyInput
 from .services.evaluation import evaluate, summarize
 from .services.uncertainty import session_margin
 from .services.vision import decode_scene, demo_scene, heatmap, image_metrics, pdi_preview
@@ -41,6 +42,55 @@ def studies():
 @router.post("/studies", status_code=201)
 def create_study(body: StudyInput):
     return storage.insert("studies", dict(id=identifier(), created_at=now(), **body.model_dump()))
+
+
+@router.post("/study-examples/hospital", status_code=201)
+def hospital_example(body: HospitalExampleInput):
+    study_id = identifier()
+    value = {
+        "id": study_id,
+        "created_at": now(),
+        "title": "Orientação na entrada de um hospital",
+        "objective": "Investigar a localização da placa Recepção em dois posicionamentos. Exemplo com imagens geradas por IA fornecidas pelo operador; há mudanças em outras placas, seta e pessoas. Comparação ilustrativa, sem isolamento causal ou resultados humanos pré-preenchidos.",
+        "example_protocol": {
+            "target": "Recepção",
+            "stimulus_source": "IA, conforme informado pelo operador",
+            "comparison": "illustrative_multifactor",
+            "recommended_order": "P01: A→B; P02: B→A",
+            "instruction": "Localize a placa Recepção.",
+        },
+    }
+    scenarios = []
+    image_shape = None
+    # Validate and calculate both images before the transaction; never leave a partial example.
+    try:
+        for label, scene in zip(("A", "B"), body.scenarios):
+            image = decode_scene(scene.image)
+            if image_shape is not None and image.shape[:2] != image_shape:
+                raise ValueError("Use a mesma resolução nos cenários A e B.")
+            image_shape = image.shape[:2]
+            scenarios.append(
+                {
+                    **scene.model_dump(),
+                    "id": identifier(),
+                    "study_id": study_id,
+                    "created_at": now(),
+                    "name": f"Cenário simulado {label} · IA",
+                    "width": image.shape[1],
+                    "height": image.shape[0],
+                    "image_metrics": image_metrics(image, [p.model_dump() for p in scene.plates]),
+                }
+            )
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    with storage.database() as db:
+        db.execute("INSERT INTO studies(id,payload) VALUES(?,?)", (study_id, json.dumps(value)))
+        for scene in scenarios:
+            db.execute(
+                "INSERT INTO scenarios(id,study_id,payload) VALUES(?,?,?)",
+                (scene["id"], study_id, json.dumps(scene)),
+            )
+    return {**value, "scenarios": scenarios}
 
 
 @router.get("/studies/{study_id}")
