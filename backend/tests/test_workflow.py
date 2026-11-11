@@ -33,6 +33,20 @@ class WorkflowTests(unittest.TestCase):
         self.environment.stop()
         self.directory.cleanup()
 
+    def test_pdi_uses_saved_scenario_without_creating_sessions(self):
+        response = self.client.get(f"/scenarios/{self.scene['id']}/pdi")
+        self.assertEqual(response.status_code, 200)
+        regions = response.json()["regions"]
+        self.assertEqual(len(regions), len(self.scene["plates"]))
+        self.assertEqual(
+            regions[0]["local_contrast"], self.scene["image_metrics"][0]["local_contrast"]
+        )
+        self.assertEqual(sum(regions[0]["histogram"]), regions[0]["pixel_count"])
+        self.assertEqual(
+            self.client.get(f"/studies/{self.study['id']}/results").json()["sessions"], []
+        )
+        self.assertEqual(self.client.get("/scenarios/nonexistent/pdi").status_code, 404)
+
     def session(self, code="P01", mode="gaze", calibration_id=None):
         if calibration_id is None:
             import time

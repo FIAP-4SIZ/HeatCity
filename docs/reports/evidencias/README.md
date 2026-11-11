@@ -47,3 +47,12 @@ As datas internas dos PDFs podem mudar ao regenerar; compare valores do JSON/CSV
 
 O relatório continua exigindo identificação/contribuições da equipe e eventuais
 novas coletas antes de ser considerado entrega acadêmica final.
+
+## Evidência visual de PDI
+
+`pdi-cena-didatica.json` descreve uma cena sintética gerada pelo código, sem
+participantes. Reproduzir: `python scripts/build_pdi_demo.py`. A API utiliza a mesma
+função `pdi_preview` para imagens carregadas pelo operador. O PDF independente
+`docs/reports/HeatCity-PDI-visual.pdf` e `docs/apresentacao/pdi-visual.html` mostram
+cena/AOIs, recortes e métricas. Não confundir esta evidência de processamento
+de imagem com os experimentos humanos de calibração deste diretório.

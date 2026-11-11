@@ -41,19 +41,48 @@ def decode_scene(data_url):
         raise ValueError(str(error)) from error
 
 
+def aoi_crop(image, plate):
+    height, width = image.shape[:2]
+    x0, y0 = int(plate["x"] * width), int(plate["y"] * height)
+    x1 = max(int((plate["x"] + plate["width"]) * width), x0 + 1)
+    y1 = max(int((plate["y"] + plate["height"]) * height), y0 + 1)
+    return image[y0:y1, x0:x1]
+
+
+def png_url(image):
+    return "data:image/png;base64," + base64.b64encode(cv2.imencode(".png", image)[1]).decode()
+
+
+def pdi_preview(image, plates):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    regions = []
+    for plate, metrics in zip(plates, image_metrics(image, plates)):
+        roi = aoi_crop(gray, plate)
+        laplacian = cv2.Laplacian(roi, cv2.CV_64F)
+        magnitude = np.abs(laplacian)
+        peak = float(magnitude.max())
+        visual = (magnitude / peak * 255).astype(np.uint8) if peak else np.zeros_like(roi)
+        low, high = np.percentile(roi, [1, 99])
+        regions.append(
+            {
+                **metrics,
+                "p1": float(low),
+                "p99": float(high),
+                "pixel_count": int(roi.size),
+                "histogram": np.bincount(roi.ravel(), minlength=256).tolist(),
+                "original": png_url(aoi_crop(image, plate)),
+                "gray": png_url(roi),
+                "laplacian": png_url(visual),
+            }
+        )
+    return {"gray_scene": png_url(gray), "regions": regions}
+
+
 def image_metrics(image, plates):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    height, width = gray.shape
     metrics = []
     for plate in plates:
-        roi = gray[
-            int(plate["y"] * height) : max(
-                int((plate["y"] + plate["height"]) * height), int(plate["y"] * height) + 1
-            ),
-            int(plate["x"] * width) : max(
-                int((plate["x"] + plate["width"]) * width), int(plate["x"] * width) + 1
-            ),
-        ]
+        roi = aoi_crop(gray, plate)
         low, high = np.percentile(roi, [1, 99])
         metrics.append(
             {

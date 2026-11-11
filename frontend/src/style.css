@@ -1350,3 +1350,42 @@ meter {
   padding: 8px 12px;
   font-size: 13px;
 }
+
+.pdi-view {
+  display: grid;
+  gap: 24px;
+}
+.pdi-view > label {
+  max-width: 420px;
+}
+.pdi-images {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+.pdi-images figure {
+  margin: 0;
+}
+.pdi-images img {
+  display: block;
+  width: 100%;
+  height: 140px;
+  object-fit: contain;
+  background: #171c1a;
+  border: 1px solid var(--line);
+}
+.pdi-images figcaption {
+  padding-top: 8px;
+  font-size: 14px;
+}
+.pdi-histogram {
+  display: block;
+  width: 100%;
+  max-width: 800px;
+  color: var(--ink);
+}
+@media (max-width: 700px) {
+  .pdi-images {
+    grid-template-columns: 1fr;
+  }
+}
