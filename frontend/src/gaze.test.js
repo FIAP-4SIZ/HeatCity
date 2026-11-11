@@ -138,7 +138,11 @@ test('movement uses the acquisition timestamp and seeds only nearby references',
   assert.deepEqual(motion.near([0.5, 0.5], 3000), []);
   const capture = new ReferenceCapture([0.5, 0.5], 1000, seed);
   for (let t = 1150; t <= 1500; t += 50) capture.push(f, t);
-  assert.equal(capture.evaluate(1500), true);
+  assert.equal(capture.evaluate(1500), false);
+  capture.push(f, 1550);
+  capture.push(f, 1600);
+  assert.equal(capture.evaluate(1600), true);
+  assert.ok(capture.stability.stationary_samples >= 8);
   assert.ok(capture.motionSamplesUsed >= 3);
   const stationary = new ReferenceCapture([0.5, 0.5], 1000);
   for (let t = 1150; t <= 1500; t += 50) stationary.push(f, t);
@@ -236,4 +240,29 @@ test('capture requests quality and FPS while excluding identifiers from exported
     if (original) Object.defineProperty(globalThis, 'navigator', original);
     else delete globalThis.navigator;
   }
+});
+
+test('pixel geometry removes frame aspect distortion consistently with eyelid openness', async () => {
+  const { inspectEyes } = await import('./gaze.js');
+  const { eyeOpenness } = await import('./eye-profile.js');
+  const make = (aspect) => {
+    const face = Array.from({ length: 478 }, () => ({ x: 0.5, y: 0.5 * aspect }));
+    for (const [a, b, u, l, i] of [
+      [33, 133, 159, 145, 468],
+      [362, 263, 386, 374, 473],
+    ]) {
+      face[a] = { x: 0.2, y: 0.3 * aspect };
+      face[b] = { x: 0.4, y: 0.35 * aspect };
+      face[u] = { x: 0.29, y: 0.28 * aspect };
+      face[l] = { x: 0.31, y: 0.37 * aspect };
+      face[i] = { x: 0.32, y: 0.34 * aspect };
+    }
+    face[1] = { x: 0.31, y: 0.42 * aspect };
+    return [face];
+  };
+  const square = inspectEyes(make(1), true, { frameAspect: 1 }).feature;
+  const wide = inspectEyes(make(16 / 9), true, { frameAspect: 16 / 9 }).feature;
+  assert.ok(square.every((v, i) => Math.abs(v - wide[i]) < 1e-12));
+  assert.ok(Math.abs(eyeOpenness(make(1))[0] - eyeOpenness(make(16 / 9), 16 / 9)[0]) < 1e-12);
+  assert.notEqual(inspectEyes(make(16 / 9), true).feature[1], square[1]);
 });

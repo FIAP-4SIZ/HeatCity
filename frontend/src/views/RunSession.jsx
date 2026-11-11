@@ -130,6 +130,7 @@ export default function RunSession({
         calibration.detector,
         calibration.eye_profile,
         calibration.camera_binding,
+        calibration.eye_geometry || 'legacy_v1',
       );
       if (current.cancelled) {
         await current.stop();

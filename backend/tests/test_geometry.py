@@ -42,7 +42,7 @@ class GeometryTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             fit_calibration(self.grid, self.grid, self.held, [[0.5, 0.5]] * 5)
 
-    def test_a_bad_corner_cannot_hide_behind_low_overall_rmse(self):
+    def test_a_bad_required_quadrant_cannot_hide_behind_low_overall_rmse(self):
         shifted = [p[:] for p in self.held]
         shifted[0][0] += 0.15
         result = fit_calibration(self.grid, self.grid, shifted, self.held)
@@ -50,6 +50,18 @@ class GeometryTests(unittest.TestCase):
         self.assertAlmostEqual(result.max_target_rmse, 0.15)
         self.assertFalse(result.approved)
         self.assertEqual(result.target_errors[0]["expected"], [0.2, 0.2])
+
+    def test_outer_corner_has_no_individual_error_limit_but_still_counts_globally(self):
+        held = self.held + [[0.08, 0.08]]
+        shifted = [p[:] for p in held]
+        shifted[-1][0] += 0.15
+        result = fit_calibration(self.grid, self.grid, shifted, held)
+        self.assertTrue(result.approved)
+        self.assertGreater(result.validation_rmse, 0)
+        self.assertFalse(result.target_errors[-1]["individual_limit_required"])
+        self.assertEqual(result.quality_policy["version"], "global_and_noncorner_v2")
+        shifted[-1] = [2, 2]
+        self.assertFalse(fit_calibration(self.grid, self.grid, shifted, held).approved)
 
     def test_dense_grid_keeps_upper_corners_separate_from_top_center(self):
         levels = [0.05, 0.275, 0.5, 0.725, 0.95]

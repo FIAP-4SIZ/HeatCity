@@ -52,7 +52,10 @@ export function inspectEyes(faces, classic = false, options = {}) {
           ? 'Mantenha apenas um rosto na câmera.'
           : 'Centralize o rosto e ilumine-o pela frente.',
     };
-  const points = faces[0];
+  const aspect =
+    Number.isFinite(options.frameAspect) && options.frameAspect > 0 ? options.frameAspect : 1;
+  // Coordinates share the image width as unit before lengths, projections and rotations.
+  const points = faces[0].map((p) => (p ? { ...p, y: p.y / aspect } : p));
   if (points.length < 478)
     return { reason: 'Íris não detectadas. Aproxime-se e evite reflexos nos óculos.' };
   const valid = (p) => p && Number.isFinite(p.x) && Number.isFinite(p.y);

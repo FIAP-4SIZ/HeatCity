@@ -1,7 +1,8 @@
 // Personal eyelid geometry, never an ethnicity classifier. No images are retained.
-export function eyeOpenness(faces) {
+export function eyeOpenness(faces, frameAspect = 1) {
   if (faces?.length !== 1 || faces[0].length < 478) return null;
-  const face = faces[0];
+  const aspect = Number.isFinite(frameAspect) && frameAspect > 0 ? frameAspect : 1;
+  const face = faces[0].map((p) => (p ? { ...p, y: p.y / aspect } : p));
   const values = [];
   for (const [a, b, u, l] of [
     [33, 133, 159, 145],
@@ -22,8 +23,8 @@ export class EyeProfile {
     this.samples = [];
     this.since = null;
   }
-  inspect(faces, time) {
-    const openness = eyeOpenness(faces);
+  inspect(faces, time, frameAspect = 1) {
+    const openness = eyeOpenness(faces, frameAspect);
     if (!openness) return { ready: !!this.baseline, openness, thresholds: this.thresholds() };
     if (!this.baseline) {
       this.since ??= time;

@@ -92,6 +92,7 @@ export default function Preparation({ study, onFinished, exploratory = false }) 
       const payload = {
         mode: 'sweep',
         source: 'imported_diagnostic',
+        eye_geometry: source.eye_geometry || 'legacy_v1',
         participant_code: participant,
         scenario_id: scenario.id,
       };
@@ -107,6 +108,7 @@ export default function Preparation({ study, onFinished, exploratory = false }) 
       setCalibration({
         ...result,
         feature_mode: 'sweep',
+        eye_geometry: source.eye_geometry || 'legacy_v1',
         detector: source.detector,
         source: 'imported_diagnostic',
       });
