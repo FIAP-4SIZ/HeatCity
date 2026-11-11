@@ -138,6 +138,11 @@ try {
         # Recria os assets locais caso tenham sido removidos.
         Run-Checked 'node' @('scripts/copy-model.mjs')
     }
+    if (-not (Test-Path 'public/mediapipe/face_landmarker.task')) {
+        Write-Host 'Baixando modelo oficial Face Landmarker para processamento local...'
+        try { Run-Checked 'node' @('scripts/install-face-landmarker.mjs') }
+        catch { Write-Warning 'Modelo novo indisponivel. Continuando com Face Mesh anterior; confira o detector na tela da camera.' }
+    }
     Set-Location $root
     # Janelas separadas preservam logs. Aspas simples protegem caminhos com espacos.
     $safeRoot = $root.Replace("'", "''")

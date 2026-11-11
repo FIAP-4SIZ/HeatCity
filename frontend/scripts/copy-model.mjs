@@ -7,3 +7,10 @@ for (const name of await readdir(source)) {
     await copyFile(new URL(name, source), new URL(name, target));
   }
 }
+const tasksSource = new URL('../node_modules/@mediapipe/tasks-vision/wasm/', import.meta.url);
+const tasksTarget = new URL('../public/mediapipe/tasks/', import.meta.url);
+await mkdir(tasksTarget, { recursive: true });
+for (const name of await readdir(tasksSource)) {
+  if (/\.(js|wasm)$/.test(name))
+    await copyFile(new URL(name, tasksSource), new URL(name, tasksTarget));
+}

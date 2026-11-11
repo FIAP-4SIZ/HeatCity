@@ -1,4 +1,4 @@
-import { loadFaceMesh } from '../camera.js';
+import { createDetector } from '../detector.js';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   targets,
@@ -150,7 +150,6 @@ export default function CalibrationLab({
     const state = runtime.current;
     try {
       await state.inflight?.catch(() => {});
-      await loadFaceMesh();
       if (!navigator.mediaDevices?.getUserMedia)
         throw new Error('A câmera exige HTTPS ou execução em localhost.');
       state.stream = await navigator.mediaDevices.getUserMedia({
@@ -159,8 +158,8 @@ export default function CalibrationLab({
       });
       video.current.srcObject = state.stream;
       await video.current.play();
-      state.mesh ??= new window.FaceMesh({ locateFile: (file) => `/mediapipe/${file}` });
-      state.mesh.setOptions({
+      await state.mesh?.close();
+      state.mesh = await createDetector({
         maxNumFaces: 2,
         refineLandmarks: true,
         minDetectionConfidence: diagnosticsOnly ? state.dev.confidence : 0.6,
@@ -291,7 +290,9 @@ export default function CalibrationLab({
       };
       await tick();
       setCamera(state.running);
-      setMessage('Ajuste a câmera à altura dos olhos. Você pode piscar naturalmente.');
+      setMessage(
+        `Detector: ${state.mesh.engine}. Ajuste a câmera à altura dos olhos. Pisque naturalmente.`,
+      );
     } catch (error) {
       await stop(
         error.name === 'NotAllowedError'
@@ -312,6 +313,7 @@ export default function CalibrationLab({
     state.featureMode = calibrationMode;
     const captureDetails = [];
     const payload = {
+      detector: state.mesh?.engine,
       mode: calibrationMode,
       participant_code: participantCode,
       scenario_id: scenarioId,
@@ -449,6 +451,7 @@ export default function CalibrationLab({
       }
       state.calibration = {
         ...response,
+        detector: state.mesh.engine,
         feature_mode: calibrationMode,
         viewport_width: payload.viewport_width,
         viewport_height: payload.viewport_height,

@@ -110,6 +110,7 @@ export default function RunSession({
         },
         setMessage,
         calibration.feature_mode,
+        calibration.detector,
       );
       if (current.cancelled) {
         await current.stop();

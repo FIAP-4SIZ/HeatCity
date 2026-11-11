@@ -82,7 +82,8 @@ try {
   await page.getByRole('button', { name: 'Iniciar calibração', exact: true }).click();
   await page.getByRole('timer').filter({ hasText: '3' }).waitFor();
   await page
-    .getByRole('button', { name: 'Mostrar tracking experimental', exact: true })
+    .locator('.fullscreen-panel p')
+    .filter({ hasText: 'RMSE' })
     .waitFor({ timeout: process.env.HEATCITY_TEST_PRECISION ? 150000 : 90000 });
   assert.ok(await page.locator('.fullscreen-panel p').filter({ hasText: 'Reprovada' }).count());
   if (process.env.HEATCITY_TEST_PRECISION) {

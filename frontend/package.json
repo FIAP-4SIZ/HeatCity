@@ -10,10 +10,12 @@
     "postinstall": "node scripts/copy-model.mjs",
     "test:e2e": "node scripts/mvp-smoke.mjs",
     "format": "prettier --write src scripts vite.config.js index.html package.json",
-    "format:check": "prettier --check src scripts vite.config.js index.html package.json"
+    "format:check": "prettier --check src scripts vite.config.js index.html package.json",
+    "model:install": "node scripts/install-face-landmarker.mjs"
   },
   "dependencies": {
     "@mediapipe/face_mesh": "0.4.1633559619",
+    "@mediapipe/tasks-vision": "1.2.2",
     "react": "19.2.0",
     "react-dom": "19.2.0"
   },

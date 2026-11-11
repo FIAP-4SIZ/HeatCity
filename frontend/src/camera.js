@@ -1,3 +1,4 @@
+import { createDetector } from './detector.js';
 import { inspectEyes, EyeGate, calibrationFeature, predict, supportedHead } from './gaze.js';
 
 let detectorLoader;
@@ -20,7 +21,13 @@ export async function loadFaceMesh() {
 }
 
 // The video stays mounted and decoded; it never covers the stimulus.
-export async function createCamera(video, onSample, onStatus, featureMode = 'fixed') {
+export async function createCamera(
+  video,
+  onSample,
+  onStatus,
+  featureMode = 'fixed',
+  expectedEngine,
+) {
   let running = true,
     stream,
     mesh,
@@ -28,7 +35,6 @@ export async function createCamera(video, onSample, onStatus, featureMode = 'fix
     inflight;
   const gate = new EyeGate();
   try {
-    await loadFaceMesh();
     if (!navigator.mediaDevices?.getUserMedia)
       throw new Error('A câmera exige HTTPS ou localhost.');
     stream = await navigator.mediaDevices.getUserMedia({
@@ -37,13 +43,14 @@ export async function createCamera(video, onSample, onStatus, featureMode = 'fix
     });
     video.srcObject = stream;
     await video.play();
-    mesh = new window.FaceMesh({ locateFile: (file) => `/mediapipe/${file}` });
-    mesh.setOptions({
+    mesh = await createDetector({
       maxNumFaces: 2,
       refineLandmarks: true,
       minDetectionConfidence: 0.6,
       minTrackingConfidence: 0.6,
     });
+    if (expectedEngine && mesh.engine !== expectedEngine)
+      throw new Error('O detector mudou desde a calibração. Recalibre antes da sessão.');
     mesh.onResults((result) => {
       if (!running) return;
       const inspection = inspectEyes(result.multiFaceLandmarks, featureMode !== 'motion');
