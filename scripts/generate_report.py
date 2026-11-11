@@ -44,6 +44,11 @@ if args.analysis:
         )
     data["calibration_analysis"] = evidence
     data["calibration_figures"] = [drawing for _, drawing in charts(evidence)]
+data["references"] = json.loads(
+    (Path(__file__).resolve().parents[1] / "docs/referencias.json").read_text(
+        encoding="utf-8"
+    )
+)
 target = Path(args.output)
 target.parent.mkdir(parents=True, exist_ok=True)
 target.write_bytes(build_report(data))
