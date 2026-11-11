@@ -51,13 +51,55 @@ def build_report(data):
     paragraph(
         "Ensaios com mode=exploratory são demonstrações técnicas não validadas, inclusive com calibração reprovada ou importada de outra postura. São excluídos das taxas, tempos e atenção oficiais. Seus mapas representam densidade de estimativas, sem comprovar onde a pessoa olhou."
     )
-    paragraph("3. Resultados persistidos", "Heading2")
+    evidence = data.get("calibration_analysis")
+    if evidence:
+        story.append(PageBreak())
+        paragraph("3. Experimentos reais de calibração", "Heading1")
+        paragraph(evidence["source_label"])
+        paragraph("Proveniência SHA-256: " + evidence["source_sha256"])
+        completed = [r for r in evidence["attempts"] if r["status"] == "completed"]
+        paragraph(
+            f"Unidade: tentativa, não participante distinto. Total: {len(evidence['attempts'])}; concluídas: {len(completed)}. "
+            "Condições favoráveis foram relatadas pelo usuário, sem medição independente. Não há metadados suficientes para quantificar FPS e resolução efetiva nesta fonte."
+        )
+        for row in evidence["attempts"]:
+            if row["status"] != "completed":
+                paragraph(
+                    f"Tentativa {row['attempt']}: interrompida ({row['reason']}); {row['references']} referências. Sem RMSE final; não atribuída como erro zero."
+                )
+        paragraph(
+            "Método reproduzível: scripts/analyze_calibration.py recalcula a interpolação geométrica usando referências e amostras de conferência do JSON original e compara RMSE, reprovação e número de quadros sem previsão aos valores registrados. Nenhum modelo é treinado. RMSE = raiz da média de [(x estimado - x alvo)² + (y estimado - y alvo)²], em eixos normalizados separadamente por largura e altura; não é erro em graus visuais ou pixels. Quadros fora da malha são contados separadamente e não entram no RMSE."
+        )
+        paragraph(
+            "O código versionado publica apenas contagens, erros e posições dos alvos exibidos; não publica vetores oculares ou imagens faciais. Com o JSON agregado, qualquer pessoa pode regenerar os gráficos; para recalcular a projeção ocular é necessário o diagnóstico original privado. A comparação numérica verifica consistência do cálculo, não precisão humana independente."
+        )
+        for figure in data.get("calibration_figures", []):
+            story.append(figure)
+            story.append(Spacer(1, 12))
+        paragraph("Interpretação e limites", "Heading2")
+        for row in completed:
+            paragraph(
+                f"Tentativa {row['attempt']}: RMSE {row['rmse']:.6f}, RMSE das referências medianas {row['median_rmse']:.6f}, P90 {row['p90']:.6f}; "
+                f"{row['predicted']} previstos, {row['unsupported']}/{row['total']} sem previsão ({row['unsupported_percent']:.1f}%). "
+                f"Critério original: {'aprovada' if row['approved'] else 'reprovada'}."
+            )
+        paragraph(
+            "Nesta fonte, a última coleta teve menos quadros sem previsão, mas maior RMSE nos previstos; não há evidência de melhora geral. Quadros consecutivos não são participantes independentes, e não se calcula significância estatística com estas duas tentativas. O erro ausente não é zero."
+        )
+        paragraph(
+            "Os gráficos espaciais posicionam cada alvo conhecido e mostram seu RMSE e a contagem sem previsão. Não são heatmaps de atenção. Um alvo sem previsão não recebe erro zero. O rastreamento livre sem referência conhecida não comprova acerto. Não foram demonstradas localização confiável de placas, superioridade A/B, leitura ou acessibilidade."
+        )
+        paragraph(
+            "Escolhas e conclusão: MediaPipe fornece detecção pronta de landmarks, não gaze pronto; a malha geométrica evita treinamento próprio e explicita a ausência de extrapolação. OpenCV fornece descritores da cena; SQLite permite execução local simples. Preserva-se o bloqueio oficial e usa-se o modo exploratório apenas para demonstrar a integração. Próximos experimentos devem manter protocolo e versão, registrar condições de captura, controlar a postura e repetir alvos conhecidos com códigos anônimos. O resultado atual é um limite empírico do protótipo nas condições registradas, sem generalização para populações ou tipos de olhos."
+        )
+        story.append(PageBreak())
+    paragraph(f"{4 if evidence else 3}. Sessões de estudo persistidas", "Heading2")
     paragraph(
         f"Sessões: {summary['sessions_total']}. Concluídas: {summary['completed']}. Excluídas/incompletas: {summary['excluded']}."
     )
     if not summary["completed"]:
         paragraph(
-            "Sem dados de participantes. Este relatório é uma estrutura técnica provisória, não comprova desempenho humano."
+            "Sem sessões de estudo persistidas neste relatório. Diagnósticos de calibração, quando incluídos, são analisados separadamente; não equivalem a participantes elegíveis ou resultados de localização."
         )
     rows = [["Cenário / alvo", "Modo", "N", "Sucesso", "Tempo (s)"]]
     for row in summary["rows"]:
@@ -152,14 +194,14 @@ def build_report(data):
             paragraph(
                 f"{len(sessions)} sessões (modo {mode}); {len(points)} pontos válidos. Cores normalizadas por imagem: intensidade não é comparável diretamente entre mapas nem mede duração de fixações."
             )
-    paragraph("4. Análise crítica e considerações finais", "Heading2")
+    paragraph(f"{5 if evidence else 4}. Análise crítica e considerações finais", "Heading2")
     paragraph(
         "Resultados observacionais dependem da tarefa, imagem, tamanho das áreas e ordem de apresentação. Para comparar A/B, usar tarefas equivalentes, contrabalançar a ordem e registrar o mesmo protocolo. Não concluir superioridade de um cenário com amostra pequena ou sem controlar esses fatores."
     )
     paragraph(
-        "Os relatos prévios de RMSE entre 0.146 e 0.206 motivaram critérios de qualidade e marcação de resultados inconclusivos. A existência da aplicação e seus testes sintéticos não comprovam precisão com pessoas. O relatório final acadêmico deve acrescentar os resultados reais, análise das falhas e discussão individual da equipe."
+        "Os relatos prévios de RMSE entre 0.146 e 0.206 motivaram critérios de qualidade e marcação de resultados inconclusivos. A existência da aplicação e seus testes sintéticos não comprovam precisão com pessoas. O relatório final deve complementar os diagnósticos com sessões reais de estudo quando viáveis e com a discussão individual da equipe."
     )
-    paragraph("5. Privacidade e reprodução", "Heading2")
+    paragraph(f"{6 if evidence else 5}. Privacidade e reprodução", "Heading2")
     paragraph(
         "Aplicação local de operador único, sem autenticação: não publicar em rede compartilhada. Consentimento antecede captura. Participantes usam códigos. Frames/vídeos de webcam não são enviados nem salvos. Exportações JSON/CSV permitem reproduzir os indicadores; a exclusão de estudo remove seus cenários e sessões. Executar os testes Python e os testes de navegador conforme README."
     )

@@ -1,0 +1,5 @@
+attempt,status,reason,references,approved,rmse,median_rmse,p90,total,predicted,unsupported,unsupported_percent
+1,completed,,25,False,0.10712178182104994,0.10018359095641483,0.16199581265131882,147,75,72,48.97959183673469
+2,interrupted,incomplete_geometry,10,,,,,,,,
+3,interrupted,communication,25,,,,,,,,
+4,completed,,25,False,0.12187634176307525,0.1122178581796994,0.1748073595338354,162,124,38,23.45679012345679

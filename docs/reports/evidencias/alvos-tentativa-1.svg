@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE svg
+  PUBLIC '-//W3C//DTD SVG 1.0//EN'
+  'http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd'>
+<svg width="500" height="360" preserveAspectRatio="xMinYMin meet" viewBox="0 0 500 360" xmlns="http://www.w3.org/2000/svg" version="1.0" fill-rule="evenodd" xmlns:xlink="http://www.w3.org/1999/xlink">
+	<title>...</title>
+	<desc>...</desc>
+	<clipPath id="clip">
+		<rect x="0" y="0" width="500" height="360"/>
+	</clipPath>
+	<g id="group" transform="scale(1,-1) translate(0,-360)" style="clip-path: url(#clip)">
+		<g transform="">
+			<text x="12" y="340" style="font-family: Helvetica; font-size: 14px;fill: rgb(8%,23%,19%); stroke:none;" transform="translate(0,680) scale(1,-1)">Tentativa 1: erro por alvo de conferência</text>
+			<rect x="91.0" y="244.0" width="78.0" height="32.0" style="stroke: rgb(8%,23%,19%); stroke-linecap: butt; stroke-width: 1; fill: rgb(92%,94%,93%); fill-rule: evenodd;"/>
+			<text x="95.0" y="263.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,526) scale(1,-1)">RMSE 0.137</text>
+			<text x="95.0" y="252.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,504) scale(1,-1)">sem: 10/11</text>
+			<rect x="331.0" y="244.0" width="78.0" height="32.0" style="stroke: rgb(8%,23%,19%); stroke-linecap: butt; stroke-width: 1; fill: rgb(92%,94%,93%); fill-rule: evenodd;"/>
+			<text x="335.0" y="263.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,526) scale(1,-1)">RMSE 0.112</text>
+			<text x="335.0" y="252.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,504) scale(1,-1)">sem: 0/11</text>
+			<rect x="211.0" y="175.0" width="78.0" height="32.0" style="stroke: rgb(8%,23%,19%); stroke-linecap: butt; stroke-width: 1; fill: rgb(92%,94%,93%); fill-rule: evenodd;"/>
+			<text x="215.0" y="194.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,388) scale(1,-1)">RMSE 0.128</text>
+			<text x="215.0" y="183.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,366) scale(1,-1)">sem: 0/10</text>
+			<rect x="91.0" y="106.0" width="78.0" height="32.0" style="stroke: rgb(8%,23%,19%); stroke-linecap: butt; stroke-width: 1; fill: rgb(92%,94%,93%); fill-rule: evenodd;"/>
+			<text x="95.0" y="125.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,250) scale(1,-1)">RMSE 0.052</text>
+			<text x="95.0" y="114.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,228) scale(1,-1)">sem: 0/11</text>
+			<rect x="331.0" y="106.0" width="78.0" height="32.0" style="stroke: rgb(8%,23%,19%); stroke-linecap: butt; stroke-width: 1; fill: rgb(92%,94%,93%); fill-rule: evenodd;"/>
+			<text x="335.0" y="125.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,250) scale(1,-1)">RMSE 0.152</text>
+			<text x="335.0" y="114.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,228) scale(1,-1)">sem: 9/11</text>
+			<rect x="43.0" y="271.6" width="78.0" height="32.0" style="stroke: rgb(8%,23%,19%); stroke-linecap: butt; stroke-width: 1; fill: rgb(92%,94%,93%); fill-rule: evenodd;"/>
+			<text x="47.0" y="290.6" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,581) scale(1,-1)">sem previsão</text>
+			<text x="47.0" y="279.6" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,559) scale(1,-1)">sem: 12/12</text>
+			<rect x="211.0" y="271.6" width="78.0" height="32.0" style="stroke: rgb(8%,23%,19%); stroke-linecap: butt; stroke-width: 1; fill: rgb(92%,94%,93%); fill-rule: evenodd;"/>
+			<text x="215.0" y="290.6" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,581) scale(1,-1)">sem previsão</text>
+			<text x="215.0" y="279.6" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,559) scale(1,-1)">sem: 12/12</text>
+			<rect x="379.0" y="271.6" width="78.0" height="32.0" style="stroke: rgb(8%,23%,19%); stroke-linecap: butt; stroke-width: 1; fill: rgb(92%,94%,93%); fill-rule: evenodd;"/>
+			<text x="383.0" y="290.6" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,581) scale(1,-1)">RMSE 0.059</text>
+			<text x="383.0" y="279.6" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,559) scale(1,-1)">sem: 10/11</text>
+			<rect x="43.0" y="175.0" width="78.0" height="32.0" style="stroke: rgb(8%,23%,19%); stroke-linecap: butt; stroke-width: 1; fill: rgb(92%,94%,93%); fill-rule: evenodd;"/>
+			<text x="47.0" y="194.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,388) scale(1,-1)">RMSE 0.169</text>
+			<text x="47.0" y="183.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,366) scale(1,-1)">sem: 0/12</text>
+			<rect x="379.0" y="175.0" width="78.0" height="32.0" style="stroke: rgb(8%,23%,19%); stroke-linecap: butt; stroke-width: 1; fill: rgb(92%,94%,93%); fill-rule: evenodd;"/>
+			<text x="383.0" y="194.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,388) scale(1,-1)">RMSE 0.061</text>
+			<text x="383.0" y="183.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,366) scale(1,-1)">sem: 8/12</text>
+			<rect x="43.0" y="78.39999999999999" width="78.0" height="32.0" style="stroke: rgb(8%,23%,19%); stroke-linecap: butt; stroke-width: 1; fill: rgb(92%,94%,93%); fill-rule: evenodd;"/>
+			<text x="47.0" y="97.39999999999999" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,194) scale(1,-1)">RMSE 0.084</text>
+			<text x="47.0" y="86.39999999999999" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,172) scale(1,-1)">sem: 0/11</text>
+			<rect x="211.0" y="78.39999999999999" width="78.0" height="32.0" style="stroke: rgb(8%,23%,19%); stroke-linecap: butt; stroke-width: 1; fill: rgb(92%,94%,93%); fill-rule: evenodd;"/>
+			<text x="215.0" y="97.39999999999999" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,194) scale(1,-1)">RMSE 0.046</text>
+			<text x="215.0" y="86.39999999999999" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,172) scale(1,-1)">sem: 0/12</text>
+			<rect x="379.0" y="78.39999999999999" width="78.0" height="32.0" style="stroke: rgb(8%,23%,19%); stroke-linecap: butt; stroke-width: 1; fill: rgb(92%,94%,93%); fill-rule: evenodd;"/>
+			<text x="383.0" y="97.39999999999999" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,194) scale(1,-1)">sem previsão</text>
+			<text x="383.0" y="86.39999999999999" style="font-family: Helvetica; font-size: 7px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,172) scale(1,-1)">sem: 11/11</text>
+			<text x="12" y="28" style="font-family: Helvetica; font-size: 9px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,56) scale(1,-1)">Posição = alvo conhecido. RMSE usa somente quadros previstos nesse alvo.</text>
+			<text x="12" y="14" style="font-family: Helvetica; font-size: 9px;fill: rgb(0%,0%,0%); stroke:none;" transform="translate(0,28) scale(1,-1)">Origem no canto superior esquerdo. Não é mapa de atenção ou fixações.</text>
+		</g>
+	</g>
+</svg>
