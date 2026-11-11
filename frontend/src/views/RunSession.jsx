@@ -111,6 +111,7 @@ export default function RunSession({
         setMessage,
         calibration.feature_mode,
         calibration.detector,
+        calibration.eye_profile,
       );
       if (current.cancelled) {
         await current.stop();

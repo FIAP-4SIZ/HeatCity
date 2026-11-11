@@ -1,5 +1,11 @@
 # Face Landmarker e precisão do olhar — 11/11/2026
 
+Atualização: o usuário forneceu depois o arquivo .task. Ele está incluído em
+frontend/models, com hash e procedência documentados, e inicializou no teste real
+CPU/WASM em Chromium. npm ci agora prepara o modelo local sem download externo.
+Os parágrafos sobre bloqueio abaixo descrevem a investigação inicial. Veja
+diagnostico-completo-e-perfil-ocular.md para o estado atual.
+
 O diagnóstico recebido utiliza o protocolo precision, com RMSE das medianas de
 0,0748515. Recalculando as previsões dos quadros brutos de validação com os mesmos
 coeficientes, o RMSE é 0,0889228; o último alvo tem RMSE por quadro de 0,1290.

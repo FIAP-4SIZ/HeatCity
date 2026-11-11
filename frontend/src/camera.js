@@ -1,3 +1,4 @@
+import { EyeProfile } from './eye-profile.js';
 import { createDetector } from './detector.js';
 import { inspectEyes, EyeGate, calibrationFeature, predict, supportedHead } from './gaze.js';
 
@@ -27,6 +28,7 @@ export async function createCamera(
   onStatus,
   featureMode = 'fixed',
   expectedEngine,
+  eyeBaseline,
 ) {
   let running = true,
     stream,
@@ -34,6 +36,7 @@ export async function createCamera(
     frame,
     inflight;
   const gate = new EyeGate();
+  const profile = new EyeProfile(eyeBaseline);
   try {
     if (!navigator.mediaDevices?.getUserMedia)
       throw new Error('A câmera exige HTTPS ou localhost.');
@@ -53,8 +56,13 @@ export async function createCamera(
       throw new Error('O detector mudou desde a calibração. Recalibre antes da sessão.');
     mesh.onResults((result) => {
       if (!running) return;
-      const inspection = inspectEyes(result.multiFaceLandmarks, featureMode !== 'motion');
       const time = performance.now();
+      const eyes = profile.inspect(result.multiFaceLandmarks, time);
+      const inspection = eyes.ready
+        ? inspectEyes(result.multiFaceLandmarks, featureMode !== 'motion', {
+            thresholds: eyes.thresholds,
+          })
+        : { reason: 'Ajustando abertura individual: olhe à frente e pisque naturalmente.' };
       const valid = gate.update(inspection.feature, time);
       onStatus?.(inspection.reason);
       onSample(valid ? inspection.feature : null, time);

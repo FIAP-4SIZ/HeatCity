@@ -13,6 +13,10 @@ const page = await browser.newPage({
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 try {
+  // Synthetic-landmark scenarios explicitly use the legacy mock. Real Tasks is tested separately.
+  await page.route('**/mediapipe/face_landmarker.task', (route) =>
+    route.fulfill({ status: 404, body: '' }),
+  );
   const before = await (await page.request.get(`${base}/api/studies`)).json();
   await page.goto(base);
   await page.getByRole('button', { name: 'Diagnósticos', exact: true }).click();
@@ -34,7 +38,8 @@ try {
   await page.getByLabel('Abertura mínima das pálpebras', { exact: true }).fill('0.08');
   if (process.env.HEATCITY_TEST_PRECISION)
     await page.getByLabel('Método de calibração').selectOption('precision');
-  await page.evaluate(() => {
+  await page.evaluate((approved) => {
+    window.mockApproved = approved;
     window.FaceMesh = class {
       setOptions() {}
       onResults(fn) {
@@ -55,10 +60,10 @@ try {
         ]) {
           face[a] = { x: 0.2, y: 0.5 };
           face[b] = { x: 0.4, y: 0.5 };
-          face[u] = { x: 0.3, y: 0.47 };
-          face[l] = { x: 0.3, y: 0.53 };
+          face[u] = { x: 0.3, y: 0.495 };
+          face[l] = { x: 0.3, y: 0.505 };
           face[i] = {
-            x: 0.2 + 0.2 * (0.3 + 0.2 * x + (validation ? 0.08 : 0)),
+            x: 0.2 + 0.2 * (0.3 + 0.2 * x + (validation && !window.mockApproved ? 0.08 : 0)),
             y: 0.5 + 0.02 * (y - 0.5),
           };
           if (window.mockBlink) face[l] = face[u];
@@ -66,7 +71,7 @@ try {
         this.fn({ multiFaceLandmarks: [face] });
       }
     };
-  });
+  }, !!process.env.HEATCITY_TEST_APPROVED);
   await page.getByRole('checkbox', { name: /Concordo com o uso da câmera/ }).check();
   await page.getByRole('button', { name: 'Ativar câmera', exact: true }).click();
   await page.getByLabel('Telemetria do detector').waitFor();
@@ -85,7 +90,12 @@ try {
     .locator('.fullscreen-panel p')
     .filter({ hasText: 'RMSE' })
     .waitFor({ timeout: process.env.HEATCITY_TEST_PRECISION ? 150000 : 90000 });
-  assert.ok(await page.locator('.fullscreen-panel p').filter({ hasText: 'Reprovada' }).count());
+  assert.ok(
+    await page
+      .locator('.fullscreen-panel p')
+      .filter({ hasText: process.env.HEATCITY_TEST_APPROVED ? 'Aprovada' : 'Reprovada' })
+      .count(),
+  );
   if (process.env.HEATCITY_TEST_PRECISION) {
     const waiting = page.waitForEvent('download');
     await page
@@ -101,7 +111,15 @@ try {
   }
   await page.getByRole('button', { name: 'Mostrar tracking experimental', exact: true }).click();
   await page.locator('.gaze').waitFor();
-  assert.ok(await page.getByText(/PRÉVIA DEV.*CALIBRAÇÃO REPROVADA/).count());
+  assert.ok(
+    await page
+      .getByText(
+        process.env.HEATCITY_TEST_APPROVED
+          ? /PRÉVIA DEV.*RMSE aprovado/
+          : /PRÉVIA DEV.*CALIBRAÇÃO REPROVADA/,
+      )
+      .count(),
+  );
   await page.evaluate(() => {
     window.mockBlink = true;
   });
@@ -118,13 +136,28 @@ try {
       .isVisible(),
     true,
   );
+  const fullDownload = page.waitForEvent('download');
+  await page
+    .getByRole('button', { name: 'Baixar diagnóstico completo da página', exact: true })
+    .click();
+  const fullFile = await fullDownload;
+  const fullData = JSON.parse(await readFile(await fullFile.path(), 'utf8'));
+  assert.equal(fullData.page_diagnostic_version, 1);
+  assert.equal(fullData.page_diagnostic.calibrations.length, 1);
+  assert.ok(fullData.page_diagnostic.eye_profile.every((v) => v < 0.12));
+  assert.ok(
+    fullData.page_diagnostic.samples.some((s) => s.phase === 'tracking' && s.raw_prediction),
+  );
+  assert.ok(fullData.page_diagnostic.samples.some((s) => !s.accepted));
+  assert.ok(fullData.page_diagnostic.events.some((s) => s.type === 'tracking_start'));
+  assert.equal(fullData.quality.approved, !!process.env.HEATCITY_TEST_APPROVED);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: '/tmp/heatcity-diagnostics.png', fullPage: true });
   const after = await (await page.request.get(`${base}/api/studies`)).json();
   assert.deepEqual(after, before);
   assert.deepEqual(errors, []);
   console.log(
-    'PASS: standalone diagnostics, local JSON comparison, DEV options, eye landmarks, rejected calibration tracking, blink and no study registration.',
+    'PASS: standalone diagnostics, local JSON comparison, DEV options, eye landmarks, complete page export, narrow eyelid profile, experimental tracking, blink and no study registration.',
   );
 } finally {
   await browser.close();

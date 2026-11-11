@@ -1,3 +1,5 @@
+import { EyeProfile } from '../eye-profile.js';
+import { DiagnosticLog } from '../diagnostic-log.js';
 import { createDetector } from '../detector.js';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -39,6 +41,7 @@ export default function CalibrationLab({
   onReady,
   diagnosticsOnly = false,
   onDiagnostic,
+  registerSnapshot,
 }) {
   const video = useRef(),
     stage = useRef(),
@@ -47,6 +50,7 @@ export default function CalibrationLab({
     runId = useRef(0);
   const overlay = useRef();
   const [dev, setDev] = useState({
+    adaptive: true,
     confidence: 0.6,
     minOpenness: 0.12,
     filter: true,
@@ -56,6 +60,7 @@ export default function CalibrationLab({
   const [metrics, setMetrics] = useState(null),
     [gaze, setGaze] = useState(null);
   runtime.current.dev = dev;
+  if (diagnosticsOnly) runtime.current.log ??= new DiagnosticLog();
   const [consent, setConsent] = useState(false),
     [camera, setCamera] = useState(false);
   const [calibrationMode, setCalibrationMode] = useState('fixed');
@@ -94,6 +99,7 @@ export default function CalibrationLab({
   async function stop(text = 'Câmera desligada. Faça uma nova calibração para continuar.') {
     invalidate(text);
     const state = runtime.current;
+    state.log?.event('camera_stop');
     state.running = false;
     state.cameraRun = (state.cameraRun || 0) + 1;
     cancelAnimationFrame(state.frame);
@@ -110,7 +116,24 @@ export default function CalibrationLab({
   }
 
   useEffect(() => {
+    registerSnapshot?.(() => ({
+      ...runtime.current.log.snapshot(),
+      detector: runtime.current.mesh?.engine ?? null,
+      eye_profile: runtime.current.eyeProfile?.baseline ?? null,
+      developer_options: { ...runtime.current.dev },
+      telemetry: {
+        frames: runtime.current.frames || 0,
+        valid_frames: runtime.current.validFrames || 0,
+      },
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        pixel_ratio: window.devicePixelRatio,
+      },
+      purpose: 'Diagnóstico local; tracking sem referência não mede precisão.',
+    }));
     const resized = () => {
+      runtime.current.log?.event('viewport_resize');
       const geometry = runtime.current.geometry;
       if (diagnosticsOnly && document.fullscreenElement !== stage.current) return;
       if (
@@ -120,6 +143,9 @@ export default function CalibrationLab({
         invalidate('A área de exibição mudou. Refaça a calibração.');
     };
     const fullscreen = () => {
+      runtime.current.log?.event(
+        document.fullscreenElement ? 'fullscreen_enter' : 'fullscreen_exit',
+      );
       if (document.fullscreenElement !== stage.current) {
         if (diagnosticsOnly && runtime.current.calibration && !runtime.current.collection) {
           runtime.current.tracking = false;
@@ -166,6 +192,8 @@ export default function CalibrationLab({
         minTrackingConfidence: diagnosticsOnly ? state.dev.confidence : 0.6,
       });
       state.featureMode = calibrationMode;
+      state.eyeProfile = new EyeProfile();
+      state.log?.event('camera_start');
       state.gate = new EyeGate();
       state.readiness = new EyeReadiness();
       state.guide = new GuidanceFilter();
@@ -176,11 +204,19 @@ export default function CalibrationLab({
       state.lastStats = 0;
       state.mesh.onResults((results) => {
         if (!state.running) return;
-        const inspection = inspectEyes(
-          results.multiFaceLandmarks,
-          state.featureMode !== 'motion',
-          diagnosticsOnly ? { minOpenness: state.dev.minOpenness } : {},
-        );
+        const eyes = state.eyeProfile.inspect(results.multiFaceLandmarks, state.frameTime);
+        const adaptive = !diagnosticsOnly || state.dev.adaptive;
+        const inspection =
+          adaptive && !eyes.ready
+            ? {
+                reason:
+                  'Ajustando abertura individual: olhe à frente por dois segundos, sem forçar os olhos.',
+              }
+            : inspectEyes(
+                results.multiFaceLandmarks,
+                state.featureMode !== 'motion',
+                adaptive ? { thresholds: eyes.thresholds } : { minOpenness: state.dev.minOpenness },
+              );
         const feature = inspection.feature;
         const now = state.frameTime;
         const accepted =
@@ -208,6 +244,7 @@ export default function CalibrationLab({
         }
         state.frames++;
         if (accepted) state.validFrames++;
+        let rawPoint = null;
         if (diagnosticsOnly && state.tracking && state.calibration) {
           const point = accepted
             ? predict(
@@ -216,6 +253,7 @@ export default function CalibrationLab({
                 state.calibration.basis,
               )
             : null;
+          rawPoint = point;
           if (point?.every(Number.isFinite)) {
             const alpha = state.dev.smoothing;
             state.smoothed = state.smoothed
@@ -227,6 +265,26 @@ export default function CalibrationLab({
             setGaze(null);
           }
         }
+        state.log?.add(
+          {
+            phase: state.tracking ? 'tracking' : state.phase,
+            accepted,
+            reason: accepted
+              ? null
+              : feature
+                ? 'Recuperação de piscada ou movimento rápido'
+                : inspection.reason,
+            features: feature || null,
+            openness: eyes.openness,
+            thresholds: adaptive ? eyes.thresholds : [state.dev.minOpenness, state.dev.minOpenness],
+            raw_prediction: rawPoint,
+            filtered_prediction: state.tracking ? state.smoothed : null,
+            expected: state.collection?.moving ? null : state.collection?.target || null,
+            faces: results.multiFaceLandmarks?.length || 0,
+            latency_ms: performance.now() - now,
+          },
+          now,
+        );
         if (diagnosticsOnly && performance.now() - state.lastStats > 250) {
           state.lastStats = performance.now();
           setMetrics({
@@ -452,6 +510,7 @@ export default function CalibrationLab({
       state.calibration = {
         ...response,
         detector: state.mesh.engine,
+        eye_profile: state.eyeProfile.baseline,
         feature_mode: calibrationMode,
         viewport_width: payload.viewport_width,
         viewport_height: payload.viewport_height,
@@ -478,6 +537,8 @@ export default function CalibrationLab({
         }),
       };
       if (diagnosticsOnly) detailed.developer_options = { ...state.dev };
+      detailed.eye_profile = state.eyeProfile.baseline;
+      state.log?.calibration(detailed);
       setDiagnostic(detailed);
       onDiagnostic?.(detailed);
       setPhase('result');
@@ -509,6 +570,7 @@ export default function CalibrationLab({
       )
         throw new Error('O tamanho da tela mudou. Recalibre nesta tela.');
       state.geometry = [field.current.clientWidth, field.current.clientHeight];
+      state.log?.event('tracking_start');
       state.tracking = true;
       state.smoothed = null;
       setPhase('tracking');
@@ -565,6 +627,19 @@ export default function CalibrationLab({
                   }
                 />
               </label>
+              <label className="checkbox">
+                <input
+                  type="checkbox"
+                  checked={dev.adaptive}
+                  disabled={camera || busy || collecting}
+                  onChange={(e) => setDev({ ...dev, adaptive: e.target.checked })}
+                />
+                Ajustar abertura por olho automaticamente
+              </label>
+              <p className="small">
+                Olhe à frente por dois segundos com os olhos confortáveis. O perfil é individual;
+                não usa etnia. O limite manual abaixo só é usado com o ajuste automático desligado.
+              </p>
               <label>
                 Abertura mínima das pálpebras
                 <input

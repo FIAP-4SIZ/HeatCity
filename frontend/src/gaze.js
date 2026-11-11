@@ -34,10 +34,10 @@ export function inspectEyes(faces, classic = false, options = {}) {
     return { reason: 'Íris não detectadas. Aproxime-se e evite reflexos nos óculos.' };
   const valid = (p) => p && Number.isFinite(p.x) && Number.isFinite(p.y);
   const features = [];
-  for (const [a, b, upper, lower, iris] of [
+  for (const [eyeIndex, [a, b, upper, lower, iris]] of [
     [33, 133, 159, 145, 468],
     [362, 263, 386, 374, 473],
-  ]) {
+  ].entries()) {
     const [p, q, u, l, i] = [a, b, upper, lower, iris].map((index) => points[index]);
     if (![p, q, u, l, i].every(valid))
       return { reason: 'Olhos encobertos. Ajuste o enquadramento.' };
@@ -47,7 +47,9 @@ export function inspectEyes(faces, classic = false, options = {}) {
     if (width < (classic ? 0.015 : 0.022))
       return { reason: 'Aproxime-se: os olhos estão pequenos na imagem.' };
     const openness = Math.hypot(u.x - l.x, u.y - l.y) / width;
-    if (openness < (options.minOpenness ?? (classic ? 0.12 : 0.14)))
+    if (
+      openness < (options.thresholds?.[eyeIndex] ?? options.minOpenness ?? (classic ? 0.12 : 0.14))
+    )
       return { reason: 'Piscada ou olhos parcialmente fechados: coleta pausada.', blink: true };
     features.push(
       ((i.x - p.x) * dx + (i.y - p.y) * dy) / (width * width),

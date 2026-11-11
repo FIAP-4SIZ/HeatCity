@@ -108,6 +108,9 @@ try {
   await page.getByRole('checkbox').uncheck();
   await page.getByRole('button', { name: 'Voltar', exact: true }).click();
   await page.getByRole('button', { name: 'Calibrar olhar', exact: true }).click();
+  await page.route('**/mediapipe/face_landmarker.task', (route) =>
+    route.fulfill({ status: 404, body: '' }),
+  );
   await page.evaluate(() => {
     window.FaceMesh = class {
       setOptions() {}

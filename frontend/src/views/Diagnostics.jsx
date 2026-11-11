@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import CalibrationLab from './CalibrationLab.jsx';
 import DiagnosticReport from '../components/DiagnosticReport.jsx';
 import { summarizeDiagnostic } from '../diagnostics.js';
@@ -7,6 +7,26 @@ export default function Diagnostics() {
   const [reports, setReports] = useState([]),
     [current, setCurrent] = useState(null),
     [error, setError] = useState('');
+  const snapshot = useRef(() => ({}));
+  function exportPage() {
+    const page = snapshot.current();
+    const latest = page.calibrations?.at(-1) || {};
+    const data = {
+      ...latest,
+      page_diagnostic_version: 1,
+      page_diagnostic: page,
+      imported_comparisons: reports,
+      privacy:
+        'Sem cadastro, nomes, documentos, vídeo ou imagens faciais. Coordenadas e características numéricas locais.',
+      precision_note: 'Sem alvo de referência, o tracking experimental não mede erro de olhar.',
+    };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'heatcity-diagnostico-completo.json';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
   async function load(event) {
     setError('');
     const incoming = [];
@@ -14,7 +34,7 @@ export default function Diagnostics() {
       const files = [...event.target.files];
       if (files.length > 20) throw new Error('Selecione até 20 arquivos por vez.');
       for (const file of files) {
-        if (file.size > 2000000) throw new Error(`${file.name}: limite de 2 MB.`);
+        if (file.size > 10000000) throw new Error(`${file.name}: limite de 10 MB.`);
         incoming.push(summarizeDiagnostic(JSON.parse(await file.text()), file.name));
       }
       setReports((previous) => [...previous, ...incoming].slice(-20));
@@ -44,8 +64,21 @@ export default function Diagnostics() {
           válidas.
         </p>
       </div>
+      <div className="panel">
+        <button className="primary" onClick={exportPage}>
+          Baixar diagnóstico completo da página
+        </button>
+        <p className="small">
+          Sem cadastro. Inclui até 5 calibrações, telemetria e os últimos 5.000 registros da câmera
+          e do tracking experimental (até 10 por segundo), aprovado ou reprovado. Exporte depois de
+          testar. Não contém imagens; sem alvos conhecidos, o tracking não comprova precisão.
+        </p>
+      </div>
       <CalibrationLab
         diagnosticsOnly
+        registerSnapshot={(getter) => {
+          snapshot.current = getter;
+        }}
         onDiagnostic={(data) => {
           try {
             setCurrent(summarizeDiagnostic(data));
