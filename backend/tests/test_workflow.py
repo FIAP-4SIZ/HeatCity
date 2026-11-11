@@ -258,3 +258,75 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(self.client.post("/sessions", json=payload).status_code, 422)
         payload["capture_settings"]["width"] = 640
         self.assertEqual(self.client.post("/sessions", json=payload).status_code, 403)
+
+    def test_exploratory_rejected_geometry_is_isolated_from_official_results(self):
+        grid = [[x, y] for y in (0.05, 0.5, 0.95) for x in (0.05, 0.5, 0.95)]
+        held = [[0.2, 0.2], [0.8, 0.2], [0.5, 0.5], [0.2, 0.8], [0.8, 0.8]]
+        calibration = self.client.post(
+            "/exploratory/calibrations",
+            json={
+                "mode": "sweep",
+                "source": "imported_diagnostic",
+                "participant_code": "DEMO01",
+                "scenario_id": self.scene["id"],
+                "features": grid,
+                "targets": grid,
+                "validation_features": [[x + 0.3, y] for x, y in held],
+                "validation_targets": held,
+            },
+        )
+        self.assertEqual(calibration.status_code, 200, calibration.text)
+        model = calibration.json()
+        self.assertFalse(model["approved"])
+        self.assertTrue(model["exploratory_only"])
+        payload = {
+            "participant": "DEMO01",
+            "scenario_id": self.scene["id"],
+            "target": "Recepção",
+            "consent": True,
+            "calibration_id": model["calibration_id"],
+            "viewport_width": 1280,
+            "viewport_height": 900,
+            "stimulus_width": 1000,
+            "stimulus_height": 1000 * self.scene["height"] / self.scene["width"],
+        }
+        self.assertEqual(
+            self.client.post("/sessions", json={**payload, "mode": "gaze"}).status_code, 403
+        )
+        session = self.client.post("/sessions", json={**payload, "mode": "exploratory"})
+        self.assertEqual(session.status_code, 201, session.text)
+        points = [{"time": i / 20, "x": 0.2, "y": 0.3, "valid": True} for i in range(40)]
+        finished = self.client.post(
+            f"/sessions/{session.json()['id']}/finish", json={"duration": 2, "points": points}
+        )
+        self.assertEqual(finished.status_code, 200, finished.text)
+        metrics = finished.json()["metrics"]
+        self.assertIsNone(metrics["success"])
+        self.assertFalse(metrics["eligible"])
+        self.assertIsNone(metrics["first_seconds"])
+        self.assertIsNone(metrics["attention_seconds"])
+        data = self.client.get(f"/studies/{self.study['id']}/results").json()
+        self.assertEqual(data["summary"]["selected_session_ids"], [])
+        self.assertEqual(data["summary"]["exploratory_sessions"], 1)
+        self.assertTrue(all(r["participants"] == 0 for r in data["summary"]["rows"]))
+        image = self.client.get(f"/scenarios/{self.scene['id']}/heatmap?mode=exploratory")
+        self.assertEqual(image.status_code, 200)
+        self.assertEqual(image.content[1:4], b"PNG")
+        self.assertEqual(
+            self.client.get(f"/studies/{self.study['id']}/report.pdf").content[:5], b"%PDF-"
+        )
+
+    def test_imported_diagnostic_cannot_issue_official_authorization(self):
+        grid = [[x, y] for y in (0.05, 0.5, 0.95) for x in (0.05, 0.5, 0.95)]
+        held = [[0.2, 0.2], [0.8, 0.2], [0.5, 0.5], [0.2, 0.8], [0.8, 0.8]]
+        result = self.client.post(
+            "/calibrations/evaluate",
+            json={
+                "source": "imported_diagnostic",
+                "features": grid,
+                "targets": grid,
+                "validation_features": held,
+                "validation_targets": held,
+            },
+        )
+        self.assertEqual(result.status_code, 422)

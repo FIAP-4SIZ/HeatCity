@@ -69,7 +69,7 @@ class ScenarioInput(Contract):
 class SessionInput(Contract):
     participant: str = Field(pattern=r"^[A-Z0-9][A-Z0-9_-]{1,23}$")
     scenario_id: str
-    mode: Literal["gaze"] = "gaze"
+    mode: Literal["gaze", "exploratory"] = "gaze"
     target: str
     consent: bool
     calibration_id: str | None = None

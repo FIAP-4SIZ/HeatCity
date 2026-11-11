@@ -59,6 +59,22 @@ def sustained(points, mask, minimum=0.2, maximum_gap=0.2):
 
 
 def evaluate(session, scenario, duration, points):
+    if session.get("mode") == "exploratory":
+        target = next(p for p in scenario["plates"] if p["name"] == session["target"])
+        coverage = analyze([Sample(**p) for p in points], [Area(**target)], duration)[
+            "valid_fraction"
+        ]
+        return {
+            "success": None,
+            "first_seconds": None,
+            "attention_seconds": None,
+            "coverage": coverage,
+            "eligible": False,
+            "outcome": "exploratory",
+            "uncertain_samples": None,
+            "valid_samples": sum(p["valid"] for p in points),
+            "reason": "Ensaio exploratório não validado. Excluído das taxas e dos tempos oficiais.",
+        }
     policy = session["calibration"].get("uncertainty")
     if not policy:
         return legacy_evaluate(session, scenario, duration, points)
@@ -148,7 +164,11 @@ def summarize(scenarios, sessions):
     # One latest eligible completed session per participant/scenario/mode/task.
     selected = {}
     for session in sorted(sessions, key=lambda s: s["created_at"]):
-        if session["status"] == "completed" and session["metrics"]["eligible"]:
+        if (
+            session["status"] == "completed"
+            and session["metrics"]["eligible"]
+            and session["mode"] == "gaze"
+        ):
             selected[
                 (session["scenario_id"], session["mode"], session["target"], session["participant"])
             ] = session
@@ -184,6 +204,7 @@ def summarize(scenarios, sessions):
     return {
         "rows": rows,
         "sessions_total": len(sessions),
+        "exploratory_sessions": sum(s["mode"] == "exploratory" for s in sessions),
         "completed": sum(s["status"] == "completed" for s in sessions),
         "excluded": sum(
             s["status"] != "completed" or not s.get("metrics", {}).get("eligible", False)

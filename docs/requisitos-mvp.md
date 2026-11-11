@@ -20,6 +20,7 @@ participantes, sessões, heatmaps e dashboard. O usuário confirmou **somente ol
 | Sessão ocular | 15 s, coordenadas normalizadas na imagem, intervalos inválidos e interrupção | E2E sintético completo; não há modo por clique |
 | Avaliação | Métricas por tarefa/cenário, exclusão por qualidade, deduplicação de participantes | Testes de sucesso/falha/repetição/cobertura/bordas |
 | Heatmaps | Individual e consolidado de sessões elegíveis | OpenCV e testes PNG; rótulo de densidade, sem alegar fixação |
+| Ensaio exploratório | Calibração própria ou importada, inclusive reprovada com geometria válida; sem métricas oficiais | E2E sintético; tokens separados, exclusão das taxas e tempos, mapa identificado |
 | PDI | Grayscale/luminância, percentis de contraste, Laplaciano e Gaussian blur | API e métricas de cenas/AOIs; sem certificação de acessibilidade |
 | Relatório/evidências | PDF, CSV, JSON, notebook e script de recálculo independente | PDF gerado e validado; dados humanos ainda necessários |
 | UI | Temas, estados vazios/erro, consentimento, etapas claras, visual responsivo | E2E e inspeção visual desktop/mobile |

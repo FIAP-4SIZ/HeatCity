@@ -39,6 +39,7 @@ export default function CalibrationLab({
   scenarioId,
   onReady,
   diagnosticsOnly = false,
+  exploratory = false,
   onDiagnostic,
   registerSnapshot,
 }) {
@@ -519,7 +520,11 @@ export default function CalibrationLab({
       setTarget(null);
       setMessage('Calculando interpolação geométrica e erro medido…');
       const response = await request(
-        diagnosticsOnly ? '/diagnostics/calibration' : '/calibrations/evaluate',
+        diagnosticsOnly
+          ? '/diagnostics/calibration'
+          : exploratory
+            ? '/exploratory/calibrations'
+            : '/calibrations/evaluate',
         payload,
       );
       current();
@@ -581,7 +586,7 @@ export default function CalibrationLab({
           ? 'Conferência geométrica aprovada. Verifique o tracking antes de usar.'
           : 'Conferência geométrica reprovada. A prévia permanece apenas para diagnóstico.',
       );
-      if (response.approved && !diagnosticsOnly)
+      if ((response.approved || exploratory) && !diagnosticsOnly)
         s.expiry = setTimeout(
           () => invalidate('Calibração expirada.'),
           response.expires_in_seconds * 1000,
@@ -897,10 +902,17 @@ export default function CalibrationLab({
                 </button>
               ) : (
                 <button
-                  disabled={!result?.approved || !camera || busy || collecting}
+                  disabled={
+                    !(result?.approved || (exploratory && result?.calibration_id)) ||
+                    !camera ||
+                    busy ||
+                    collecting
+                  }
                   onClick={transfer}
                 >
-                  Usar calibração no estudo
+                  {exploratory
+                    ? 'Usar somente no ensaio exploratório'
+                    : 'Usar calibração no estudo'}
                 </button>
               )}
               <button

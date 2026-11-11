@@ -4,6 +4,7 @@ import { createCamera, gazePoint } from '../camera.js';
 import Scene from '../components/Scene.jsx';
 
 export default function RunSession({
+  exploratory = false,
   scenario,
   participant,
   target,
@@ -153,7 +154,7 @@ export default function RunSession({
         scenario_id: scenario.id,
         target,
         consent,
-        mode: 'gaze',
+        mode: exploratory ? 'exploratory' : 'gaze',
         calibration_id: calibration.calibration_id,
         viewport_width: window.innerWidth,
         viewport_height: window.innerHeight,
@@ -183,13 +184,23 @@ export default function RunSession({
   }
   return (
     <section ref={root} className="run-session">
+      {exploratory && (
+        <div className="notice exploratory-banner">
+          <strong>ENSAIO EXPLORATÓRIO · NÃO VALIDADO</strong> · estimativas aproximadas; fora dos
+          indicadores oficiais.{' '}
+          {calibration.source === 'imported_diagnostic'
+            ? 'Geometria importada de outra coleta.'
+            : ''}
+        </div>
+      )}
       <div className="run-instructions">
         <span className="eyebrow">PARTICIPANTE {participant}</span>
         <h2>Encontre a placa “{target}” com os olhos.</h2>
         <p>Não clique nas placas. Mantenha uma posição confortável.</p>
         <p className="small">
-          A margem medida na calibração será aplicada ao tamanho desta imagem. Passagens ambíguas
-          pelas bordas não contam como acerto; exige observação contínua de pelo menos 0,2 s.
+          {exploratory
+            ? 'Este ensaio registra somente estimativas e qualidade de captura; não calcula acerto, tempo de localização ou atenção validada.'
+            : 'A margem medida na calibração será aplicada ao tamanho desta imagem. Passagens ambíguas pelas bordas não contam como acerto; exige observação contínua de pelo menos 0,2 s.'}
         </p>
       </div>
       <div className="run-field">

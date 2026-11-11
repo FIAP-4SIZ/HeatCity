@@ -94,14 +94,20 @@ def start_session(body: SessionInput):
     if not plate:
         raise HTTPException(422, "Selecione uma placa do cenário.")
     calibration = None
-    if body.mode == "gaze":
+    if body.mode in ("gaze", "exploratory"):
         from time import monotonic
 
         calibration = calibration_models.get(body.calibration_id)
-        if not calibration or calibration["expires"] <= monotonic() or not calibration["approved"]:
+        if not calibration or calibration["expires"] <= monotonic():
             raise HTTPException(
                 403, "Calibração aprovada e vigente é obrigatória para olhar experimental."
             )
+        if body.mode == "gaze" and (
+            not calibration["approved"] or calibration.get("exploratory_only")
+        ):
+            raise HTTPException(403, "O estudo oficial exige aprovação e autorização oficial.")
+        if body.mode == "exploratory" and not calibration.get("exploratory_only"):
+            raise HTTPException(403, "Use a autorização específica do ensaio exploratório.")
         if (
             calibration.get("participant") != body.participant
             or calibration.get("scenario_id") != body.scenario_id
@@ -156,7 +162,7 @@ def start_session(body: SessionInput):
             body.stimulus_width,
             body.stimulus_height,
         )
-        if (
+        if body.mode == "gaze" and (
             2 * margin["image_axes"][0] >= plate["width"]
             or 2 * margin["image_axes"][1] >= plate["height"]
         ):
@@ -175,6 +181,9 @@ def start_session(body: SessionInput):
                 "basis",
                 "validation_median_rmse",
                 "error_margin",
+                "approved",
+                "exploratory_only",
+                "source",
                 "viewport_width",
                 "viewport_height",
                 "head_min",
@@ -264,7 +273,7 @@ def results(study_id: str):
 
 @router.get("/scenarios/{scenario_id}/heatmap")
 def scenario_heatmap(scenario_id: str, mode: str = "gaze", session_id: str | None = None):
-    if mode != "gaze":
+    if mode not in ("gaze", "exploratory"):
         raise HTTPException(422, "Modo inválido.")
     scenario = require("scenarios", scenario_id)
     all_results = results(scenario["study_id"])
@@ -275,12 +284,14 @@ def scenario_heatmap(scenario_id: str, mode: str = "gaze", session_id: str | Non
         if s["scenario_id"] == scenario_id
         and s["mode"] == mode
         and s["status"] == "completed"
-        and s["metrics"]["eligible"]
+        and (s["metrics"]["eligible"] or mode == "exploratory")
     ]
     sessions = (
         [s for s in sessions if s["id"] == session_id]
         if session_id
         else [s for s in sessions if s["id"] in selected]
+        if mode == "gaze"
+        else sessions
     )
     return Response(
         heatmap(decode_scene(scenario["image"]), [p for s in sessions for p in s["points"]]),

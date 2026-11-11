@@ -11,6 +11,20 @@ Node e npm, prepara as dependências e abre o navegador padrão. O modelo pronto
 MediaPipe está incluído no projeto e é copiado localmente, sem download adicional.
 Chrome e Edge permitem câmera em localhost. Finalize pelo terminal do launcher.
 
+## Apresentação: ensaio exploratório
+
+No estudo, abra **Ensaio exploratório**, informe código e consentimento e importe
+um diagnóstico com malha concluída. Uma malha reprovada pode ser usada apenas para
+esta demonstração de 15 s, com identificação **não validado**. Os mapas são densidade
+de estimativas; não há taxas de sucesso, tempo de localização ou atenção oficial.
+As autorizações são separadas no servidor: esse ensaio não libera o estudo oficial.
+
+O pacote offline está em [docs/apresentacao](docs/apresentacao/ROTEIRO.md):
+[slides HTML](docs/apresentacao/slides.html), [slides PDF](docs/apresentacao/slides.pdf),
+roteiro de fala, demonstração e plano B. No Windows, o atalho
+**docs/apresentacao/Abrir-apresentacao.cmd** abre os slides no navegador padrão. Não inclui vetores oculares do usuário;
+as estatísticas dos diagnósticos são agregadas e identificadas como tentativas.
+
 ## Calibração atual
 
 O MediaPipe detecta as íris. O projeto **não cria um modelo de aprendizado**:
@@ -43,7 +57,7 @@ Malhas inconsistentes e cobertura insuficiente são reprovadas. O limite de erro
 
 Somente o código do participante é obrigatório como identificação, por exemplo
 P01, sem solicitar nome, e-mail, documento ou telefone. A sessão exige consentimento,
-cenário e calibração aprovada vinculada àquele código e área de tela.
+cenário e, no modo oficial, calibração aprovada vinculada àquele código e área de tela.
 
 **Diagnósticos / DEV** funciona sem cadastro. O botão **Baixar diagnóstico completo
 da página** inclui até cinco calibrações, configurações, eventos e os últimos
@@ -57,7 +71,7 @@ a pessoa olhou, o tracking livre não permite calcular precisão real.
 A margem por eixo é convertida da tela para o tamanho da imagem exibida. Casos de
 borda permanecem ambíguos; uma observação conclusiva exige sequência de pelo menos
 0,2 s. Permanência só na faixa de incerteza torna a sessão inconclusiva. A calibração
-reprovada continua bloqueada para o estudo. A política e margens ficam no JSON/PDF.
+reprovada continua bloqueada para o estudo oficial. A política e margens ficam no JSON/PDF.
 
 A webcam recebe pedido inicial de 4K/120 FPS e depois as maiores capacidades que
 informar, com negociação e fallback. O diagnóstico mostra resolução/FPS solicitados,
@@ -87,7 +101,7 @@ HEATCITY_API_URL configura o destino do proxy Vite.
 ## Conferências de software
 
 ```bash
-.venv/bin/ruff check backend scripts/generate_report.py scripts/recompute_metrics.py scripts/validate_diagnostics.py
+.venv/bin/ruff check backend scripts/generate_report.py scripts/recompute_metrics.py scripts/validate_diagnostics.py scripts/build_presentation.py
 PYTHONPATH=backend .venv/bin/python -m unittest discover -s backend/tests -v
 npm --prefix frontend test
 npm --prefix frontend run format:check

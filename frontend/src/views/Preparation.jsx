@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import CalibrationLab from './CalibrationLab.jsx';
 import RunSession from './RunSession.jsx';
-import { number } from '../api.js';
+import { number, post } from '../api.js';
 
-export default function Preparation({ study, onFinished }) {
+export default function Preparation({ study, onFinished, exploratory = false }) {
   const [scenarioId, setScenarioId] = useState(study.scenarios[0]?.id || ''),
     [participant, setParticipant] = useState(''),
     [target, setTarget] = useState(study.scenarios[0]?.plates[0]?.name || ''),
@@ -11,6 +11,8 @@ export default function Preparation({ study, onFinished }) {
     [calibrating, setCalibrating] = useState(false),
     [calibration, setCalibration] = useState(null),
     [running, setRunning] = useState(false);
+  const [importing, setImporting] = useState(false),
+    [importError, setImportError] = useState('');
   const scenario = study.scenarios.find((s) => s.id === scenarioId);
   if (!scenario)
     return (
@@ -22,6 +24,7 @@ export default function Preparation({ study, onFinished }) {
   if (running)
     return (
       <RunSession
+        exploratory={exploratory}
         scenario={scenario}
         participant={participant}
         target={target}
@@ -50,6 +53,7 @@ export default function Preparation({ study, onFinished }) {
           </button>
         </div>
         <CalibrationLab
+          exploratory={exploratory}
           participantCode={participant}
           scenarioId={scenario.id}
           onReady={(model) => {
@@ -60,11 +64,75 @@ export default function Preparation({ study, onFinished }) {
       </section>
     );
   const valid = /^[A-Z0-9][A-Z0-9_-]{1,23}$/.test(participant) && consent;
+  async function importDiagnostic(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setImporting(true);
+    setImportError('');
+    try {
+      if (file.size > 10000000) throw new Error('Limite de 10 MB.');
+      const data = JSON.parse(await file.text());
+      const candidates = [...(data.page_diagnostic?.calibrations || []), data];
+      const source = candidates
+        .filter(
+          (c) =>
+            c.mode === 'sweep' &&
+            c.quality?.basis === 'mesh' &&
+            Array.isArray(c.features) &&
+            c.features.length >= 9,
+        )
+        .at(-1);
+      if (!source)
+        throw new Error('Use um diagnóstico com malha concluída, aprovada ou reprovada.');
+      const payload = {
+        mode: 'sweep',
+        source: 'imported_diagnostic',
+        participant_code: participant,
+        scenario_id: scenario.id,
+      };
+      for (const key of [
+        'features',
+        'targets',
+        'validation_features',
+        'validation_targets',
+        'validation_samples',
+      ])
+        if (source[key]) payload[key] = source[key];
+      const result = await post('/exploratory/calibrations', payload);
+      setCalibration({
+        ...result,
+        feature_mode: 'sweep',
+        detector: source.detector,
+        source: 'imported_diagnostic',
+      });
+    } catch (error) {
+      setImportError(error.message);
+    } finally {
+      setImporting(false);
+    }
+  }
   return (
     <div className="preparation-grid">
       <section className="panel">
         <p className="eyebrow">ETAPA 1 · PREPARAR SESSÃO</p>
-        <h2>Identifique a sessão com um código</h2>
+        <h2>
+          {exploratory
+            ? 'Ensaio exploratório · não validado'
+            : 'Identifique a sessão com um código'}
+        </h2>
+        {exploratory && (
+          <div className="notice">
+            <strong>
+              Demonstração técnica; não mede sucesso, tempo de localização ou atenção validada.
+            </strong>
+            <p>
+              Você pode usar uma malha concluída reprovada. Importar um diagnóstico evita repetir a
+              coleta na apresentação, mas a posição atual pode diferir da original. O ensaio ficará
+              fora das taxas oficiais.
+            </p>
+          </div>
+        )}
         <p className="muted">
           O único dado de identificação solicitado é o código do participante. Não informe nome,
           e-mail, CPF, telefone ou outros dados pessoais.
@@ -131,12 +199,50 @@ export default function Preparation({ study, onFinished }) {
               coordenadas da sessão. Imagens faciais não serão salvas.
             </span>
           </label>
-          <button className="primary" disabled={!valid} onClick={() => setCalibrating(true)}>
+          <button
+            className="primary"
+            disabled={!valid || importing}
+            onClick={() => setCalibrating(true)}
+          >
             {calibration ? 'Refazer calibração' : 'Calibrar olhar'}
           </button>
+          {exploratory && (
+            <label>
+              Importar diagnóstico para demonstração
+              <input
+                type="file"
+                accept="application/json,.json"
+                disabled={!valid || importing}
+                onChange={importDiagnostic}
+              />
+              <span className="small">
+                Informe código, consentimento e cenário antes de importar. Nenhuma imagem facial
+                será importada.
+              </span>
+            </label>
+          )}
+          {importing && <p role="status">Conferindo geometria importada…</p>}
+          {importError && (
+            <p className="error" role="alert">
+              {importError}
+            </p>
+          )}
           {calibration && (
-            <div className="notice success">
-              <strong>Calibração aprovada · RMSE {number(calibration.validation_rmse, 3)}</strong>
+            <div className={`notice ${exploratory ? '' : 'success'}`}>
+              <strong>
+                {exploratory ? 'Geometria para demonstração' : 'Calibração aprovada'} · RMSE{' '}
+                {number(calibration.validation_rmse, 3)}
+              </strong>
+              {exploratory && (
+                <p>
+                  Calibração {calibration.approved ? 'aprovada pelo critério' : 'reprovada'} ·
+                  fonte:{' '}
+                  {calibration.source === 'imported_diagnostic'
+                    ? 'diagnóstico importado, não reconferido nesta postura'
+                    : 'coleta atual'}
+                  . Uso exclusivamente exploratório.
+                </p>
+              )}
               <p>A autorização é temporária e válida somente para este participante e cenário.</p>
               <button className="primary" disabled={!valid} onClick={() => setRunning(true)}>
                 Continuar para o teste de 15 s

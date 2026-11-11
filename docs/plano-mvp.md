@@ -13,5 +13,9 @@ Ainda é necessário validar precisão e usabilidade com pessoas e webcam real.
 O relatório PDF versionado é provisório e identifica a ausência de validação
 humana desta reconstrução. Consulte README para instalação, testes e reprodução.
 
-Git Flow: a implementação está em `feature/mvp-study-workflow`; não altera `main`
+Para apresentação, o ensaio exploratório permite demonstrar o fluxo com malha
+concluída reprovada, sempre identificado como não validado e excluído das taxas
+e tempos oficiais. O [roteiro](apresentacao/ROTEIRO.md) orienta a demonstração.
+
+Git Flow: as entregas ficam em branches `feature/*`; não alteram `main`
 automaticamente. Commits não incluem assinatura automática de ferramentas.

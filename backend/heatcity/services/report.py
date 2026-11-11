@@ -47,6 +47,10 @@ def build_report(data):
     paragraph(
         "Taxa de sucesso = participantes que localizaram o alvo / participantes elegíveis da mesma tarefa, cenário e modo. Tempo até localizar é resumido somente entre sucessos; falhas permanecem no denominador da taxa. Para repetições, seleciona-se a última sessão concluída elegível por participante/grupo. Sessões abortadas e rastreamento insuficiente são excluídos. Nas sessões novas, a margem empírica por eixo usa o maior P90 absoluto observado entre os alvos e é convertida da tela para o tamanho real da imagem exibida. A área de erro deve caber inteiramente na placa e permanecer por pelo menos 0,2 s para confirmar observação. Permanência apenas na faixa ambígua torna o resultado inconclusivo e excluído das taxas; ausências conclusivas continuam no denominador. Uma aquisição com menos de 60% dos intervalos adjacentes válidos dentro de 0,2 s também é inconclusiva, em vez de contar como ausência. Sessões históricas preservam seu método anterior. A margem é heurística, não um intervalo de confiança nem garantia de conter o olhar real."
     )
+    paragraph("Ensaios exploratórios", "Heading2")
+    paragraph(
+        "Ensaios com mode=exploratory são demonstrações técnicas não validadas, inclusive com calibração reprovada ou importada de outra postura. São excluídos das taxas, tempos e atenção oficiais. Seus mapas representam densidade de estimativas, sem comprovar onde a pessoa olhou."
+    )
     paragraph("3. Resultados persistidos", "Heading2")
     paragraph(
         f"Sessões: {summary['sessions_total']}. Concluídas: {summary['completed']}. Excluídas/incompletas: {summary['excluded']}."
@@ -99,7 +103,9 @@ def build_report(data):
             values = [
                 session["participant"],
                 " / ".join(f"{v * 100:.1f}%" for v in axes) if axes else "histórico",
-                str(metrics.get("uncertain_samples", "—")),
+                str(metrics.get("uncertain_samples"))
+                if metrics.get("uncertain_samples") is not None
+                else "—",
                 f"{rate(camera.get('frame_rate'))} / {rate(processing.get('average_fps'))}",
                 metrics.get("outcome", session["status"]),
             ]
@@ -118,18 +124,24 @@ def build_report(data):
         story.append(Spacer(1, 12))
     selected = set(summary["selected_session_ids"])
     for scenario in study.get("scenarios", []):
-        for mode in ("gaze",):
+        for mode in ("gaze", "exploratory"):
             sessions = [
                 s
                 for s in data["sessions"]
-                if s["scenario_id"] == scenario["id"] and s["mode"] == mode and s["id"] in selected
+                if s["scenario_id"] == scenario["id"]
+                and s["mode"] == mode
+                and (s["id"] in selected if mode == "gaze" else s["status"] == "completed")
             ]
             points = [p for s in sessions for p in s["points"] if p["valid"]]
             if not points:
                 continue
             story.append(PageBreak())
             paragraph(scenario["name"], "Heading2")
-            paragraph("Densidade de estimativas de olhar (experimental)")
+            paragraph(
+                "ENSAIO EXPLORATÓRIO — NÃO VALIDADO"
+                if mode == "exploratory"
+                else "Densidade de estimativas de olhar (experimental)"
+            )
             raw = heatmap(decode_scene(scenario["image"]), points)
             width = 440
             height = width * scenario["height"] / scenario["width"]
@@ -138,7 +150,7 @@ def build_report(data):
                 height = 400
             story.append(Image(io.BytesIO(raw), width=width, height=height))
             paragraph(
-                f"{len(sessions)} sessões elegíveis; {len(points)} pontos válidos. Cores normalizadas por imagem: intensidade não é comparável diretamente entre mapas nem mede duração de fixações."
+                f"{len(sessions)} sessões (modo {mode}); {len(points)} pontos válidos. Cores normalizadas por imagem: intensidade não é comparável diretamente entre mapas nem mede duração de fixações."
             )
     paragraph("4. Análise crítica e considerações finais", "Heading2")
     paragraph(

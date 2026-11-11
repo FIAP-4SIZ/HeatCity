@@ -1333,3 +1333,20 @@ meter {
     grid-template-columns: 1fr;
   }
 }
+
+.exploratory-heatmap {
+  display: block;
+  width: 100%;
+  max-width: 900px;
+  margin: 12px 0;
+  border: 2px solid var(--line);
+}
+.exploratory-banner {
+  flex-shrink: 0;
+  background: #fff3d7;
+  color: #432f0a;
+  border: 2px solid #9a6700;
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 13px;
+}

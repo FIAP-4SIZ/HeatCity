@@ -45,6 +45,7 @@ ValidationGroup = Annotated[list[EyePair], Field(min_length=6, max_length=120)]
 
 class CalibrationRequest(BaseModel):
     mode: Literal["sweep"] = "sweep"
+    source: Literal["live", "imported_diagnostic"] = "live"
     capture_settings: CameraSettings | None = None
     participant_code: str | None = Field(default=None, pattern=r"^[A-Z0-9][A-Z0-9_-]{1,23}$")
     scenario_id: str | None = None
@@ -91,6 +92,7 @@ def diagnostic_calibration(body: CalibrationRequest):
         values = body.model_dump(
             exclude={
                 "mode",
+                "source",
                 "participant_code",
                 "scenario_id",
                 "viewport_width",
@@ -106,10 +108,13 @@ def diagnostic_calibration(body: CalibrationRequest):
 
 @app.post("/calibrations/evaluate")
 def calibrate(body: CalibrationRequest):
+    if body.source != "live":
+        raise HTTPException(422, "Importação é permitida somente para demonstração exploratória.")
     try:
         values = body.model_dump(
             exclude={
                 "mode",
+                "source",
                 "participant_code",
                 "scenario_id",
                 "viewport_width",
@@ -148,6 +153,54 @@ def calibrate(body: CalibrationRequest):
         return result
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.post("/exploratory/calibrations")
+def exploratory_calibration(body: CalibrationRequest):
+    # A separate, explicitly scoped authorization. Never enters official approvals.
+    try:
+        values = body.model_dump(
+            exclude={
+                "mode",
+                "source",
+                "participant_code",
+                "scenario_id",
+                "viewport_width",
+                "viewport_height",
+                "capture_settings",
+            }
+        )
+        result = asdict(fit_calibration(**values))
+        now = monotonic()
+        for key, model in list(calibration_models.items()):
+            if model["expires"] <= now:
+                calibration_models.pop(key, None)
+        if len(calibration_models) >= 1000:
+            raise HTTPException(503, "Limite de calibrações ativas atingido.")
+        key = uuid4().hex
+        calibration_models[key] = {
+            **result,
+            "expires": now + 600,
+            "participant": body.participant_code,
+            "scenario_id": body.scenario_id,
+            "feature_mode": "sweep",
+            "viewport_width": body.viewport_width,
+            "viewport_height": body.viewport_height,
+            "capture_settings": body.capture_settings.model_dump()
+            if body.capture_settings
+            else None,
+            "exploratory_only": True,
+            "source": body.source,
+        }
+        return {
+            **result,
+            "calibration_id": key,
+            "expires_in_seconds": 600,
+            "exploratory_only": True,
+            "source": body.source,
+        }
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
 
 
 @app.post("/analysis")

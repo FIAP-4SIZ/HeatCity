@@ -55,6 +55,55 @@ export default function Results({ studyId, refresh, onError }) {
           <strong>{data.summary.excluded}</strong>
         </div>
       </div>
+      {data.summary.exploratory_sessions > 0 && (
+        <section className="panel">
+          <span className="tag neutral">ENSAIOS EXPLORATÓRIOS · NÃO VALIDADOS</span>
+          <h2>Densidade de estimativas para demonstração</h2>
+          <p>
+            {data.summary.exploratory_sessions} ensaio(s) fora das taxas e dos tempos oficiais. As
+            cores não demonstram leitura, localização correta ou atenção validada.
+          </p>
+          {data.sessions
+            .filter((s) => s.mode === 'exploratory' && s.status === 'completed')
+            .map((s) => (
+              <article key={s.id}>
+                <h3>
+                  Código {s.participant} · tarefa {s.target}
+                </h3>
+                <p>
+                  Calibração {s.calibration.approved ? 'aprovada pelo critério' : 'reprovada'} ·{' '}
+                  {s.calibration.source === 'imported_diagnostic'
+                    ? 'geometria importada, não reconferida nesta postura'
+                    : 'coleta atual'}{' '}
+                  · {s.metrics.valid_samples} estimativas na imagem · cobertura{' '}
+                  {number(s.metrics.coverage * 100)}%
+                </p>
+                {s.metrics.valid_samples > 0 ? (
+                  <>
+                    {' '}
+                    <img
+                      className="exploratory-heatmap"
+                      src={`/api/scenarios/${s.scenario_id}/heatmap?mode=exploratory&session_id=${s.id}`}
+                      alt="Densidade de estimativas exploratórias, sem validação de atenção"
+                    />
+                    <a
+                      className="text-link"
+                      download={`heatcity-exploratorio-${s.id}.png`}
+                      href={`/api/scenarios/${s.scenario_id}/heatmap?mode=exploratory&session_id=${s.id}`}
+                    >
+                      Baixar mapa exploratório PNG
+                    </a>
+                  </>
+                ) : (
+                  <p className="notice">
+                    Nenhuma estimativa válida na imagem. O ensaio foi preservado para diagnóstico;
+                    não há mapa de densidade para interpretar.
+                  </p>
+                )}
+              </article>
+            ))}
+        </section>
+      )}
       <div className="panel">
         <div className="section-heading">
           <div>
@@ -214,18 +263,21 @@ export default function Results({ studyId, refresh, onError }) {
                   <td>{s.target}</td>
                   <td>
                     <span className={`tag ${s.metrics?.eligible ? 'positive' : 'neutral'}`}>
-                      {s.status === 'running'
-                        ? 'Incompleta'
-                        : s.status === 'aborted'
-                          ? 'Interrompida'
-                          : s.metrics.eligible
-                            ? 'Elegível'
-                            : 'Inconclusiva'}
+                      {s.mode === 'exploratory'
+                        ? 'Exploratório · não validado'
+                        : s.status === 'running'
+                          ? 'Incompleta'
+                          : s.status === 'aborted'
+                            ? 'Interrompida'
+                            : s.metrics.eligible
+                              ? 'Elegível'
+                              : 'Inconclusiva'}
                     </span>
                     {s.metrics?.outcome && (
                       <p className="small">
                         {
                           {
+                            exploratory: 'Ensaio técnico sem métricas oficiais',
                             observed: 'Observação confirmada',
                             not_observed: 'Sem observação confirmada',
                             inconclusive: 'Resultado inconclusivo',

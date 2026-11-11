@@ -173,6 +173,7 @@ export default function App() {
     ['overview', 'Visão geral'],
     ['scenarios', 'Cenários e placas'],
     ['prepare', 'Nova sessão'],
+    ['explore', 'Ensaio exploratório'],
     ['results', 'Resultados'],
   ];
   return (
@@ -415,16 +416,19 @@ export default function App() {
                       )}
                     </section>
                   ))}
-                {tab === 'prepare' && (
+                {['prepare', 'explore'].includes(tab) && (
                   <Preparation
-                    key={`${study.id}-${revision}`}
+                    key={`${study.id}-${revision}-${tab}`}
+                    exploratory={tab === 'explore'}
                     study={study}
                     onFinished={(session) => {
                       setRevision((r) => r + 1);
                       setNotice(
-                        session.metrics.eligible
-                          ? 'Sessão salva e incluída na análise.'
-                          : 'Sessão salva como inconclusiva e excluída do consolidado.',
+                        session.mode === 'exploratory'
+                          ? 'Ensaio exploratório salvo; excluído dos indicadores oficiais.'
+                          : session.metrics.eligible
+                            ? 'Sessão salva e incluída na análise.'
+                            : 'Sessão salva como inconclusiva e excluída do consolidado.',
                       );
                       route(`/studies/${studyId}/results`);
                     }}
