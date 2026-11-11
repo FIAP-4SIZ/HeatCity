@@ -157,6 +157,9 @@ try {
   const diagnosticFile = await diagnosticDownload;
   const diagnostic = JSON.parse(await readFile(await diagnosticFile.path(), 'utf8'));
   assert.equal(diagnostic.targets.length, 9);
+  assert.equal(diagnostic.mode, 'sweep');
+  assert.equal(diagnostic.quality.basis, 'mesh');
+  assert.equal('coefficients' in diagnostic.quality, false);
   assert.equal(diagnostic.residuals.length, 5);
   assert.equal('calibration_id' in diagnostic.quality, false);
   await page.getByRole('button', { name: 'Usar calibração no estudo', exact: true }).click();
@@ -203,7 +206,7 @@ try {
     .waitFor();
   assert.deepEqual(errors, []);
   console.log(
-    'PASS: independent classic calibration, participant-bound authorization, full gaze session, blink, persistence, heatmap and PDF. Synthetic test only.',
+    'PASS: moving sweep and geometric interpolation, participant-bound authorization, full gaze session, blink, persistence, heatmap and PDF. Synthetic test only.',
   );
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForFunction(() => {

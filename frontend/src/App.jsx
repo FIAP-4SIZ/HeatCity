@@ -42,11 +42,12 @@ function Methodology() {
         </article>
         <article className="panel">
           <span className="step-number">02</span>
-          <h2>Calibre e valide separadamente.</h2>
+          <h2>Calibre e confira o erro.</h2>
           <p>
-            O ajuste usa nove pontos; a validação usa cinco alvos posteriores. A autorização exige
-            RMSE ≤ 0,100 e erro menor que metade da menor dimensão da placa escolhida. São critérios
-            experimentais, não limites clínicos.
+            O alvo móvel percorre a tela e registra nove referências geométricas. Cinco alvos
+            posteriores conferem o erro, sem treinamento. A autorização exige RMSE ≤ 0,100 e erro
+            menor que metade da menor dimensão da placa escolhida. São critérios experimentais, não
+            limites clínicos.
           </p>
         </article>
         <article className="panel">

@@ -36,8 +36,6 @@ try {
   });
   await page.getByRole('heading', { name: 'comparacao.json', exact: true }).waitFor();
   await page.getByLabel('Abertura mínima das pálpebras', { exact: true }).fill('0.08');
-  if (process.env.HEATCITY_TEST_PRECISION)
-    await page.getByLabel('Método de calibração').selectOption('precision');
   await page.evaluate((approved) => {
     window.mockApproved = approved;
     window.FaceMesh = class {
@@ -50,7 +48,7 @@ try {
         const target = document.querySelector('.target');
         const validation = document
           .querySelector('.fullscreen-panel strong')
-          ?.textContent.startsWith('Validação');
+          ?.textContent.startsWith('Conferência');
         const x = target ? parseFloat(target.style.left) / 100 : 0.5,
           y = target ? parseFloat(target.style.top) / 100 : 0.5;
         const face = Array.from({ length: 478 }, () => ({ x: 0.5, y: 0.5 }));
@@ -88,7 +86,7 @@ try {
   await page.getByRole('timer').filter({ hasText: '3' }).waitFor();
   await page
     .locator('.fullscreen-panel p')
-    .filter({ hasText: 'RMSE' })
+    .filter({ hasText: /^RMSE / })
     .waitFor({ timeout: process.env.HEATCITY_TEST_PRECISION ? 150000 : 90000 });
   assert.ok(
     await page
@@ -96,18 +94,21 @@ try {
       .filter({ hasText: process.env.HEATCITY_TEST_APPROVED ? 'Aprovada' : 'Reprovada' })
       .count(),
   );
-  if (process.env.HEATCITY_TEST_PRECISION) {
+  {
     const waiting = page.waitForEvent('download');
     await page
       .getByRole('button', { name: 'Baixar diagnóstico da calibração', exact: true })
       .click();
     const file = await waiting;
     const data = JSON.parse(await readFile(await file.path(), 'utf8'));
-    assert.equal(data.mode, 'precision');
-    assert.equal(data.features.length, 29);
-    assert.equal(data.validation_features.length, 9);
-    assert.equal(data.capture_details.length, 38);
-    assert.equal(data.features[0].length, 10);
+    assert.equal(data.mode, 'sweep');
+    assert.equal(data.features.length, 9);
+    assert.equal(data.validation_features.length, 5);
+    assert.equal(data.capture_details.length, 14);
+    assert.equal(data.features[0].length, 2);
+    assert.equal(data.quality.basis, 'mesh');
+    assert.equal('coefficients' in data.quality, false);
+    assert.equal(data.validation_samples.length, 5);
   }
   await page.getByRole('button', { name: 'Mostrar tracking experimental', exact: true }).click();
   await page.locator('.gaze').waitFor();
@@ -115,7 +116,7 @@ try {
     await page
       .getByText(
         process.env.HEATCITY_TEST_APPROVED
-          ? /PRÉVIA DEV.*RMSE aprovado/
+          ? /PRÉVIA DEV.*Conferência aprovada/
           : /PRÉVIA DEV.*CALIBRAÇÃO REPROVADA/,
       )
       .count(),

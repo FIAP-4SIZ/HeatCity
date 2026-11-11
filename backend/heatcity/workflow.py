@@ -123,10 +123,11 @@ def start_session(body: SessionInput):
             k: calibration.get(k)
             for k in (
                 "validation_rmse",
-                "coefficients",
+                "anchors",
+                "cells",
                 "feature_mode",
                 "basis",
-                "training_cv_rmse",
+                "validation_median_rmse",
                 "viewport_width",
                 "viewport_height",
                 "head_min",

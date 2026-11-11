@@ -7,22 +7,26 @@ export default function DiagnosticReport({ report }) {
       <div className="section-heading">
         <div>
           <p className="eyebrow">
-            {report.mode === 'precision'
-              ? 'PROTOCOLO DE PRECISÃO'
-              : report.mode === 'fixed'
-                ? 'PONTOS FIXOS'
-                : 'ALVO MÓVEL'}{' '}
+            {report.mode === 'sweep'
+              ? 'VARREDURA GEOMÉTRICA'
+              : report.mode === 'precision'
+                ? 'PROTOCOLO DE PRECISÃO'
+                : report.mode === 'fixed'
+                  ? 'PONTOS FIXOS'
+                  : 'ALVO MÓVEL'}{' '}
             · {report.basis}
           </p>
           <h3>{report.name}</h3>
         </div>
-        <span className={`tag ${report.rmse <= 0.1 ? 'positive' : 'neutral'}`}>
+        <span
+          className={`tag ${report.approved && Number.isFinite(report.rmse) && report.rmse <= 0.1 ? 'positive' : 'neutral'}`}
+        >
           RMSE {number(report.rmse, 3)}
         </span>
       </div>
       <p className="small">
-        Ajuste: {report.training} amostras · Validação: {report.validation} · CV do ajuste:{' '}
-        {number(report.cv, 3)} · Fora da tela: {report.outside}
+        Referências: {report.training} · Conferência: {report.validation} · Fora da tela:{' '}
+        {report.outside} · Sem previsão na malha: {report.unsupported || 0}
       </p>
       <p className="small">
         RMSE X/Y: {report.axisRmse.map((v) => number(v, 3)).join(' / ')} · Viés X/Y:{' '}
@@ -79,8 +83,8 @@ export default function DiagnosticReport({ report }) {
         </table>
       </div>
       <p className="small">
-        RMSE recalculado: {number(report.recomputed, 4)}. Médias por alvo ocultam dispersão; este
-        gráfico não comprova precisão humana.
+        RMSE das medianas com previsão: {number(report.recomputed, 4)}. Médias por alvo ocultam
+        dispersão; este gráfico não comprova precisão humana.
       </p>
     </article>
   );

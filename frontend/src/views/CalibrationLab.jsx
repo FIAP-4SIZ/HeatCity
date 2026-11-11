@@ -1,39 +1,34 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { createDetector } from '../detector.js';
 import { EyeProfile } from '../eye-profile.js';
 import { DiagnosticLog } from '../diagnostic-log.js';
-import { createDetector } from '../detector.js';
-import React, { useEffect, useRef, useState } from 'react';
 import {
-  targets,
-  precisionSequence,
-  precisionValidation,
+  sweepTargets,
   validationTargets,
+  calibrationFeature,
   medianFeature,
   predict,
-  calibrationFeature,
   inspectEyes,
-  trajectory,
-  PASS_MS,
   EyeGate,
-  GuidanceFilter,
   EyeReadiness,
+  GuidanceFilter,
 } from '../gaze.js';
 
-async function api(path, body, method = 'POST') {
-  const response = await fetch(`/api${path}`, {
+async function request(path, body, method = 'POST') {
+  const r = await fetch(`/api${path}`, {
     method,
     headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,
   });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
+  if (!r.ok) {
+    const data = await r.json().catch(() => ({}));
     throw new Error(
-      typeof error.detail === 'string'
-        ? error.detail
-        : 'Não foi possível concluir a operação. Verifique a API.',
+      typeof data.detail === 'string' ? data.detail : 'Não foi possível concluir a calibração.',
     );
   }
-  return response.status === 204 ? null : response.json();
+  return r.status === 204 ? null : r.json();
 }
+const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export default function CalibrationLab({
   participantCode,
@@ -46,551 +41,494 @@ export default function CalibrationLab({
   const video = useRef(),
     stage = useRef(),
     field = useRef(),
-    runtime = useRef({}),
-    runId = useRef(0);
-  const overlay = useRef();
+    overlay = useRef();
+  const state = useRef({ log: new DiagnosticLog(), generation: 0, dev: {} });
+  const [camera, setCamera] = useState(false),
+    [busy, setBusy] = useState(false),
+    [phase, setPhase] = useState('idle');
+  const [quality, setQuality] = useState(false),
+    [target, setTarget] = useState(null),
+    [gaze, setGaze] = useState(null);
+  const [countdown, setCountdown] = useState(null),
+    [message, setMessage] = useState('Ative a câmera para conferir os olhos.'),
+    [guidance, setGuidance] = useState('Olhe à frente com os olhos confortáveis.');
+  const [result, setResult] = useState(null),
+    [diagnostic, setDiagnostic] = useState(null),
+    [metrics, setMetrics] = useState(null);
+  const [consent, setConsent] = useState(false),
+    [progress, setProgress] = useState(0);
   const [dev, setDev] = useState({
     adaptive: true,
-    confidence: 0.6,
     minOpenness: 0.12,
+    confidence: 0.6,
     filter: true,
-    overlay: 'iris',
     smoothing: 0.25,
+    overlay: 'iris',
   });
-  const [metrics, setMetrics] = useState(null),
-    [gaze, setGaze] = useState(null);
-  runtime.current.dev = dev;
-  if (diagnosticsOnly) runtime.current.log ??= new DiagnosticLog();
-  const [consent, setConsent] = useState(false),
-    [camera, setCamera] = useState(false);
-  const [calibrationMode, setCalibrationMode] = useState('fixed');
-  const [busy, setBusy] = useState(false),
-    [phase, setPhase] = useState('idle');
-  runtime.current.phase = phase;
-  const [message, setMessage] = useState('Ative a câmera para verificar o enquadramento.');
-  const [quality, setQuality] = useState(false),
-    [target, setTarget] = useState(null);
-  const [progress, setProgress] = useState(0),
-    [result, setResult] = useState(null);
-  const [diagnostic, setDiagnostic] = useState(null);
-  const [countdown, setCountdown] = useState(null);
-  const [visualWarning, setVisualWarning] = useState(false);
-  const [guidance, setGuidance] = useState('Centralize o rosto e ilumine-o pela frente.');
-
+  state.current.dev = dev;
+  state.current.phase = phase;
+  const collecting = phase === 'collecting' || phase === 'countdown';
   function invalidate(text) {
-    runId.current++;
-    const state = runtime.current;
-    state.collection = null;
-    state.tracking = false;
-    state.geometry = null;
-    if (state.calibration?.calibration_id)
-      api(`/calibrations/${state.calibration.calibration_id}`, null, 'DELETE').catch(() => {});
-    state.calibration = null;
-    clearTimeout(state.expiry);
-    setCountdown(null);
+    const s = state.current;
+    s.generation++;
+    s.collection = null;
+    s.tracking = false;
+    s.reference = null;
+    s.displayTarget = null;
+    if (s.calibration?.calibration_id)
+      request(`/calibrations/${s.calibration.calibration_id}`, null, 'DELETE').catch(() => {});
+    s.calibration = null;
+    s.geometry = null;
+    clearTimeout(s.expiry);
     setResult(null);
     setDiagnostic(null);
     setTarget(null);
     setGaze(null);
+    setCountdown(null);
     setPhase('idle');
     if (text) setMessage(text);
   }
-
-  async function stop(text = 'Câmera desligada. Faça uma nova calibração para continuar.') {
+  async function stop(text = 'Câmera desligada. Recalibre ao reiniciar.') {
     invalidate(text);
-    const state = runtime.current;
-    state.log?.event('camera_stop');
-    state.running = false;
-    state.cameraRun = (state.cameraRun || 0) + 1;
-    cancelAnimationFrame(state.frame);
-    state.stream?.getTracks().forEach((track) => track.stop());
-    state.stream = null;
+    const s = state.current;
+    s.running = false;
+    cancelAnimationFrame(s.frame);
+    s.stream?.getTracks().forEach((t) => t.stop());
+    s.stream = null;
+    await s.inflight?.catch(() => {});
+    await s.mesh?.close();
+    s.mesh = null;
+    s.log.event('camera_stop');
     setCamera(false);
     setQuality(false);
-    if (video.current) video.current.srcObject = null;
-    if (overlay.current) {
-      const context = overlay.current.getContext('2d');
-      context.clearRect(0, 0, overlay.current.width, overlay.current.height);
-    }
-    if (diagnosticsOnly) setMetrics(null);
   }
-
   useEffect(() => {
     registerSnapshot?.(() => ({
-      ...runtime.current.log.snapshot(),
-      detector: runtime.current.mesh?.engine ?? null,
-      eye_profile: runtime.current.eyeProfile?.baseline ?? null,
-      developer_options: { ...runtime.current.dev },
+      ...state.current.log.snapshot(),
+      detector: state.current.mesh?.engine || null,
+      eye_profile: state.current.profile?.baseline || null,
+      developer_options: { ...state.current.dev },
       telemetry: {
-        frames: runtime.current.frames || 0,
-        valid_frames: runtime.current.validFrames || 0,
+        frames: state.current.frames || 0,
+        valid_frames: state.current.validFrames || 0,
       },
       viewport: {
         width: window.innerWidth,
         height: window.innerHeight,
         pixel_ratio: window.devicePixelRatio,
       },
-      purpose: 'Diagnóstico local; tracking sem referência não mede precisão.',
+      method: 'Referências medidas e interpolação geométrica; sem regressão ou treinamento.',
     }));
-    const resized = () => {
-      runtime.current.log?.event('viewport_resize');
-      const geometry = runtime.current.geometry;
-      if (diagnosticsOnly && document.fullscreenElement !== stage.current) return;
-      if (
-        geometry &&
-        (field.current.clientWidth !== geometry[0] || field.current.clientHeight !== geometry[1])
-      )
-        invalidate('A área de exibição mudou. Refaça a calibração.');
-    };
-    const fullscreen = () => {
-      runtime.current.log?.event(
-        document.fullscreenElement ? 'fullscreen_enter' : 'fullscreen_exit',
-      );
+    const full = () => {
+      const s = state.current;
+      s.log.event(document.fullscreenElement ? 'fullscreen_enter' : 'fullscreen_exit');
       if (document.fullscreenElement !== stage.current) {
-        if (diagnosticsOnly && runtime.current.calibration && !runtime.current.collection) {
-          runtime.current.tracking = false;
-          runtime.current.geometry = null;
+        if (diagnosticsOnly && s.calibration && !s.collection && s.phase !== 'countdown') {
+          s.tracking = false;
+          s.reference = null;
+          s.geometry = null;
           setGaze(null);
+          setTarget(null);
           setPhase('result');
-        } else invalidate('Tela cheia encerrada. Refaça a calibração para continuar.');
+        } else invalidate('Tela cheia encerrada. A coleta foi interrompida.');
       }
     };
-    document.addEventListener('fullscreenchange', fullscreen);
+    const resize = () => {
+      const s = state.current;
+      s.log.event('viewport_resize');
+      if (
+        document.fullscreenElement === stage.current &&
+        s.geometry &&
+        (s.geometry[0] !== field.current.clientWidth ||
+          s.geometry[1] !== field.current.clientHeight)
+      )
+        invalidate('A área da tela mudou. Refaça a varredura.');
+    };
     const hidden = () => {
       if (document.hidden) stop('Captura interrompida ao sair da página.');
     };
-    window.addEventListener('resize', resized);
+    document.addEventListener('fullscreenchange', full);
+    window.addEventListener('resize', resize);
     document.addEventListener('visibilitychange', hidden);
     return () => {
-      stop();
-      runtime.current.mesh?.close();
-      window.removeEventListener('resize', resized);
-      document.removeEventListener('fullscreenchange', fullscreen);
+      state.current.generation++;
+      state.current.running = false;
+      cancelAnimationFrame(state.current.frame);
+      state.current.stream?.getTracks().forEach((t) => t.stop());
+      state.current.inflight?.finally(() => state.current.mesh?.close()).catch(() => {});
+      clearTimeout(state.current.expiry);
+      if (state.current.calibration?.calibration_id)
+        request(`/calibrations/${state.current.calibration.calibration_id}`, null, 'DELETE').catch(
+          () => {},
+        );
+      document.removeEventListener('fullscreenchange', full);
+      window.removeEventListener('resize', resize);
       document.removeEventListener('visibilitychange', hidden);
     };
   }, []);
-
   async function startCamera() {
     setBusy(true);
-    setMessage('Carregando detector e solicitando acesso à câmera…');
-    const state = runtime.current;
+    const s = state.current;
     try {
-      await state.inflight?.catch(() => {});
       if (!navigator.mediaDevices?.getUserMedia)
-        throw new Error('A câmera exige HTTPS ou execução em localhost.');
-      state.stream = await navigator.mediaDevices.getUserMedia({
+        throw new Error('A câmera exige HTTPS ou localhost.');
+      s.stream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
         audio: false,
       });
-      video.current.srcObject = state.stream;
+      video.current.srcObject = s.stream;
       await video.current.play();
-      await state.mesh?.close();
-      state.mesh = await createDetector({
-        maxNumFaces: 2,
-        refineLandmarks: true,
-        minDetectionConfidence: diagnosticsOnly ? state.dev.confidence : 0.6,
-        minTrackingConfidence: diagnosticsOnly ? state.dev.confidence : 0.6,
+      s.mesh = await createDetector({
+        minDetectionConfidence: diagnosticsOnly ? dev.confidence : 0.6,
+        minTrackingConfidence: diagnosticsOnly ? dev.confidence : 0.6,
       });
-      state.featureMode = calibrationMode;
-      state.eyeProfile = new EyeProfile();
-      state.log?.event('camera_start');
-      state.gate = new EyeGate();
-      state.readiness = new EyeReadiness();
-      state.guide = new GuidanceFilter();
-      setVisualWarning(false);
-      state.frames = 0;
-      state.validFrames = 0;
-      state.began = performance.now();
-      state.lastStats = 0;
-      state.mesh.onResults((results) => {
-        if (!state.running) return;
-        const eyes = state.eyeProfile.inspect(results.multiFaceLandmarks, state.frameTime);
-        const adaptive = !diagnosticsOnly || state.dev.adaptive;
+      s.profile = new EyeProfile();
+      s.gate = new EyeGate();
+      s.ready = new EyeReadiness();
+      s.guide = new GuidanceFilter();
+      s.frames = 0;
+      s.validFrames = 0;
+      s.began = performance.now();
+      s.lastStats = 0;
+      s.mesh.onResults((r) => {
+        if (!s.running) return;
+        const now = s.frameTime,
+          eyes = s.profile.inspect(r.multiFaceLandmarks, now),
+          adaptive = !diagnosticsOnly || s.dev.adaptive;
         const inspection =
           adaptive && !eyes.ready
-            ? {
-                reason:
-                  'Ajustando abertura individual: olhe à frente por dois segundos, sem forçar os olhos.',
-              }
+            ? { reason: 'Ajustando abertura individual. Olhe à frente por dois segundos.' }
             : inspectEyes(
-                results.multiFaceLandmarks,
-                state.featureMode !== 'motion',
-                adaptive ? { thresholds: eyes.thresholds } : { minOpenness: state.dev.minOpenness },
+                r.multiFaceLandmarks,
+                true,
+                adaptive ? { thresholds: eyes.thresholds } : { minOpenness: s.dev.minOpenness },
               );
-        const feature = inspection.feature;
-        const now = state.frameTime;
-        const accepted =
-          diagnosticsOnly && !state.dev.filter ? !!feature : state.gate.update(feature, now);
-        setQuality(state.readiness.update(feature, now));
-        let issue = feature
+        const f = inspection.feature,
+          accepted = diagnosticsOnly && !s.dev.filter ? !!f : s.gate.update(f, now);
+        setQuality(s.ready.update(f, now));
+        s.frames++;
+        if (accepted) s.validFrames++;
+        const issue = f
           ? null
           : inspection.blink
-            ? 'Olhos fechados por mais tempo. Abra-os quando estiver confortável.'
+            ? 'Olhos fechados por mais tempo. Abra-os quando confortável.'
             : inspection.reason;
-        const collection = state.collection;
+        setGuidance(s.guide.update(issue, now).text);
         if (
-          collection &&
+          s.collection &&
           accepted &&
-          now - collection.since > 900 &&
-          now - (collection.last || 0) >= 50
+          now - s.collection.since >= 300 &&
+          now - (s.collection.last || 0) >= 50
         ) {
-          const delta = collection.last ? Math.min(now - collection.last, 100) : 0;
-          collection.last = now;
-          collection.features.push(feature);
-          collection.targets.push(
-            collection.moving ? trajectory(Math.max(0, collection.clock - 150)) : collection.target,
-          );
-          if (collection.moving) collection.clock = Math.min(PASS_MS, collection.clock + delta);
+          s.collection.last = now;
+          s.collection.features.push(f);
         }
-        state.frames++;
-        if (accepted) state.validFrames++;
-        let rawPoint = null;
-        if (diagnosticsOnly && state.tracking && state.calibration) {
-          const point = accepted
-            ? predict(
-                calibrationFeature(feature, state.calibration.feature_mode),
-                state.calibration.coefficients,
-                state.calibration.basis,
-              )
-            : null;
-          rawPoint = point;
-          if (point?.every(Number.isFinite)) {
-            const alpha = state.dev.smoothing;
-            state.smoothed = state.smoothed
-              ? point.map((v, i) => alpha * v + (1 - alpha) * state.smoothed[i])
-              : point;
-            setGaze(state.smoothed);
-          } else {
-            state.smoothed = null;
-            setGaze(null);
-          }
+        const point = s.tracking && accepted ? predict(calibrationFeature(f), s.calibration) : null;
+        if (point?.every(Number.isFinite)) {
+          const alpha = s.dev.smoothing;
+          s.smoothed = s.smoothed
+            ? point.map((v, i) => alpha * v + (1 - alpha) * s.smoothed[i])
+            : point;
+          setGaze(s.smoothed);
+        } else if (s.tracking) {
+          s.smoothed = null;
+          setGaze(null);
         }
-        state.log?.add(
+        if (
+          s.reference &&
+          accepted &&
+          point?.every(Number.isFinite) &&
+          now - s.reference.since >= 600
+        )
+          s.reference.predictions.push(point);
+        s.log.add(
           {
-            phase: state.tracking ? 'tracking' : state.phase,
+            phase: s.tracking ? 'tracking' : s.phase,
             accepted,
+            features: f || null,
+            raw_prediction: point?.every(Number.isFinite) ? point : null,
+            prediction_supported: s.tracking ? !!point?.every(Number.isFinite) : null,
+            filtered_prediction: s.tracking ? s.smoothed : null,
+            expected: s.reference?.target || s.collection?.target || s.displayTarget || null,
+            reference_stationary: !!s.collection,
             reason: accepted
               ? null
-              : feature
+              : f
                 ? 'Recuperação de piscada ou movimento rápido'
                 : inspection.reason,
-            features: feature || null,
             openness: eyes.openness,
-            thresholds: adaptive ? eyes.thresholds : [state.dev.minOpenness, state.dev.minOpenness],
-            raw_prediction: rawPoint,
-            filtered_prediction: state.tracking ? state.smoothed : null,
-            expected: state.collection?.moving ? null : state.collection?.target || null,
-            faces: results.multiFaceLandmarks?.length || 0,
+            thresholds: adaptive ? eyes.thresholds : [s.dev.minOpenness, s.dev.minOpenness],
+            faces: r.multiFaceLandmarks?.length || 0,
             latency_ms: performance.now() - now,
+            diagnostic_attempt: s.attempt || null,
           },
           now,
         );
-        if (diagnosticsOnly && performance.now() - state.lastStats > 250) {
-          state.lastStats = performance.now();
+        if (now - s.lastStats > 250) {
+          s.lastStats = now;
           setMetrics({
-            frames: state.frames,
-            fps: (state.frames * 1000) / (state.lastStats - state.began),
-            valid: state.validFrames / state.frames,
-            latency: state.lastStats - now,
-            faces: results.multiFaceLandmarks?.length || 0,
-            features: feature,
+            frames: s.frames,
+            fps: (s.frames * 1000) / (now - s.began),
+            valid: s.validFrames / s.frames,
+            features: f,
+            faces: r.multiFaceLandmarks?.length || 0,
           });
-          const canvas = overlay.current;
-          if (canvas) {
-            canvas.width = video.current.videoWidth;
-            canvas.height = video.current.videoHeight;
-            const context = canvas.getContext('2d');
-            context.clearRect(0, 0, canvas.width, canvas.height);
-            if (state.dev.overlay !== 'off')
-              for (const face of results.multiFaceLandmarks || []) {
+          const c = overlay.current;
+          if (c) {
+            c.width = video.current.videoWidth;
+            c.height = video.current.videoHeight;
+            const ctx = c.getContext('2d');
+            ctx.clearRect(0, 0, c.width, c.height);
+            if (s.dev.overlay !== 'off')
+              for (const face of r.multiFaceLandmarks || [])
                 for (let i = 0; i < face.length; i++) {
-                  if (
-                    state.dev.overlay === 'iris' &&
-                    ![
-                      33, 133, 159, 145, 362, 263, 386, 374, 468, 469, 470, 471, 472, 473, 474, 475,
-                      476, 477,
-                    ].includes(i)
-                  )
-                    continue;
-                  context.beginPath();
-                  context.arc(
-                    face[i].x * canvas.width,
-                    face[i].y * canvas.height,
-                    (i >= 468 ? 2.5 : 1.5) * (canvas.width / (canvas.clientWidth || 180)),
+                  if (s.dev.overlay === 'iris' && i < 468) continue;
+                  ctx.beginPath();
+                  ctx.arc(
+                    face[i].x * c.width,
+                    face[i].y * c.height,
+                    ((i >= 468 ? 2.5 : 1.5) * c.width) / (c.clientWidth || 180),
                     0,
                     Math.PI * 2,
                   );
-                  context.fillStyle = i >= 468 ? '#ffcb4d' : '#55ebac';
-                  context.fill();
+                  ctx.fillStyle = i >= 468 ? '#ffcb4d' : '#55ebac';
+                  ctx.fill();
                 }
-              }
           }
         }
-        const display = state.guide.update(issue, now);
-        setGuidance(display.text);
-        setVisualWarning(display.warning);
       });
-      state.running = true;
-      const cameraRun = (state.cameraRun = (state.cameraRun || 0) + 1);
-      state.stream.getVideoTracks()[0].onended = () => stop('A câmera foi desconectada.');
+      s.running = true;
+      s.stream.getVideoTracks()[0].onended = () => stop('A câmera foi desconectada.');
+      s.log.event('camera_start');
       const tick = async () => {
-        if (!state.running || state.cameraRun !== cameraRun) return;
+        if (!s.running) return;
         try {
-          state.frameTime = performance.now();
-          state.inflight = state.mesh.send({ image: video.current });
-          await state.inflight;
+          s.frameTime = performance.now();
+          s.inflight = s.mesh.send({ image: video.current });
+          await s.inflight;
         } catch {
-          await stop('Falha no detector. Desligue e tente novamente.');
+          await stop('Falha no detector. Reinicie a câmera.');
           return;
         }
-        if (state.running && state.cameraRun === cameraRun)
-          state.frame = requestAnimationFrame(tick);
+        if (s.running) s.frame = requestAnimationFrame(tick);
       };
       await tick();
-      setCamera(state.running);
-      setMessage(
-        `Detector: ${state.mesh.engine}. Ajuste a câmera à altura dos olhos. Pisque naturalmente.`,
-      );
-    } catch (error) {
-      await stop(
-        error.name === 'NotAllowedError'
-          ? 'Permissão de câmera negada. Autorize no navegador e tente novamente.'
-          : error.message,
-      );
+      setCamera(s.running);
+      setMessage(`Detector: ${s.mesh.engine}. Mantenha a cabeça confortável e estável.`);
+    } catch (e) {
+      await stop(e.name === 'NotAllowedError' ? 'Permissão de câmera negada.' : e.message);
     } finally {
       setBusy(false);
     }
   }
-
+  async function fullScreen() {
+    if (document.fullscreenElement !== stage.current) await stage.current.requestFullscreen();
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  }
   async function calibrate() {
     invalidate();
+    const s = state.current,
+      id = s.generation;
+    setBusy(true);
     setPhase('countdown');
-    setCountdown(3);
-    const id = runId.current,
-      state = runtime.current;
-    state.featureMode = calibrationMode;
-    const captureDetails = [];
-    const payload = {
-      detector: state.mesh?.engine,
-      mode: calibrationMode,
-      participant_code: participantCode,
-      scenario_id: scenarioId,
-      features: [],
-      targets: [],
-      validation_features: [],
-      validation_targets: [],
+    const details = [],
+      payload = {
+        mode: 'sweep',
+        participant_code: participantCode,
+        scenario_id: scenarioId,
+        features: [],
+        targets: [],
+        validation_features: [],
+        validation_targets: [],
+        validation_samples: [],
+      };
+    const current = () => {
+      if (s.generation !== id || !s.running) throw new Error('Coleta interrompida.');
     };
     try {
-      if (document.fullscreenElement !== stage.current) await stage.current.requestFullscreen();
-      if (runId.current !== id) return;
-      setProgress(0);
-      for (let remaining = 3; remaining > 0; remaining--) {
-        if (runId.current !== id) return;
-        setCountdown(remaining);
-        setMessage(`Prepare-se. Iniciando em ${remaining}…`);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+      await fullScreen();
+      for (let i = 3; i > 0; i--) {
+        current();
+        setCountdown(i);
+        setMessage(`Prepare-se. Iniciando em ${i}…`);
+        await pause(1000);
       }
-      if (runId.current !== id) return;
-      state.geometry = [field.current.clientWidth, field.current.clientHeight];
-      payload.viewport_width = state.geometry[0];
-      payload.viewport_height = state.geometry[1];
+      current();
+      s.geometry = [field.current.clientWidth, field.current.clientHeight];
+      payload.viewport_width = s.geometry[0];
+      payload.viewport_height = s.geometry[1];
       setCountdown(null);
       setPhase('collecting');
-      const collect = async (moving, point, duration, minimum = 6) => {
-        const collection = {
-          since: performance.now(),
-          features: [],
-          targets: [],
-          moving,
-          target: point,
-          clock: 0,
-        };
-        state.collection = collection;
+      let last = [0.5, 0.5];
+      const move = async (next) => {
+        const from = last,
+          start = performance.now(),
+          duration = Math.max(250, Math.hypot(next[0] - from[0], next[1] - from[1]) * 1100);
         await new Promise((resolve, reject) => {
-          const poll = () => {
-            if (runId.current !== id) {
-              resolve();
-              return;
+          const step = () => {
+            try {
+              current();
+              const t = Math.min(1, (performance.now() - start) / duration),
+                ease = t * t * (3 - 2 * t);
+              s.displayTarget = next.map((v, i) => from[i] + ease * (v - from[i]));
+              setTarget(s.displayTarget);
+              if (t < 1) requestAnimationFrame(step);
+              else resolve();
+            } catch (e) {
+              reject(e);
             }
-            const elapsed = performance.now() - collection.since;
-            setTarget(moving ? trajectory(collection.clock) : point);
-            const enough = moving
-              ? collection.clock >= PASS_MS && collection.features.length >= 120
-              : elapsed >= duration && collection.features.length >= minimum;
-            if (enough) {
-              resolve();
-              return;
-            }
-            if (elapsed > (moving ? 45000 : 6500)) {
-              state.collection = null;
-              reject(
-                new Error(
-                  `Coleta insuficiente: ${collection.features.length} amostras válidas (${moving ? 'mínimo 120 na trajetória' : `mínimo ${minimum} neste ponto`}). Verifique iluminação e enquadramento; a câmera pode estar processando lentamente.`,
-                ),
-              );
-              return;
-            }
-            requestAnimationFrame(poll);
           };
-          poll();
+          step();
         });
-        state.collection = null;
-        if (runId.current !== id) return null;
-        return collection;
+        last = next;
       };
-      const fixedPoints = calibrationMode === 'precision' ? precisionSequence() : targets;
-      const heldPoints = calibrationMode === 'precision' ? precisionValidation : validationTargets;
-      if (calibrationMode !== 'motion') {
-        for (let index = 0; index < fixedPoints.length; index++) {
-          setMessage(
-            `Calibração ${index + 1}/${fixedPoints.length}: olhe para o ponto, sem seguir com a cabeça.`,
-          );
-          const collection = await collect(false, fixedPoints[index], 2200, 20);
-          if (!collection) return;
-          payload.features.push(
-            medianFeature(
-              collection.features.map((feature) => calibrationFeature(feature, calibrationMode)),
-            ),
-          );
-          payload.targets.push(fixedPoints[index]);
-          captureDetails.push({
-            phase: 'training',
-            target: fixedPoints[index],
-            samples: collection.features,
-          });
-          setProgress(index + 1);
+      const collect = async (point) => {
+        await move(point);
+        current();
+        const c = { target: point, since: performance.now(), features: [] };
+        s.collection = c;
+        while (performance.now() - c.since < 950 || c.features.length < 10) {
+          current();
+          if (performance.now() - c.since > 4500)
+            throw new Error(
+              `Coleta insuficiente: ${c.features.length} amostras válidas. Confira olhos, iluminação e enquadramento.`,
+            );
+          await pause(30);
         }
-      } else {
-        setMessage('Acompanhe o alvo com os olhos. Pisque normalmente.');
-        const training = await collect(true, null, PASS_MS);
-        if (!training) return;
-        payload.features.push(...training.features);
-        payload.targets.push(...training.targets);
-        setProgress(1);
-      }
-      for (let index = 0; index < heldPoints.length; index++) {
-        setMessage(`Validação ${index + 1}/${heldPoints.length}: mantenha o olhar no ponto.`);
-        const classic = calibrationMode !== 'motion';
-        const collection = await collect(
-          false,
-          heldPoints[index],
-          classic ? 2200 : 1500,
-          classic ? 20 : 6,
+        s.collection = null;
+        return c.features;
+      };
+      for (let i = 0; i < sweepTargets.length; i++) {
+        setMessage(
+          `Varredura ${i + 1}/9: acompanhe o alvo com os olhos; ele desacelera nas referências.`,
         );
-        if (!collection) return;
-        if (classic) {
-          payload.validation_features.push(
-            medianFeature(
-              collection.features.map((feature) => calibrationFeature(feature, calibrationMode)),
-            ),
-          );
-          payload.validation_targets.push(heldPoints[index]);
-        } else {
-          payload.validation_features.push(...collection.features);
-          payload.validation_targets.push(...collection.targets);
-        }
-        captureDetails.push({
-          phase: 'validation',
-          target: heldPoints[index],
-          samples: collection.features,
-        });
-        setProgress(index + (classic ? fixedPoints.length + 1 : 2));
+        const p = sweepTargets[i],
+          samples = await collect(p);
+        payload.features.push(medianFeature(samples.map(calibrationFeature)));
+        payload.targets.push(p);
+        details.push({ phase: 'reference', target: p, samples });
+        setProgress(i + 1);
       }
+      // Diagonal passes cover the central field between row sweeps, without fitting to moving samples.
+      setMessage('Acompanhe as diagonais e o centro.');
+      for (const p of [
+        [0.05, 0.05],
+        [0.95, 0.95],
+        [0.95, 0.05],
+        [0.05, 0.95],
+        [0.5, 0.5],
+      ])
+        await move(p);
+      for (let i = 0; i < validationTargets.length; i++) {
+        setMessage(`Conferência ${i + 1}/5: olhe para o alvo. Estes dados só medem erro.`);
+        const p = validationTargets[i],
+          samples = await collect(p),
+          pairs = samples.map(calibrationFeature);
+        payload.validation_features.push(medianFeature(pairs));
+        payload.validation_targets.push(p);
+        payload.validation_samples.push(pairs);
+        details.push({ phase: 'validation', target: p, samples });
+        setProgress(10 + i);
+      }
+      s.displayTarget = null;
       setTarget(null);
-      setMessage('Avaliando erro em amostras independentes…');
-      const response = await api(
+      setMessage('Calculando interpolação geométrica e erro medido…');
+      const response = await request(
         diagnosticsOnly ? '/diagnostics/calibration' : '/calibrations/evaluate',
         payload,
       );
-      if (runId.current !== id) {
-        if (response.calibration_id)
-          api(`/calibrations/${response.calibration_id}`, null, 'DELETE').catch(() => {});
-        return;
-      }
-      state.calibration = {
+      current();
+      s.attempt = (s.attempt || 0) + 1;
+      s.calibration = {
         ...response,
-        detector: state.mesh.engine,
-        eye_profile: state.eyeProfile.baseline,
-        feature_mode: calibrationMode,
+        feature_mode: 'sweep',
+        detector: s.mesh.engine,
+        eye_profile: s.profile.baseline,
         viewport_width: payload.viewport_width,
         viewport_height: payload.viewport_height,
       };
-      setResult(response);
       const quality = { ...response };
       delete quality.calibration_id;
       delete quality.expires_in_seconds;
-      const detailed = {
-        version: 2,
-        capture_details: captureDetails,
-        feature_schema: 'separate eyes x/y + nose yaw/pitch + eye midpoint x/y + eye span + roll',
-        purpose: 'diagnóstico experimental, não comprovação de precisão humana',
+      const report = {
+        version: 3,
+        mode: 'sweep',
+        detector: s.mesh.engine,
         ...payload,
         quality,
-        residuals: payload.validation_features.map((feature, index) => {
-          const estimated = predict(feature, response.coefficients, response.basis);
-          const expected = payload.validation_targets[index];
+        eye_profile: s.profile.baseline,
+        developer_options: diagnosticsOnly ? { ...s.dev } : undefined,
+        capture_details: details,
+        diagnostic_attempt: s.attempt,
+        feature_schema: 'Média das duas posições relativas das íris; interpolação por triângulos',
+        purpose: 'Medição geométrica experimental; sem treinamento',
+        residuals: payload.validation_features.map((f, i) => {
+          const p = predict(f, response),
+            finite = p.every(Number.isFinite);
           return {
-            expected,
-            estimated,
-            error: Math.hypot(estimated[0] - expected[0], estimated[1] - expected[1]),
+            expected: payload.validation_targets[i],
+            estimated: finite ? p : null,
+            unsupported: !finite,
+            error: finite
+              ? Math.hypot(
+                  p[0] - payload.validation_targets[i][0],
+                  p[1] - payload.validation_targets[i][1],
+                )
+              : null,
           };
         }),
       };
-      if (diagnosticsOnly) detailed.developer_options = { ...state.dev };
-      detailed.eye_profile = state.eyeProfile.baseline;
-      state.log?.calibration(detailed);
-      setDiagnostic(detailed);
-      onDiagnostic?.(detailed);
+      s.log.calibration(report);
+      setDiagnostic(report);
+      onDiagnostic?.(report);
+      setResult(response);
       setPhase('result');
       setMessage(
         response.approved
-          ? 'Calibração aprovada. A prévia do olhar está liberada.'
-          : 'Calibração reprovada. Ajuste a postura e repita.',
+          ? 'Conferência geométrica aprovada. Verifique o tracking antes de usar.'
+          : 'Conferência geométrica reprovada. A prévia permanece apenas para diagnóstico.',
       );
       if (response.approved && !diagnosticsOnly)
-        state.expiry = setTimeout(
-          () => invalidate('Calibração expirada. Refaça antes de continuar.'),
+        s.expiry = setTimeout(
+          () => invalidate('Calibração expirada.'),
           response.expires_in_seconds * 1000,
         );
-    } catch (error) {
-      if (runId.current === id) invalidate(error.message);
+    } catch (e) {
+      if (s.generation === id) invalidate(e.message);
+    } finally {
+      if (s.generation === id) {
+        s.collection = null;
+        setBusy(false);
+      } else setBusy(false);
     }
   }
-
-  async function previewDiagnostic() {
-    const state = runtime.current;
+  async function preview() {
+    const s = state.current;
     try {
-      await stage.current.requestFullscreen();
+      await fullScreen();
       setPhase('tracking');
-      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      if (!state.calibration) return;
+      await pause(50);
+      if (!s.calibration) return false;
       if (
-        field.current.clientWidth !== state.calibration.viewport_width ||
-        field.current.clientHeight !== state.calibration.viewport_height
+        field.current.clientWidth !== s.calibration.viewport_width ||
+        field.current.clientHeight !== s.calibration.viewport_height
       )
-        throw new Error('O tamanho da tela mudou. Recalibre nesta tela.');
-      state.geometry = [field.current.clientWidth, field.current.clientHeight];
-      state.log?.event('tracking_start');
-      state.tracking = true;
-      state.smoothed = null;
-      setPhase('tracking');
-    } catch (error) {
-      state.tracking = false;
-      setGaze(null);
+        throw new Error('A área da tela mudou. Refaça a varredura.');
+      s.geometry = [field.current.clientWidth, field.current.clientHeight];
+      s.tracking = true;
+      s.smoothed = null;
+      s.log.event('tracking_start');
+      return true;
+    } catch (e) {
+      s.tracking = false;
       setPhase('result');
-      setMessage(error.message);
+      setMessage(e.message);
+      return false;
     }
   }
-  function transfer() {
-    const value = runtime.current.calibration;
-    runtime.current.calibration = null;
-    clearTimeout(runtime.current.expiry);
-    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    onReady(value);
-  }
-  function exportDiagnostic() {
+  function exportCalibration() {
     const url = URL.createObjectURL(
-      new Blob([JSON.stringify(diagnostic, null, 2)], { type: 'application/json' }),
+      new Blob([JSON.stringify(diagnostic)], { type: 'application/json' }),
     );
     const link = document.createElement('a');
     link.href = url;
@@ -598,18 +536,30 @@ export default function CalibrationLab({
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
-  const collecting = phase === 'collecting' || phase === 'countdown';
+  function transfer() {
+    const s = state.current,
+      geometry = s.calibration;
+    s.calibration = null;
+    clearTimeout(s.expiry);
+    s.running = false;
+    cancelAnimationFrame(s.frame);
+    s.stream?.getTracks().forEach((t) => t.stop());
+    s.inflight?.finally(() => s.mesh?.close()).catch(() => {});
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    onReady(geometry);
+  }
   return (
     <section className={`calibration-lab ${diagnosticsOnly ? 'diagnostic-lab' : ''}`}>
       <div className="workspace">
         <aside>
           <h2>{diagnosticsOnly ? 'Câmera e controles DEV' : 'Prepare seu espaço'}</h2>
+          <p>
+            O MediaPipe detecta os olhos. A calibração usa somente referências medidas e
+            interpolação geométrica, sem treinar modelo.
+          </p>
           {diagnosticsOnly && (
             <fieldset className="dev-controls">
               <legend>Experimentos locais</legend>
-              <p className="small">
-                Ajuste antes de ativar a câmera. Não altera os critérios dos estudos.
-              </p>
               <label>
                 Confiança de detecção / tracking
                 <input
@@ -617,8 +567,8 @@ export default function CalibrationLab({
                   min="0.3"
                   max="0.9"
                   step="0.1"
+                  disabled={camera || busy}
                   value={dev.confidence}
-                  disabled={camera || busy || collecting}
                   onChange={(e) =>
                     setDev({
                       ...dev,
@@ -630,16 +580,12 @@ export default function CalibrationLab({
               <label className="checkbox">
                 <input
                   type="checkbox"
+                  disabled={camera || busy}
                   checked={dev.adaptive}
-                  disabled={camera || busy || collecting}
                   onChange={(e) => setDev({ ...dev, adaptive: e.target.checked })}
                 />
                 Ajustar abertura por olho automaticamente
               </label>
-              <p className="small">
-                Olhe à frente por dois segundos com os olhos confortáveis. O perfil é individual;
-                não usa etnia. O limite manual abaixo só é usado com o ajuste automático desligado.
-              </p>
               <label>
                 Abertura mínima das pálpebras
                 <input
@@ -647,8 +593,8 @@ export default function CalibrationLab({
                   min="0.03"
                   max="0.2"
                   step="0.01"
+                  disabled={camera || busy}
                   value={dev.minOpenness}
-                  disabled={camera || busy || collecting}
                   onChange={(e) =>
                     setDev({
                       ...dev,
@@ -657,20 +603,20 @@ export default function CalibrationLab({
                   }
                 />
               </label>
-              <label>
+              <p className="small">O limite manual só é usado com o ajuste automático desligado.</p>
+              <label className="checkbox">
                 <input
                   type="checkbox"
+                  disabled={camera || busy}
                   checked={dev.filter}
-                  disabled={camera || busy || collecting}
                   onChange={(e) => setDev({ ...dev, filter: e.target.checked })}
-                />{' '}
+                />
                 Filtrar movimentos rápidos e recuperação de piscadas
               </label>
               <label>
                 Landmarks na câmera
                 <select
                   value={dev.overlay}
-                  disabled={collecting}
                   onChange={(e) => setDev({ ...dev, overlay: e.target.value })}
                 >
                   <option value="iris">Olhos e íris</option>
@@ -691,64 +637,37 @@ export default function CalibrationLab({
               </label>
             </fieldset>
           )}
-          <label>
-            Método de calibração
-            <select
-              aria-label="Método de calibração"
-              value={calibrationMode}
-              disabled={collecting || busy}
-              onChange={(e) => {
-                invalidate('Método alterado. Faça uma nova calibração.');
-                runtime.current.featureMode = e.target.value;
-                setCalibrationMode(e.target.value);
-              }}
-            >
-              <option value="precision">Precisão · pontos aleatórios + deriva</option>
-              <option value="fixed">Pontos fixos · validação independente</option>
-              <option value="motion">Rápida · alvo móvel</option>
-            </select>
-          </label>
           <p>
-            Use luz difusa pela frente, câmera na altura dos olhos e distância de 40–70 cm. Evite
-            contraluz e reflexos nas lentes. Aproxime-se se os olhos não forem reconhecidos.
+            Olhe à frente por dois segundos, sem forçar a abertura dos olhos. Use luz frontal e
+            mantenha a cabeça estável. Não há compensação aprendida de postura.
           </p>
-
-          <label>
-            <input
-              type="checkbox"
-              checked={consent}
-              disabled={busy}
-              onChange={(e) => {
-                setConsent(e.target.checked);
-                if (!e.target.checked) stop('Consentimento retirado. Câmera desligada.');
-              }}
-            />{' '}
-            Concordo com o uso da câmera para este teste. Os frames são processados neste navegador,
-            sem gravação ou envio.
-          </label>
+          {
+            <label className="checkbox">
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(e) => {
+                  setConsent(e.target.checked);
+                  if (!e.target.checked) stop('Consentimento retirado. Câmera desligada.');
+                }}
+              />
+              Concordo com o uso da câmera para este teste, sem gravação de imagens.
+            </label>
+          }
           <button
-            disabled={!consent || busy || collecting}
+            disabled={busy || (!camera && !consent)}
             onClick={() => (camera ? stop() : startCamera())}
           >
-            {busy ? 'Preparando…' : camera ? 'Desligar câmera' : 'Ativar câmera'}
+            {camera ? 'Desligar câmera' : 'Ativar câmera'}
           </button>
           <p className="small">
-            Apenas coordenadas oculares são enviadas à API na calibração. Nenhum vídeo ou imagem
-            facial é armazenado. Uso acadêmico, sem precisão clínica garantida.
+            Nenhuma imagem facial é enviada à API. Só coordenadas de calibração.
           </p>
         </aside>
         <section className="experiment">
           <div className="stage-head">
-            <h2>Calibração individual</h2>
-            <span>
-              {progress}/
-              {calibrationMode === 'precision' ? 38 : calibrationMode === 'fixed' ? 14 : 6} etapas ·{' '}
-              {calibrationMode === 'precision'
-                ? 'cerca de 90 s'
-                : calibrationMode === 'fixed'
-                  ? 'cerca de 35 s'
-                  : 'tempo adaptativo'}
-            </span>
+            <h2>Calibração por varredura geométrica</h2>
+            <span>{progress}/14 referências · cerca de 35 s</span>
           </div>
           <div
             ref={stage}
@@ -760,51 +679,36 @@ export default function CalibrationLab({
                 <div className="countdown" role="timer" aria-label="Contagem regressiva">
                   {countdown}
                 </div>
-              ) : phase === 'tracking' ? (
-                <>
-                  {gaze && (
-                    <div
-                      className="gaze"
-                      data-outside={gaze.some((v) => v < 0 || v > 1)}
-                      style={{
-                        left: `${Math.max(0, Math.min(1, gaze[0])) * 100}%`,
-                        top: `${Math.max(0, Math.min(1, gaze[1])) * 100}%`,
-                      }}
-                    />
-                  )}
-                  <span className="diagnostic-watermark">
-                    PRÉVIA DEV · {result?.approved ? 'RMSE aprovado' : 'CALIBRAÇÃO REPROVADA'} · ESC
-                    volta ao diagnóstico
-                  </span>
-                </>
               ) : target ? (
                 <div
                   className="target"
                   style={{ left: `${target[0] * 100}%`, top: `${target[1] * 100}%` }}
                 />
+              ) : phase === 'tracking' ? (
+                <>
+                  {gaze && (
+                    <div
+                      className="gaze"
+                      style={{ left: `${gaze[0] * 100}%`, top: `${gaze[1] * 100}%` }}
+                    />
+                  )}
+                  <span className="diagnostic-watermark">
+                    PRÉVIA DEV ·{' '}
+                    {result?.approved ? 'Conferência aprovada' : 'CALIBRAÇÃO REPROVADA'} · fora da
+                    malha, a previsão é ocultada · ESC volta
+                  </span>
+                </>
               ) : (
                 <div className="placeholder">
                   <span>＋</span>
-                  <h3>Olhe. Calibre. Avalie.</h3>
-                  <p>
-                    {calibrationMode === 'precision'
-                      ? '25 posições aleatórias e quatro repetições do centro.'
-                      : calibrationMode === 'fixed'
-                        ? 'Nove pontos fixos para comparar com o método inicial.'
-                        : 'Um alvo móvel por 12 segundos.'}
-                    <br />
-                    {calibrationMode === 'precision'
-                      ? 'Nove alvos de validação independente.'
-                      : 'Cinco alvos de validação independente.'}
-                  </p>
+                  <h3>Acompanhe o alvo móvel.</h3>
+                  <p>Varredura em linhas, bordas, cantos, diagonais e centro.</p>
+                  <p>Sem regressão, classificação ou treinamento.</p>
                 </div>
               )}
             </div>
-            <div
-              className={`camera-preview ${visualWarning ? 'warning' : 'ready'}`}
-              aria-label="Câmera com orientação em tempo real"
-            >
-              <video ref={video} muted playsInline aria-label="Prévia da webcam" />
+            <div className="camera-preview">
+              <video ref={video} autoPlay muted playsInline />
               {diagnosticsOnly && (
                 <canvas
                   ref={overlay}
@@ -818,26 +722,39 @@ export default function CalibrationLab({
             </div>
             <div className="fullscreen-panel">
               <strong>{message}</strong>
+              {result?.unsupported_validation_samples > 0 && (
+                <p>
+                  {result.unsupported_validation_samples} quadros sem previsão na malha. O RMSE,
+                  quando disponível, considera somente quadros com previsão; cobertura insuficiente
+                  reprova.
+                </p>
+              )}
               {diagnostic && (
-                <button className="secondary" onClick={exportDiagnostic}>
+                <button className="secondary" onClick={exportCalibration}>
                   Baixar diagnóstico da calibração
                 </button>
               )}
               {result && (
                 <p>
-                  RMSE {result.validation_rmse.toFixed(3)} · Limite 0.100 ·{' '}
-                  {result.approved ? 'Aprovada' : 'Reprovada'}
+                  RMSE{' '}
+                  {Number.isFinite(result.validation_rmse)
+                    ? result.validation_rmse.toFixed(3)
+                    : 'indisponível'}{' '}
+                  · Limite 0.100 · {result.approved ? 'Aprovada' : 'Reprovada'}
                 </p>
               )}
-              <button disabled={!camera || !quality || collecting || busy} onClick={calibrate}>
+              <button disabled={!camera || !quality || busy || collecting} onClick={calibrate}>
                 {result ? 'Refazer calibração' : 'Iniciar calibração'}
               </button>
               {diagnosticsOnly ? (
-                <button disabled={!result || !camera || collecting} onClick={previewDiagnostic}>
+                <button disabled={!result || !camera || busy || collecting} onClick={preview}>
                   Mostrar tracking experimental
                 </button>
               ) : (
-                <button disabled={!result?.approved || !camera || collecting} onClick={transfer}>
+                <button
+                  disabled={!result?.approved || !camera || busy || collecting}
+                  onClick={transfer}
+                >
                   Usar calibração no estudo
                 </button>
               )}
@@ -852,13 +769,9 @@ export default function CalibrationLab({
               </button>
             </div>
           </div>
-          <div className="feedback" role="status">
-            {message}
-          </div>
           {diagnosticsOnly && metrics && (
             <div className="live-metrics" aria-label="Telemetria do detector">
               <span>FPS: {metrics.fps.toFixed(1)}</span>
-              <span>Processamento: {metrics.latency.toFixed(0)} ms</span>
               <span>Válidas: {(metrics.valid * 100).toFixed(0)}%</span>
               <span>Rostos: {metrics.faces}</span>
               <span>Frames: {metrics.frames}</span>
@@ -867,12 +780,6 @@ export default function CalibrationLab({
                 {metrics.features?.map((v) => v.toFixed(3)).join(' · ') || 'indisponíveis'}
               </span>
             </div>
-          )}
-          {result && (
-            <p className={result.approved ? 'good' : 'error'}>
-              Erro de validação: {result.validation_rmse.toFixed(3)} · Limite: 0.100 ·{' '}
-              {result.approved ? 'Aprovada' : 'Reprovada'}
-            </p>
           )}
         </section>
       </div>

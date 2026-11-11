@@ -1,4 +1,15 @@
-export const targets = [0.1, 0.5, 0.9].flatMap((y) => [0.1, 0.5, 0.9].map((x) => [x, y]));
+export const targets = [0.05, 0.5, 0.95].flatMap((y) => [0.05, 0.5, 0.95].map((x) => [x, y]));
+export const sweepTargets = [
+  targets[0],
+  targets[1],
+  targets[2],
+  targets[5],
+  targets[4],
+  targets[3],
+  targets[6],
+  targets[7],
+  targets[8],
+];
 export const validationTargets = [
   [0.2, 0.2],
   [0.8, 0.2],
@@ -6,21 +17,29 @@ export const validationTargets = [
   [0.2, 0.8],
   [0.8, 0.8],
 ];
-const path = [
-  [0.1, 0.1],
-  [0.9, 0.1],
-  [0.1, 0.9],
-  [0.9, 0.9],
-  [0.5, 0.5],
-];
-export const PASS_MS = 12000;
-export function trajectory(elapsed) {
-  const position = Math.max(0, Math.min(1, elapsed / PASS_MS)) * (path.length - 1);
-  const index = Math.min(path.length - 2, Math.floor(position)),
-    fraction = position - index;
-  return path[index].map((value, axis) => value + (path[index + 1][axis] - value) * fraction);
+export function predict(feature, geometry) {
+  if (!feature || geometry?.basis !== 'mesh') return [NaN, NaN];
+  for (const cell of geometry.cells || []) {
+    const anchors = cell.map((i) => geometry.anchors[i]);
+    const [a, b, c] = anchors.map((p) => p.eye);
+    const ux = b[0] - a[0],
+      uy = b[1] - a[1],
+      vx = c[0] - a[0],
+      vy = c[1] - a[1];
+    const px = feature[0] - a[0],
+      py = feature[1] - a[1],
+      det = ux * vy - uy * vx;
+    if (Math.abs(det) < 1e-8) continue;
+    const wb = (px * vy - py * vx) / det,
+      wc = (ux * py - uy * px) / det,
+      weights = [1 - wb - wc, wb, wc];
+    if (Math.min(...weights) < -1e-7) continue;
+    return [0, 1].map((axis) =>
+      anchors.reduce((sum, p, i) => sum + weights[i] * p.screen[axis], 0),
+    );
+  }
+  return [NaN, NaN];
 }
-
 export function inspectEyes(faces, classic = false, options = {}) {
   if (faces?.length !== 1)
     return {
@@ -113,18 +132,6 @@ export function supportedHead(feature, model) {
     .slice(4)
     .every((v, i) => v >= model.head_min[i] - margins[i] && v <= model.head_max[i] + margins[i]);
 }
-export function predict(feature, coefficients, basis = 'affine') {
-  if (basis === 'quadratic') {
-    const [x, y] = feature;
-    feature = [x, y, x * x, x * y, y * y];
-  }
-  return [0, 1].map((axis) =>
-    feature.reduce(
-      (total, value, index) => total + value * coefficients[index][axis],
-      coefficients.at(-1)[axis],
-    ),
-  );
-}
 export function medianFeature(samples) {
   return samples[0].map(
     (_, axis) => samples.map((s) => s[axis]).sort((a, b) => a - b)[Math.floor(samples.length / 2)],
@@ -177,36 +184,6 @@ export class EyeReadiness {
   }
 }
 
-export function calibrationFeature(feature, mode) {
-  return mode === 'fixed'
-    ? [(feature[0] + feature[2]) / 2, (feature[1] + feature[3]) / 2]
-    : feature;
-}
-
-export const precisionTargets = [0.1, 0.3, 0.5, 0.7, 0.9].flatMap((y) =>
-  [0.1, 0.3, 0.5, 0.7, 0.9].map((x) => [x, y]),
-);
-export const precisionValidation = [
-  [0.2, 0.2],
-  [0.8, 0.2],
-  [0.2, 0.8],
-  [0.8, 0.8],
-  [0.4, 0.4],
-  [0.6, 0.4],
-  [0.4, 0.6],
-  [0.6, 0.6],
-  [0.5, 0.2],
-];
-export function precisionSequence(random = Math.random) {
-  const shuffled = precisionTargets.map((point) => [...point]);
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  const output = [];
-  shuffled.forEach((point, i) => {
-    output.push(point);
-    if ((i + 1) % 5 === 0 && i < 24) output.push([0.5, 0.5]);
-  });
-  return output;
+export function calibrationFeature(feature) {
+  return [(feature[0] + feature[2]) / 2, (feature[1] + feature[3]) / 2];
 }

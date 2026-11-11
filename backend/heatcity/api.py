@@ -2,14 +2,14 @@
 
 from dataclasses import asdict
 from time import monotonic
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from .analysis import Area, Sample, analyze
-from .calibration import fit_calibration, fit_motion_calibration, fit_precision_calibration
+from .calibration import fit_calibration
 from .workflow import calibration_models, router
 
 app = FastAPI(title="HeatCity", version="1.0.0")
@@ -38,8 +38,12 @@ def revoke(calibration_id: str):
     calibration_models.pop(calibration_id, None)
 
 
+EyePair = Annotated[list[float], Field(min_length=2, max_length=2)]
+ValidationGroup = Annotated[list[EyePair], Field(min_length=6, max_length=120)]
+
+
 class CalibrationRequest(BaseModel):
-    mode: Literal["fixed", "motion", "precision"] = "fixed"
+    mode: Literal["sweep"] = "sweep"
     participant_code: str | None = Field(default=None, pattern=r"^[A-Z0-9][A-Z0-9_-]{1,23}$")
     scenario_id: str | None = None
     viewport_width: int | None = Field(default=None, ge=200, le=16000)
@@ -48,6 +52,7 @@ class CalibrationRequest(BaseModel):
     targets: list[list[float]] = Field(max_length=5000)
     validation_features: list[list[float]] = Field(max_length=5000)
     validation_targets: list[list[float]] = Field(max_length=5000)
+    validation_samples: list[ValidationGroup] | None = Field(default=None, max_length=25)
 
 
 class AnalysisRequest(BaseModel):
@@ -68,11 +73,7 @@ def diagnostic_calibration(body: CalibrationRequest):
         values = body.model_dump(
             exclude={"mode", "participant_code", "scenario_id", "viewport_width", "viewport_height"}
         )
-        fit = {
-            "fixed": fit_calibration,
-            "motion": fit_motion_calibration,
-            "precision": fit_precision_calibration,
-        }[body.mode]
+        fit = fit_calibration
         return {**asdict(fit(**values)), "diagnostic_only": True}
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
@@ -84,11 +85,7 @@ def calibrate(body: CalibrationRequest):
         values = body.model_dump(
             exclude={"mode", "participant_code", "scenario_id", "viewport_width", "viewport_height"}
         )
-        fit = {
-            "fixed": fit_calibration,
-            "motion": fit_motion_calibration,
-            "precision": fit_precision_calibration,
-        }[body.mode]
+        fit = fit_calibration
         result = asdict(fit(**values))
         now = monotonic()
         for key, expires in list(approvals.items()):

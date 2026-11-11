@@ -48,4 +48,3 @@ jobs:
           node frontend/scripts/mvp-smoke.mjs
           node frontend/scripts/diagnostics-smoke.mjs
           HEATCITY_TEST_APPROVED=1 node frontend/scripts/diagnostics-smoke.mjs
-          HEATCITY_TEST_PRECISION=1 node frontend/scripts/diagnostics-smoke.mjs

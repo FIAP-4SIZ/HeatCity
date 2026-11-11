@@ -98,10 +98,6 @@ export async function createCamera(
 }
 export function gazePoint(feature, model) {
   if (!feature || !supportedHead(feature, model)) return null;
-  const point = predict(
-    calibrationFeature(feature, model.feature_mode),
-    model.coefficients,
-    model.basis,
-  );
+  const point = predict(calibrationFeature(feature), model);
   return point.every((n) => Number.isFinite(n) && n >= 0 && n <= 1) ? point : null;
 }

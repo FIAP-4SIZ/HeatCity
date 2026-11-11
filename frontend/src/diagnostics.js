@@ -2,8 +2,13 @@
 export function summarizeDiagnostic(data, name = 'Calibração atual') {
   if (
     !data ||
-    !['fixed', 'motion', 'precision'].includes(data.mode) ||
-    !Number.isFinite(data.quality?.validation_rmse) ||
+    !['fixed', 'motion', 'precision', 'sweep'].includes(data.mode) ||
+    (!Number.isFinite(data.quality?.validation_rmse) &&
+      !(
+        data.mode === 'sweep' &&
+        data.quality?.validation_rmse === null &&
+        data.quality?.unsupported_validation_samples > 0
+      )) ||
     data.quality.validation_rmse < 0 ||
     data.quality.validation_rmse > 100 ||
     !Array.isArray(data.residuals) ||
@@ -12,12 +17,19 @@ export function summarizeDiagnostic(data, name = 'Calibração atual') {
     throw new Error('Formato de diagnóstico não reconhecido.');
   const groups = new Map();
   let total = 0,
-    outside = 0;
+    outside = 0,
+    unsupported = 0,
+    supported = 0;
   let sx = 0,
     sy = 0,
     bx = 0,
     by = 0;
   for (const item of data.residuals) {
+    if (item.unsupported === true && item.estimated === null) {
+      unsupported++;
+      continue;
+    }
+    supported++;
     if (
       ![item.expected, item.estimated].every(
         (pair) => Array.isArray(pair) && pair.length === 2 && pair.every(Number.isFinite),
@@ -53,10 +65,14 @@ export function summarizeDiagnostic(data, name = 'Calibração atual') {
     name,
     mode: data.mode,
     rmse: data.quality.validation_rmse,
-    recomputed: Math.sqrt(total / data.residuals.length),
-    axisRmse: [Math.sqrt(sx / data.residuals.length), Math.sqrt(sy / data.residuals.length)],
-    bias: [bx / data.residuals.length, by / data.residuals.length],
-    basis: ['affine', 'quadratic'].includes(data.quality.basis)
+    approved: data.quality.approved === true,
+    recomputed: supported ? Math.sqrt(total / supported) : null,
+    axisRmse: [
+      supported ? Math.sqrt(sx / supported) : null,
+      supported ? Math.sqrt(sy / supported) : null,
+    ],
+    bias: [supported ? bx / supported : null, supported ? by / supported : null],
+    basis: ['affine', 'quadratic', 'mesh'].includes(data.quality.basis)
       ? data.quality.basis
       : data.mode === 'motion'
         ? 'ridge'
@@ -65,6 +81,7 @@ export function summarizeDiagnostic(data, name = 'Calibração atual') {
     training: Array.isArray(data.features) ? data.features.length : 0,
     validation: data.residuals.length,
     outside,
+    unsupported,
     targets: [...groups.values()].map((g) => ({
       expected: g.expected,
       estimated: [g.x / g.count, g.y / g.count],

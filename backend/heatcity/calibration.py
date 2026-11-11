@@ -1,247 +1,176 @@
-"""Calibração afim com validação independente em coordenadas normalizadas."""
+"""Interpolação geométrica de referências oculares; sem regressão ou treinamento."""
 
 from dataclasses import dataclass
 
 import numpy as np
 
 
+def barycentric(point, triangle):
+    a, b, c = np.asarray(triangle, dtype=float)
+    u, v, p = b - a, c - a, np.asarray(point) - a
+    det = u[0] * v[1] - u[1] * v[0]
+    if abs(det) < 1e-8:
+        return None
+    wb = (p[0] * v[1] - p[1] * v[0]) / det
+    wc = (u[0] * p[1] - u[1] * p[0]) / det
+    return np.array([1 - wb - wc, wb, wc])
+
+
+def project(point, anchors, cells):
+    for cell in cells:
+        weights = barycentric(point, [anchors[i]["eye"] for i in cell])
+        if weights is not None and weights.min() >= -1e-7:
+            return weights @ np.array([anchors[i]["screen"] for i in cell])
+    return None
+
+
 @dataclass(frozen=True)
 class Calibration:
-    coefficients: list[list[float]]
-    validation_rmse: float
+    anchors: list[dict]
+    cells: list[list[int]]
+    validation_rmse: float | None
     approved: bool
-    basis: str = "affine"
-    training_cv_rmse: float | None = None
+    basis: str = "mesh"
+    validation_median_rmse: float | None = None
+    unsupported_validation_samples: int = 0
+    validation_axis_rmse: list[float] | None = None
+    validation_p90: float = 0
 
 
-def _pairs(values: list[list[float]], minimum: int) -> np.ndarray:
-    result = np.asarray(values, dtype=float)
-    if result.ndim != 2 or result.shape[1] != 2 or len(result) < minimum:
-        raise ValueError(f"São necessários pelo menos {minimum} pares de coordenadas.")
-    if not np.isfinite(result).all() or np.abs(result).max() > 100:
-        raise ValueError("As coordenadas devem ser finitas.")
-    return result
+def _pairs(values, minimum):
+    a = np.asarray(values, dtype=float)
+    if (
+        a.ndim != 2
+        or a.shape[1] != 2
+        or len(a) < minimum
+        or not np.isfinite(a).all()
+        or np.abs(a).max() > 100
+    ):
+        raise ValueError(f"São necessários ao menos {minimum} pares finitos de coordenadas.")
+    return a
 
 
 def fit_calibration(
-    features: list[list[float]],
-    targets: list[list[float]],
-    validation_features: list[list[float]],
-    validation_targets: list[list[float]],
-    max_rmse: float = 0.1,
-) -> Calibration:
-    """Ajusta nove alvos; aprova pelo erro em amostras coletadas separadamente.
-
-    Features representam posições oculares relativas, ainda sem unidade física.
-    RMSE é a distância euclidiana na tela normalizada, não precisão clínica.
-    """
+    features,
+    targets,
+    validation_features,
+    validation_targets,
+    max_rmse=0.1,
+    validation_samples=None,
+):
     x, y = _pairs(features, 9), _pairs(targets, 9)
     vx, vy = _pairs(validation_features, 5), _pairs(validation_targets, 5)
     if len(x) != len(y) or len(vx) != len(vy):
-        raise ValueError("Cada amostra precisa de um alvo correspondente.")
-    if not np.isfinite(max_rmse) or not 0 < max_rmse <= 1:
-        raise ValueError("O limite de erro deve estar entre zero e um.")
-    if (y < 0).any() or (y > 1).any() or (vy < 0).any() or (vy > 1).any():
-        raise ValueError("Os alvos devem estar no intervalo [0, 1].")
-    # Não basta repetir um ponto nove vezes: exige a grade completa de nove alvos.
-    expected = {(a, b) for a in (0.1, 0.5, 0.9) for b in (0.1, 0.5, 0.9)}
-    if not expected.issubset({tuple(np.round(row, 6)) for row in y}):
-        raise ValueError("A calibração precisa cobrir a grade de nove pontos (0.1, 0.5, 0.9).")
+        raise ValueError("Cada referência ocular precisa de seu alvo correspondente.")
+    if (
+        not np.isfinite(max_rmse)
+        or not 0 < max_rmse <= 1
+        or (y < 0).any()
+        or (y > 1).any()
+        or (vy < 0).any()
+        or (vy > 1).any()
+    ):
+        raise ValueError("Alvos e limite de erro devem estar dentro da tela normalizada.")
+    levels_x, levels_y = sorted(set(y[:, 0])), sorted(set(y[:, 1]))
+    expected_held = {(0.2, 0.2), (0.8, 0.2), (0.5, 0.5), (0.2, 0.8), (0.8, 0.8)}
+    if not expected_held.issubset(set(map(tuple, np.round(vy, 6)))):
+        raise ValueError("Valide centro e quatro quadrantes em uma coleta separada.")
+    if (
+        len(levels_x) not in (3, 5)
+        or len(levels_y) != len(levels_x)
+        or len(y) != len(levels_x) ** 2
+    ):
+        raise ValueError("Complete a malha de 3×3 ou 5×5 referências distintas.")
+    if min(levels_x) > 0.1 or max(levels_x) < 0.9 or min(levels_y) > 0.1 or max(levels_y) < 0.9:
+        raise ValueError("O alvo precisa cobrir centro, bordas e cantos da tela.")
+    lookup = {tuple(t): i for i, t in enumerate(y)}
+    if len(lookup) != len(y):
+        raise ValueError("As referências da malha não podem se repetir.")
+    anchors = [{"eye": a.tolist(), "screen": b.tolist()} for a, b in zip(x, y)]
+    cells = []
+    signs = []
+    for j in range(len(levels_y) - 1):
+        for i in range(len(levels_x) - 1):
+            try:
+                a, b, c, d = [
+                    lookup[t]
+                    for t in [
+                        (levels_x[i], levels_y[j]),
+                        (levels_x[i + 1], levels_y[j]),
+                        (levels_x[i + 1], levels_y[j + 1]),
+                        (levels_x[i], levels_y[j + 1]),
+                    ]
+                ]
+            except KeyError as error:
+                raise ValueError("Falta uma referência da malha.") from error
+            for cell in ([a, b, c], [a, c, d]):
+                p, q, r = x[cell]
+                area = (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])
+                if abs(area) < 1e-7:
+                    raise ValueError(
+                        "Referências oculares indistinguíveis. A malha não pode ser interpolada."
+                    )
+                signs.append(area > 0)
+                cells.append(cell)
+    if len(set(signs)) != 1:
+        raise ValueError(
+            "A malha ocular se dobrou: movimento, ruído ou referências inconsistentes. Repita a varredura."
+        )
+    # Local orientation alone is insufficient: reject crossing nonadjacent mesh edges.
+    edges = sorted({tuple(sorted((c[i], c[(i + 1) % 3]))) for c in cells for i in range(3)})
 
-    def design(values, basis):
-        if basis == "quadratic":
-            a, b = values[:, 0], values[:, 1]
-            return np.column_stack((a, b, a * a, a * b, b * b, np.ones(len(values))))
-        return np.column_stack((values, np.ones(len(values))))
+    def side(a, b, c):
+        return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
 
-    def cv_error(matrix):
-        distances = []
-        for index in range(len(matrix)):
-            mask = np.arange(len(matrix)) != index
-            if np.linalg.matrix_rank(matrix[mask]) < matrix.shape[1]:
-                return float("inf")
-            weights, *_ = np.linalg.lstsq(matrix[mask], y[mask], rcond=None)
-            distances.append(float(np.sum((matrix[index] @ weights - y[index]) ** 2)))
-        return float(np.sqrt(np.mean(distances)))
+    for k, (a, b) in enumerate(edges):
+        for c, d in edges[k + 1 :]:
+            if len({a, b, c, d}) < 4:
+                continue
+            if (
+                side(x[a], x[b], x[c]) * side(x[a], x[b], x[d]) < 0
+                and side(x[c], x[d], x[a]) * side(x[c], x[d], x[b]) < 0
+            ):
+                raise ValueError("A malha contém regiões cruzadas. Refaça as referências.")
 
-    affine = design(x, "affine")
-    if np.linalg.matrix_rank(affine) < 3:
-        raise ValueError("Amostras degeneradas: repita a calibração.")
-    basis = "affine"
-    matrix = affine
-    score = cv_error(affine)
-    quadratic = design(x, "quadratic")
-    quadratic_score = cv_error(quadratic)
-    # Select only on training folds. The five later targets never choose the model.
-    if score > 1e-8 and quadratic_score < score * 0.8:
-        basis = "quadratic"
-        matrix = quadratic
-        score = quadratic_score
-    coefficients, *_ = np.linalg.lstsq(matrix, y, rcond=None)
-    predicted = design(vx, basis) @ coefficients
-    error = float(np.sqrt(np.mean(np.sum((predicted - vy) ** 2, axis=1))))
+    def errors(values, labels):
+        residuals = []
+        missing = 0
+        for f, t in zip(values, labels):
+            p = project(f, anchors, cells)
+            if p is None:
+                missing += 1
+            else:
+                residuals.append(p - t)
+        return np.asarray(residuals).reshape((-1, 2)), missing
+
+    med_errors, med_missing = errors(vx, vy)
+    median_rmse = (
+        float(np.sqrt(np.mean(np.sum(med_errors**2, axis=1)))) if len(med_errors) else None
+    )
+    if validation_samples is not None:
+        if len(validation_samples) != len(vy):
+            raise ValueError("Grupos de validação incompletos.")
+        values, labels = [], []
+        for group, t in zip(validation_samples, vy):
+            a = _pairs(group, 6)
+            if len(a) > 120:
+                raise ValueError("Limite de 120 quadros por alvo.")
+            values.extend(a)
+            labels.extend([t] * len(a))
+        residuals, missing = errors(values, labels)
+    else:
+        residuals, missing = med_errors, med_missing
+    distances = np.linalg.norm(residuals, axis=1)
+    rmse = float(np.sqrt(np.mean(distances**2))) if len(distances) else None
     return Calibration(
-        coefficients.tolist(),
-        error,
-        error <= max_rmse,
-        basis,
-        score if np.isfinite(score) else None,
-    )
-
-
-@dataclass(frozen=True)
-class MotionCalibration:
-    coefficients: list[list[float]]
-    validation_rmse: float
-    approved: bool
-    head_min: list[float]
-    head_max: list[float]
-    validation_p90: float
-
-
-def fit_motion_calibration(features, targets, validation_features, validation_targets):
-    """Ridge com ambos os olhos e seis descritores de posição da cabeça.
-
-    O cliente coleta uma trajetória, incluindo movimentos naturais da cabeça. A validação é
-    coletada depois do ajuste, sem otimizar hiperparâmetros com essas amostras.
-    """
-    x, vx = np.asarray(features, dtype=float), np.asarray(validation_features, dtype=float)
-    y, vy = _pairs(targets, 120), _pairs(validation_targets, 30)
-    if (
-        x.ndim != 2
-        or vx.ndim != 2
-        or x.shape != (len(y), 10)
-        or vx.shape != (len(vy), 10)
-        or not np.isfinite(x).all()
-        or not np.isfinite(vx).all()
-        or np.abs(x).max() > 100
-        or np.abs(vx).max() > 100
-    ):
-        raise ValueError("Amostras móveis exigem dez características finitas por alvo.")
-    if (y < 0).any() or (y > 1).any() or (vy < 0).any() or (vy > 1).any():
-        raise ValueError("Alvos devem estar em [0, 1].")
-    for values in (y, vy):
-        # Cobertura em ambos os eixos e em cada quadrante, sem exigir grade fixa.
-        if (
-            np.ptp(values, axis=0).min() < 0.5
-            or len(set(map(tuple, (values >= 0.5).astype(int)))) < 4
-        ):
-            raise ValueError("Cobertura insuficiente: acompanhe toda a trajetória.")
-    if np.ptp(x[:, :4], axis=0).max() < 0.01:
-        raise ValueError("Movimento ocular insuficiente. Verifique a detecção das íris.")
-    mean, scale = x.mean(axis=0), x.std(axis=0)
-    scale = np.maximum(scale, 1e-4)
-    design = np.column_stack(((x - mean) / scale, np.ones(len(x))))
-    penalty = np.eye(11) * (len(x) * 0.01)
-    penalty[-1, -1] = 0
-    weights = np.linalg.solve(design.T @ design + penalty, design.T @ y)
-    coefficients = weights[:-1] / scale[:, None]
-    intercept = weights[-1] - mean @ coefficients
-    coefficients = np.vstack((coefficients, intercept))
-    distances = np.linalg.norm(np.column_stack((vx, np.ones(len(vx)))) @ coefficients - vy, axis=1)
-    error = float(np.sqrt(np.mean(distances**2)))
-    return MotionCalibration(
-        coefficients.tolist(),
-        error,
-        error <= 0.1,
-        x[:, 4:].min(axis=0).tolist(),
-        x[:, 4:].max(axis=0).tolist(),
-        float(np.percentile(distances, 90)),
-    )
-
-
-@dataclass(frozen=True)
-class PrecisionCalibration:
-    coefficients: list[list[float]]
-    validation_rmse: float
-    approved: bool
-    basis: str
-    training_cv_rmse: float
-    ridge_alpha: float
-    validation_axis_rmse: list[float]
-    validation_bias: list[float]
-    validation_p90: float
-    head_min: list[float]
-    head_max: list[float]
-
-
-def fit_precision_calibration(features, targets, validation_features, validation_targets):
-    """Grouped target CV prevents repeated frames/anchors leaking across folds.
-
-    Uses only training targets for regularization selection. The independent
-    validation is never used to change weights, offset, alpha or approval limit.
-    """
-    x = np.asarray(features, dtype=float)
-    vx = np.asarray(validation_features, dtype=float)
-    y = _pairs(targets, 25)
-    vy = _pairs(validation_targets, 9)
-    if (
-        x.shape != (len(y), 10)
-        or vx.shape != (len(vy), 10)
-        or not np.isfinite(x).all()
-        or not np.isfinite(vx).all()
-        or np.abs(x).max() > 100
-        or np.abs(vx).max() > 100
-    ):
-        raise ValueError("O protocolo de precisão exige dez features finitas por ponto.")
-    if (y < 0).any() or (y > 1).any() or (vy < 0).any() or (vy > 1).any():
-        raise ValueError("Alvos fora da tela.")
-    expected = {(a, b) for a in (0.1, 0.3, 0.5, 0.7, 0.9) for b in (0.1, 0.3, 0.5, 0.7, 0.9)}
-    labels = np.round(y, 6)
-    if not expected.issubset(set(map(tuple, labels))):
-        raise ValueError("Complete a grade de 25 posições antes de validar.")
-    if np.ptp(x[:, :4], axis=0).max() < 0.01:
-        raise ValueError("Sinal ocular insuficiente; ajuste não identificável.")
-
-    held_expected = {
-        (0.2, 0.2),
-        (0.8, 0.2),
-        (0.2, 0.8),
-        (0.8, 0.8),
-        (0.4, 0.4),
-        (0.6, 0.4),
-        (0.4, 0.6),
-        (0.6, 0.6),
-        (0.5, 0.2),
-    }
-    if not held_expected.issubset(set(map(tuple, np.round(vy, 6)))):
-        raise ValueError("A validação exige os nove alvos espaciais independentes.")
-
-    def solve(a, b, alpha):
-        mean = a.mean(axis=0)
-        scale = np.maximum(a.std(axis=0), 1e-4)
-        design = np.column_stack(((a - mean) / scale, np.ones(len(a))))
-        regularizer = np.eye(11) * (len(a) * alpha)
-        regularizer[-1, -1] = 0
-        weights = np.linalg.solve(design.T @ design + regularizer, design.T @ b)
-        raw = weights[:-1] / scale[:, None]
-        return np.vstack((raw, weights[-1] - mean @ raw))
-
-    scores = []
-    for alpha in (0.01, 0.1, 1.0, 10.0):
-        errors = []
-        for target in sorted(expected):
-            test = np.all(labels == target, axis=1)
-            weights = solve(x[~test], y[~test], alpha)
-            predicted = np.column_stack((x[test], np.ones(test.sum()))) @ weights
-            errors.append(np.mean(np.sum((predicted - y[test]) ** 2, axis=1)))
-        scores.append(float(np.sqrt(np.mean(errors))))
-    best = int(np.argmin(scores))
-    alpha = (0.01, 0.1, 1.0, 10.0)[best]
-    weights = solve(x, y, alpha)
-    residual = np.column_stack((vx, np.ones(len(vx)))) @ weights - vy
-    distances = np.linalg.norm(residual, axis=1)
-    rmse = float(np.sqrt(np.mean(distances**2)))
-    return PrecisionCalibration(
-        weights.tolist(),
+        anchors,
+        cells,
         rmse,
-        rmse <= 0.1,
-        "affine",
-        scores[best],
-        alpha,
-        np.sqrt(np.mean(residual**2, axis=0)).tolist(),
-        residual.mean(axis=0).tolist(),
-        float(np.percentile(distances, 90)),
-        x[:, 4:].min(axis=0).tolist(),
-        x[:, 4:].max(axis=0).tolist(),
+        not missing and not med_missing and rmse <= max_rmse and median_rmse <= max_rmse,
+        validation_median_rmse=median_rmse,
+        unsupported_validation_samples=missing,
+        validation_axis_rmse=np.sqrt(np.mean(residuals**2, axis=0)).tolist()
+        if len(residuals)
+        else None,
+        validation_p90=float(np.percentile(distances, 90)) if len(distances) else 0,
     )
