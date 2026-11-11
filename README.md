@@ -120,9 +120,20 @@ sintéticos; o teste Tasks inicializa o detector real e verifica um quadro sem r
 Nenhum desses testes comprova precisão ocular humana. HEATCITY_TEST_APPROVED=1
 exercita exportação após conferência geométrica aprovada.
 
-O relatório provisório é gerado por scripts/generate_report.py; dados reais só
-entram mediante um estudo persistido. scripts/recompute_metrics.py recalcula métricas
-exportadas. scripts/validate_diagnostics.py confere arquivos geométricos mode=sweep.
+O [relatório técnico](docs/reports/HeatCity-relatorio-tecnico.pdf) inclui a análise
+real de quatro tentativas de calibração, gráficos e limites. As duas tentativas
+concluídas foram reprovadas; isso não constitui resultado oficial de localização.
+Veja [instruções de reprodução](docs/reports/evidencias/README.md) e o
+[notebook executado](notebooks/calibracao-real.ipynb).
+
+```bash
+.venv/bin/python scripts/analyze_calibration.py --aggregate docs/reports/evidencias/analise-calibracao.json
+.venv/bin/python scripts/generate_report.py --analysis docs/reports/evidencias/analise-calibracao.json
+```
+
+Para relatórios de sessões persistidas, use scripts/generate_report.py --study-id ID.
+scripts/recompute_metrics.py recalcula métricas exportadas.
+scripts/validate_diagnostics.py confere arquivos geométricos mode=sweep.
 
 As notas de investigação e relatórios de versões anteriores em docs/ são históricos;
 o método corrente é o descrito em calibracao-varredura-geometrica.md.

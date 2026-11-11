@@ -47,9 +47,9 @@ interpretar um mapa vazio como atenção. Não repetir longas calibrações dura
 
 Abra **slides.pdf** e **evidencias-agregadas.json**. Explique as quatro tentativas
 registradas: duas concluídas reprovadas, uma interrupção geométrica e uma falha de
-comunicação. Mostre a arquitetura, o método e os limites. O PDF técnico provisório
-em docs/reports descreve o software; resultados humanos oficiais não foram obtidos
-com esses diagnósticos.
+comunicação. Mostre a arquitetura, o método e os limites. O PDF técnico
+em docs/reports analisa as quatro tentativas reais com gráficos; resultados
+oficiais de localização não foram obtidos com esses diagnósticos.
 
 ## Respostas curtas para a arguição
 
