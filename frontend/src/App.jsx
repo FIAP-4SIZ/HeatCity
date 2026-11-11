@@ -463,7 +463,12 @@ export default function App() {
                 <button className="secondary" onClick={() => route('/diagnostics')}>
                   Diagnósticos
                 </button>
-                <button className="primary" onClick={() => setCreating(true)}>
+                <button
+                  className="primary"
+                  onClick={() => {
+                    setCreating(true);
+                  }}
+                >
                   + Criar estudo
                 </button>
               </div>

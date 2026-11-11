@@ -25,6 +25,16 @@ roteiro de fala, demonstração e plano B. No Windows, o atalho
 **docs/apresentacao/Abrir-apresentacao.cmd** abre os slides no navegador padrão. Não inclui vetores oculares do usuário;
 as estatísticas dos diagnósticos são agregadas e identificadas como tentativas.
 
+## Estudo-base hospitalar
+
+O hospital usa a listagem e as telas normais de estudos, sem botão de exemplos.
+A base versionada contém somente as duas imagens originais, AOIs e protocolo;
+participantes, calibrações e sessões são realizados normalmente.
+As duas imagens JPEG originais já estão incluídas no repositório. Ao iniciar o
+programa após o pull, o estudo é criado automaticamente, sem duplicar ou substituir
+sessões existentes e sem adicionar participantes fictícios.
+Veja o [estado e preparo da base compartilhada](docs/estudo-exemplo-hospital.md).
+
 ## PDI visual
 
 No estudo, abra **PDI visual**. Selecione o cenário e a placa para explorar a cena
