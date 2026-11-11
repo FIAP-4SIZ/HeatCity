@@ -25,6 +25,19 @@ roteiro de fala, demonstração e plano B. No Windows, o atalho
 **docs/apresentacao/Abrir-apresentacao.cmd** abre os slides no navegador padrão. Não inclui vetores oculares do usuário;
 as estatísticas dos diagnósticos são agregadas e identificadas como tentativas.
 
+## PDI visual
+
+No estudo, abra **PDI visual**. Selecione o cenário e a placa para explorar a cena
+com AOIs, recortes original/cinza/Laplaciano, histograma e fórmulas das métricas.
+Funciona sem webcam ou participante, inclusive com imagens enviadas pelo operador.
+As AOIs são definidas manualmente; os descritores não inferem atenção ou legibilidade.
+
+Para apresentação offline, use [PDI visual HTML](docs/apresentacao/pdi-visual.html)
+ou o [PDF com cena e três placas](docs/reports/HeatCity-PDI-visual.pdf).
+A cena didática é sintética, com métricas calculadas pela mesma implementação da API.
+Regenerar: `.venv/bin/python scripts/build_pdi_demo.py` (Windows:
+`.venv\Scripts\python.exe scripts\build_pdi_demo.py`). Não instala novas dependências.
+
 ## Calibração atual
 
 O MediaPipe detecta as íris. O projeto **não cria um modelo de aprendizado**:

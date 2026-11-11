@@ -4,6 +4,7 @@ import { api, post, route, number } from './api.js';
 import ScenarioEditor from './views/ScenarioEditor.jsx';
 import Preparation from './views/Preparation.jsx';
 import Results from './views/Results.jsx';
+import PdiView from './views/PdiView.jsx';
 import Scene from './components/Scene.jsx';
 
 function useRoute() {
@@ -172,6 +173,7 @@ export default function App() {
   const tabs = [
     ['overview', 'Visão geral'],
     ['scenarios', 'Cenários e placas'],
+    ['pdi', 'PDI visual'],
     ['prepare', 'Nova sessão'],
     ['explore', 'Ensaio exploratório'],
     ['results', 'Resultados'],
@@ -416,6 +418,7 @@ export default function App() {
                       )}
                     </section>
                   ))}
+                {tab === 'pdi' && <PdiView key={study.id} study={study} />}
                 {['prepare', 'explore'].includes(tab) && (
                   <Preparation
                     key={`${study.id}-${revision}-${tab}`}

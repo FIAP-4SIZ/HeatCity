@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -84,6 +85,27 @@ slides = [
         '<p class="lead">A entrega integra processamento de imagem, captura ocular experimental e documentação reproduzível.</p><p>A limitação de precisão foi medida e passou a orientar o escopo: demonstração exploratória agora, conclusões sobre sinalização somente após dados adequados.</p><div class="badge">CÓDIGO · DIAGNÓSTICOS · MAPAS · RELATÓRIO · LIMITAÇÕES</div><p class="muted">Referências: enunciado Cognitive Computing-GS2-2026; MediaPipe Tasks Vision; código e documentação do HeatCity. Evidência numérica: diagnóstico do usuário, sem publicar vetores oculares.</p>',
     ),
 ]
+# A cena é didática; as métricas são calculadas sobre seus pixels, sem dados humanos.
+pdi_html = (root / "pdi-visual.html").read_text(encoding="utf-8")
+pdi_images = re.findall(r'<img[^>]+src="([^"]+)"', pdi_html)
+pdi_metrics = json.loads(
+    (root.parent / "reports/evidencias/pdi-cena-didatica.json").read_text(
+        encoding="utf-8"
+    )
+)["regions"][0]
+slides.insert(
+    3,
+    (
+        "PDI · EVIDÊNCIA VISUAL",
+        "Da cena aos descritores de uma placa",
+        f'<div class="cols"><div><img src="{pdi_images[0]}" style="width:100%;max-height:315px;object-fit:contain" alt="Cena didática com três AOIs"/><p class="muted">Cena sintética. AOIs definidas pelo operador.</p></div><div><div style="display:flex;gap:8px">'
+        + "".join(
+            f'<img src="{url}" style="width:31%;height:100px;object-fit:contain;background:#18241e" alt="Etapa de processamento da AOI"/>'
+            for url in pdi_images[1:4]
+        )
+        + f'</div><p class="muted">Original → cinza → magnitude do Laplaciano</p><p>Recepção: área {pdi_metrics["area_percent"]:.2f}% · média {pdi_metrics["luminance"]:.1f}/255 · contraste {pdi_metrics["local_contrast"]:.3f} · var. Laplaciano {pdi_metrics["sharpness"]:.1f}.</p><p class="muted">Contraste: (P99 − P1)/(P99 + P1 + ε). Valores descritivos; não são WCAG nem prova de leitura.</p></div></div><p><a href="pdi-visual.html" style="color:#215b43">Abrir demonstração offline com os três recortes →</a></p>',
+    ),
+)
 html = """<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HeatCity · apresentação</title><style>
 *{box-sizing:border-box}body{margin:0;background:#f4f5f1;color:#163b30;font:24px/1.4 'Segoe UI',Arial,sans-serif}.slide{display:none;width:100vw;height:100vh;padding:42px 58px;overflow:hidden}.slide.active{display:block}.eyebrow{font-size:16px;letter-spacing:2px;font-weight:700;color:#5b675b}h1{font-size:46px;line-height:1.12;margin:18px 0 28px;max-width:1100px}h3{font-size:25px;margin:14px 0}p{margin:14px 0}.lead{font-size:32px;max-width:1000px}.cols{display:grid;grid-template-columns:1fr 1fr;gap:42px}.badge,.note{padding:16px 20px;border-radius:10px;margin:22px 0}.badge{background:#173e30;color:white;font-size:22px;font-weight:650}.note{background:#f4e6c6;color:#4f3609;font-size:22px}.muted{font-size:17px;color:#526456}.pipeline{display:flex;align-items:center;gap:8px;margin:30px 0}.pipeline span{padding:14px;background:#dfebe2;border-radius:8px;font-size:19px;flex:1}table{width:100%;border-collapse:collapse;font-size:22px}th,td{text-align:left;padding:14px;border-bottom:1px solid #9daf9f}th{background:#dfeae1}li{margin:12px 0}footer{position:fixed;bottom:12px;left:58px;font-size:15px;color:#526456}nav{position:fixed;bottom:12px;right:24px}button{padding:10px 14px;background:#173e30;color:white;border:0;border-radius:6px;margin-left:6px;font-size:16px} @media(max-width:900px){body{font-size:18px}h1{font-size:32px}.slide{padding:28px}.lead{font-size:24px}.cols{gap:20px}table{font-size:17px}} @page{size:13.333in 7.5in;margin:0}@media print{nav,footer{display:none}.slide{display:block!important;width:13.333in;height:7.5in;break-after:page;min-height:0}.slide:last-of-type{break-after:auto}}
 </style><main>"""

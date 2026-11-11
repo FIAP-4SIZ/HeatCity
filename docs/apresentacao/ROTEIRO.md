@@ -8,7 +8,7 @@ para compartilhar/contingência. Não depende da API nem da internet.
 1. **Objetivo (40 s):** “O HeatCity investiga uma cadeia de visão computacional
    aplicada à sinalização, desde a descrição da imagem até estimativas experimentais
    de olhar. Esta é uma entrega de MVP exploratório.”
-2. **Problema e arquitetura (1 min):** mostrar cena/AOIs, PDI, detector pronto,
+2. **Problema e arquitetura (1–2 min):** abrir o slide de PDI e a aba **PDI visual**; mostrar cena/AOIs, PDI, detector pronto,
    geometria, armazenamento e exportação. Explicar o que cada membro implementou;
    não atribuir funções pessoais sem combinar com a equipe.
 3. **Evidência (1 min):** “As duas coletas concluídas deram RMSE 0,107 e 0,122
@@ -21,6 +21,17 @@ para compartilhar/contingência. Não depende da API nem da internet.
    “O mapa mostra a densidade das coordenadas estimadas, não uma prova de leitura.”
 6. **Conclusão (1 min):** mostrar limitações e próximos experimentos. O avanço é a
    integração e a rastreabilidade; ainda falta precisão humana repetível.
+
+## Demonstração visual de PDI (antes da webcam)
+
+1. No estudo, abra **PDI visual**, selecione o cenário e a placa.
+2. Mostre as AOIs e alterne para cinza: elas foram delimitadas pelo operador.
+3. Mostre o recorte original, cinza e Laplaciano; não é detecção automática de placa.
+4. Explique o histograma, P1/P99 e o contraste. Não é contraste WCAG.
+5. Mostre intensidade média (0–255), área relativa e variância do Laplaciano.
+   Ruído, textura e resolução também alteram o Laplaciano; não é prova de leitura.
+6. Sem API, abra **pdi-visual.html** ou **HeatCity-PDI-visual.pdf** no pacote.
+   Identifique a cena como sintética; os números são calculados sobre seus pixels.
 
 ## Demonstração ao vivo
 
@@ -57,7 +68,7 @@ oficiais de localização não foram obtidos com esses diagnósticos.
   medimos e expomos as falhas de cobertura e erro.”
 - **Por que um modo exploratório?** “Para demonstrar a cadeia sem converter dados
   reprovados em resultados oficiais.”
-- **Onde há PDI?** “Luminância, contraste por percentis, nitidez pelo Laplaciano,
+- **Onde há PDI?** “Intensidade de cinza, contraste por percentis, variância do Laplaciano,
   suavização e visualização de densidade; as métricas descrevem a imagem.”
 - **Criaram machine learning?** “Não treinamos modelos. Usamos MediaPipe pronto
   e interpolação geométrica; sem regressão ou classificador próprios.”

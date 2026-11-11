@@ -59,5 +59,33 @@ class AnalysisTests(unittest.TestCase):
             analyze([Sample(0.2, 0.2, 0.2), Sample(0.1, 0.2, 0.2)], [self.area], 1)
 
 
+class PdiTests(unittest.TestCase):
+    def test_uniform_patch_has_zero_contrast_and_laplacian(self):
+        import numpy as np
+
+        from heatcity.services.vision import pdi_preview
+
+        roi = {"name": "Uniforme", "x": 0, "y": 0, "width": 1, "height": 1}
+        r = pdi_preview(np.full((200, 200, 3), 90, np.uint8), [roi])["regions"][0]
+        self.assertEqual(r["luminance"], 90)
+        self.assertEqual(r["sharpness"], 0)
+        self.assertEqual(r["local_contrast"], 0)
+        self.assertEqual(sum(r["histogram"]), 40000)
+        self.assertEqual(r["histogram"][90], 40000)
+
+    def test_blurring_same_pattern_reduces_laplacian_variance(self):
+        import cv2
+        import numpy as np
+
+        from heatcity.services.vision import pdi_preview
+
+        gray = ((np.indices((200, 200)).sum(axis=0) // 8 % 2) * 255).astype(np.uint8)
+        image = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+        roi = {"name": "Padrão", "x": 0, "y": 0, "width": 1, "height": 1}
+        a = pdi_preview(image, [roi])["regions"][0]
+        b = pdi_preview(cv2.GaussianBlur(image, (9, 9), 2), [roi])["regions"][0]
+        self.assertGreater(a["sharpness"], b["sharpness"])
+
+
 if __name__ == "__main__":
     unittest.main()

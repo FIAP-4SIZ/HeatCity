@@ -11,7 +11,7 @@ from . import storage
 from .schemas import FinishInput, ScenarioInput, SessionInput, StudyInput
 from .services.evaluation import evaluate, summarize
 from .services.uncertainty import session_margin
-from .services.vision import decode_scene, demo_scene, heatmap, image_metrics
+from .services.vision import decode_scene, demo_scene, heatmap, image_metrics, pdi_preview
 
 router = APIRouter()
 # Injected from calibration API; never trust client-supplied approval.
@@ -83,6 +83,12 @@ def create_scenario(study_id: str, body: ScenarioInput):
         )
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
+
+
+@router.get("/scenarios/{scenario_id}/pdi")
+def scenario_pdi(scenario_id: str):
+    scenario = require("scenarios", scenario_id)
+    return pdi_preview(decode_scene(scenario["image"]), scenario["plates"])
 
 
 @router.post("/sessions", status_code=201)
