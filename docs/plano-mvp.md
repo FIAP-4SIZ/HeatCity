@@ -17,5 +17,6 @@ Para apresentação, o ensaio exploratório permite demonstrar o fluxo com malha
 concluída reprovada, sempre identificado como não validado e excluído das taxas
 e tempos oficiais. O [roteiro](apresentacao/ROTEIRO.md) orienta a demonstração.
 
-Git Flow: as entregas ficam em branches `feature/*`; não alteram `main`
-automaticamente. Commits não incluem assinatura automática de ferramentas.
+O [fluxo atual](fluxo-desenvolvimento.md) usa `develop` como base de integração e
+branches curtas por tarefa. `main` fica reservada à entrega final, após sinalização
+explícita do usuário. Commits não incluem assinatura automática de ferramentas.
