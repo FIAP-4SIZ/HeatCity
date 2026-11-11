@@ -89,6 +89,17 @@ de sair da prévia com ESC. Recarregar a página apaga o histórico temporário.
 Vídeos e imagens faciais não são enviados nem persistidos. Sem referência de onde
 a pessoa olhou, o tracking livre não permite calcular precisão real.
 
+## Análise do sinal ocular e histórico oficial
+
+A calibração mostra dispersão por alvo, mudança ao longo da coleta e separação
+entre alvos, nos dois olhos e na média. O diagnóstico também aceita tentativas
+interrompidas sem RMSE. As medidas são descritivas; não treinam modelos nem mudam
+aprovação. Veja [método e reprodução](docs/variacao-sinal-ocular.md).
+
+Após reprovar no teste oficial, use **Baixar todas as calibrações deste teste (N)**.
+O histórico preserva todas as tentativas da preparação atual e continua disponível
+ao voltar. Baixe antes de sair da etapa ou recarregar a página.
+
 ## Margem no estudo e webcam
 
 A margem por eixo é convertida da tela para o tamanho da imagem exibida. Casos de

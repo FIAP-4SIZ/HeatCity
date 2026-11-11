@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { CalibrationArchive } from '../calibration-archive.js';
+import CalibrationHistoryDownload from '../components/CalibrationHistoryDownload.jsx';
 import CalibrationLab from './CalibrationLab.jsx';
 import RunSession from './RunSession.jsx';
 import { number, post } from '../api.js';
 
 export default function Preparation({ study, onFinished, exploratory = false }) {
+  const archive = useRef(new CalibrationArchive());
   const [scenarioId, setScenarioId] = useState(study.scenarios[0]?.id || ''),
     [participant, setParticipant] = useState(''),
     [target, setTarget] = useState(study.scenarios[0]?.plates[0]?.name || ''),
@@ -54,6 +57,7 @@ export default function Preparation({ study, onFinished, exploratory = false }) 
         </div>
         <CalibrationLab
           exploratory={exploratory}
+          attemptArchive={archive.current}
           participantCode={participant}
           scenarioId={scenario.id}
           onReady={(model) => {
@@ -137,6 +141,7 @@ export default function Preparation({ study, onFinished, exploratory = false }) 
           O único dado de identificação solicitado é o código do participante. Não informe nome,
           e-mail, CPF, telefone ou outros dados pessoais.
         </p>
+        {!exploratory && <CalibrationHistoryDownload archive={archive.current} />}
         <div className="form-stack">
           <label>
             Código do participante (obrigatório)

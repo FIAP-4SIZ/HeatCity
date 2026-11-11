@@ -1,6 +1,10 @@
 import { openCapture, framePump } from '../capture-quality.js';
 import { MotionCapture } from '../motion-capture.js';
 import { ReferenceCapture } from '../reference-capture.js';
+import { analyzeSignals } from '../signal-analysis.js';
+import SignalReport from '../components/SignalReport.jsx';
+import { CalibrationArchive } from '../calibration-archive.js';
+import CalibrationHistoryDownload from '../components/CalibrationHistoryDownload.jsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { createDetector } from '../detector.js';
 import { EyeProfile } from '../eye-profile.js';
@@ -36,6 +40,7 @@ const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export default function CalibrationLab({
   participantCode,
+  attemptArchive,
   scenarioId,
   onReady,
   diagnosticsOnly = false,
@@ -43,6 +48,8 @@ export default function CalibrationLab({
   onDiagnostic,
   registerSnapshot,
 }) {
+  const localArchive = useRef(new CalibrationArchive());
+  const archive = attemptArchive || localArchive.current;
   const video = useRef(),
     stage = useRef(),
     field = useRef(),
@@ -61,6 +68,7 @@ export default function CalibrationLab({
     [diagnostic, setDiagnostic] = useState(null),
     [metrics, setMetrics] = useState(null);
   const [captureStatus, setCaptureStatus] = useState(null);
+  const [signalAnalysis, setSignalAnalysis] = useState(null);
   const [consent, setConsent] = useState(false),
     [progress, setProgress] = useState(0);
   const [dev, setDev] = useState({
@@ -74,6 +82,14 @@ export default function CalibrationLab({
   state.current.dev = dev;
   state.current.phase = phase;
   const collecting = phase === 'collecting' || phase === 'countdown';
+  function archiveAttempt(report) {
+    if (!diagnosticsOnly && !exploratory)
+      archive.append({
+        ...report,
+        camera_capture: state.current.capture?.metadata,
+        telemetry: state.current.pump?.stats.snapshot(),
+      });
+  }
   function invalidate(text) {
     const s = state.current;
     s.generation++;
@@ -83,9 +99,12 @@ export default function CalibrationLab({
         status: 'interrupted',
         error: text || 'Coleta interrompida.',
         motion_capture: s.motion?.snapshot(),
+        signal_analysis: analyzeSignals(s.pending.capture_details || []),
       };
       if (s.pending.features.length || s.pending.motion_capture?.samples.length)
         s.log.calibration(s.pending);
+      archiveAttempt(s.pending);
+      setSignalAnalysis(s.pending.signal_analysis);
     }
     s.collection = null;
     if (s.motion) s.motion.enabled = false;
@@ -124,7 +143,11 @@ export default function CalibrationLab({
     registerSnapshot?.(() => ({
       ...state.current.log.snapshot(),
       incomplete_calibration: state.current.pending
-        ? { ...state.current.pending, motion_capture: state.current.motion?.snapshot() }
+        ? {
+            ...state.current.pending,
+            signal_analysis: analyzeSignals(state.current.pending.capture_details || []),
+            motion_capture: state.current.motion?.snapshot(),
+          }
         : null,
       detector: state.current.mesh?.engine || null,
       eye_profile: state.current.profile?.baseline || null,
@@ -156,6 +179,7 @@ export default function CalibrationLab({
         } else if (s.pending?.status === 'failed') {
           invalidate(s.pending.error);
           setDiagnostic(s.pending);
+          setSignalAnalysis(s.pending.signal_analysis);
         } else invalidate('Tela cheia encerrada. A coleta foi interrompida.');
       }
     };
@@ -345,6 +369,7 @@ export default function CalibrationLab({
     const s = state.current,
       id = s.generation;
     setBusy(true);
+    setSignalAnalysis(null);
     setPhase('countdown');
     const details = [],
       payload = {
@@ -384,6 +409,11 @@ export default function CalibrationLab({
       s.geometry = [field.current.clientWidth, field.current.clientHeight];
       payload.viewport_width = s.geometry[0];
       payload.viewport_height = s.geometry[1];
+      Object.assign(s.pending, {
+        viewport_width: payload.viewport_width,
+        viewport_height: payload.viewport_height,
+        camera_capture: s.capture.metadata,
+      });
       setCountdown(null);
       setPhase('collecting');
       let last = [0.5, 0.5];
@@ -445,12 +475,17 @@ export default function CalibrationLab({
           phase: 'reference',
           target: p,
           samples,
+          sample_timing: capture.samples.map((row) => ({
+            relative_ms: Math.round(row.time - capture.arrived),
+            moving: !!row.moving,
+          })),
           accepted_by: 'automatic_stability',
           stability: capture.stability,
           motion_samples_used: capture.motionSamplesUsed || 0,
           accepted_at_ms: Math.round(capture.acceptedAt - s.began),
         });
         setProgress(i + 1);
+        s.pending.signal_analysis = analyzeSignals(details);
         if ((i + 1) % 5 === 0) {
           for (let attempt = 0; attempt <= 2; attempt++) {
             const check = await request('/diagnostics/geometry', {
@@ -467,7 +502,7 @@ export default function CalibrationLab({
             if (attempt === 2) {
               s.pending.affected_references = check.reference_indices;
               throw new Error(
-                `Coleta interrompida na linha ${Math.floor(i / 5) + 1}: ${check.message} Os dados e pontos afetados estão no diagnóstico; não é necessário esperar as conferências finais.`,
+                `Coleta interrompida na linha ${Math.floor(i / 5) + 1}: ${check.message} A análise de variação e separação dos sinais está disponível abaixo e no diagnóstico.`,
               );
             }
             const all = check.reference_indices || [];
@@ -483,6 +518,10 @@ export default function CalibrationLab({
               details[index] = {
                 ...details[index],
                 samples: repeated.features,
+                sample_timing: repeated.samples.map((row) => ({
+                  relative_ms: Math.round(row.time - repeated.arrived),
+                  moving: !!row.moving,
+                })),
                 previous_reference: details[index],
                 retry: attempt + 1,
                 stability: repeated.stability,
@@ -509,6 +548,10 @@ export default function CalibrationLab({
           phase: 'validation',
           target: p,
           samples,
+          sample_timing: capture.samples.map((row) => ({
+            relative_ms: Math.round(row.time - capture.arrived),
+            moving: !!row.moving,
+          })),
           accepted_by: 'automatic_stability',
           stability: capture.stability,
           motion_samples_used: capture.motionSamplesUsed || 0,
@@ -547,6 +590,7 @@ export default function CalibrationLab({
         camera_capture: s.capture.metadata,
         motion_capture: s.motion.snapshot(),
         geometry_checks: s.pending.geometry_checks,
+        signal_analysis: analyzeSignals(details),
         confirmation_required: false,
         automatic_advance: true,
         mode: 'sweep',
@@ -577,7 +621,9 @@ export default function CalibrationLab({
       };
       s.pending = null;
       s.log.calibration(report);
+      archiveAttempt(report);
       setDiagnostic(report);
+      setSignalAnalysis(report.signal_analysis);
       onDiagnostic?.(report);
       setResult(response);
       setPhase('result');
@@ -597,11 +643,14 @@ export default function CalibrationLab({
           ...s.pending,
           status: 'failed',
           error: e.message,
+          signal_analysis: analyzeSignals(details),
           motion_capture: s.motion.snapshot(),
         };
         s.log.calibration(s.pending);
+        archiveAttempt(s.pending);
         invalidate(e.message);
         setDiagnostic(s.pending);
+        setSignalAnalysis(s.pending.signal_analysis);
         if (document.fullscreenElement === stage.current)
           await document.exitFullscreen().catch(() => {});
       }
@@ -884,6 +933,9 @@ export default function CalibrationLab({
                   Baixar diagnóstico da calibração
                 </button>
               )}
+              {!diagnosticsOnly && !exploratory && !collecting && (
+                <CalibrationHistoryDownload archive={archive} />
+              )}
               {result && (
                 <p>
                   RMSE{' '}
@@ -943,6 +995,9 @@ export default function CalibrationLab({
           )}
         </section>
       </div>
+      {!collecting && phase !== 'tracking' && signalAnalysis && (
+        <SignalReport analysis={signalAnalysis} />
+      )}
     </section>
   );
 }

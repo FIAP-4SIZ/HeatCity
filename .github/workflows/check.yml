@@ -56,6 +56,7 @@ jobs:
               else:
                   raise SystemExit(f'Not ready: {url}')
           PY
+          node frontend/scripts/signal-smoke.mjs
           node frontend/scripts/hospital-smoke.mjs
           node frontend/scripts/pdi-smoke.mjs
           node frontend/scripts/tasks-smoke.mjs

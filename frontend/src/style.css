@@ -1389,3 +1389,19 @@ meter {
     grid-template-columns: 1fr;
   }
 }
+
+.signal-report {
+  margin-top: 24px;
+}
+.signal-report > label {
+  display: grid;
+  gap: 8px;
+  max-width: 380px;
+}
+.signal-report > svg {
+  display: block;
+  width: 100%;
+  max-width: 850px;
+  color: var(--ink);
+  margin: 16px 0;
+}

@@ -2,11 +2,14 @@ import React, { useRef, useState } from 'react';
 import CalibrationLab from './CalibrationLab.jsx';
 import DiagnosticReport from '../components/DiagnosticReport.jsx';
 import { summarizeDiagnostic } from '../diagnostics.js';
+import { signalAttempts } from '../signal-analysis.js';
+import SignalReport from '../components/SignalReport.jsx';
 
 export default function Diagnostics() {
   const [reports, setReports] = useState([]),
     [current, setCurrent] = useState(null),
     [error, setError] = useState('');
+  const [signalReports, setSignalReports] = useState([]);
   const snapshot = useRef(() => ({}));
   function exportPage() {
     const page = snapshot.current();
@@ -16,6 +19,7 @@ export default function Diagnostics() {
       page_diagnostic_version: 1,
       page_diagnostic: page,
       imported_comparisons: reports,
+      imported_signal_comparisons: signalReports,
       privacy:
         'Sem cadastro, nomes, documentos, vídeo ou imagens faciais. Coordenadas e características numéricas locais.',
       precision_note: 'Sem alvo de referência, o tracking experimental não mede erro de olhar.',
@@ -29,15 +33,23 @@ export default function Diagnostics() {
   }
   async function load(event) {
     setError('');
-    const incoming = [];
+    const incoming = [],
+      signals = [];
     try {
       const files = [...event.target.files];
       if (files.length > 20) throw new Error('Selecione até 20 arquivos por vez.');
       for (const file of files) {
         if (file.size > 10000000) throw new Error(`${file.name}: limite de 10 MB.`);
-        incoming.push(summarizeDiagnostic(JSON.parse(await file.text()), file.name));
+        const data = JSON.parse(await file.text());
+        const attempts = signalAttempts(data);
+        signals.push(...attempts.map((a) => ({ ...a, name: file.name })));
+        if (data.quality && Array.isArray(data.residuals))
+          incoming.push(summarizeDiagnostic(data, file.name));
+        else if (!attempts.length)
+          throw new Error('Arquivo sem resíduos de conferência ou amostras por alvo.');
       }
       setReports((previous) => [...previous, ...incoming].slice(-20));
+      setSignalReports((previous) => [...previous, ...signals].slice(-20));
     } catch (e) {
       setError(e.message);
     }
@@ -98,14 +110,15 @@ export default function Diagnostics() {
             onClick={() => {
               setReports([]);
               setCurrent(null);
+              setSignalReports([]);
             }}
           >
             Limpar comparação
           </button>
         </div>
         <p>
-          Os arquivos são analisados neste navegador, sem envio ou cadastro. Não são incorporados ao
-          repositório ou ao banco.
+          São exibidas até 20 análises de sinal importadas. Os arquivos são analisados neste
+          navegador, sem envio ou cadastro. Não são incorporados ao repositório ou ao banco.
         </p>
         <label>
           Importar diagnósticos
@@ -123,6 +136,13 @@ export default function Diagnostics() {
           <DiagnosticReport key={i} report={r} />
         ))}
       </div>
+      {signalReports.map((r, i) => (
+        <SignalReport
+          key={i}
+          analysis={r.analysis}
+          title={`${r.name} · tentativa ${r.attempt} · sinal ocular`}
+        />
+      ))}
     </section>
   );
 }
