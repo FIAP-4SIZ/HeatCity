@@ -22,6 +22,31 @@ para compartilhar/contingência. Não depende da API nem da internet.
 6. **Conclusão (1 min):** mostrar limitações e próximos experimentos. O avanço é a
    integração e a rastreabilidade; ainda falta precisão humana repetível.
 
+## Exemplo concreto e relação com a Global Solution (40–60 s)
+
+“Imagine alguém entrando pela primeira vez num hospital para encontrar a recepção.
+A entrada conduz a busca para o corredor à frente, mas a placa fica sobre uma porta
+lateral. A pessoa pode parar, procurar outra indicação ou pedir ajuda. Este é um
+exemplo ilustrativo, não um caso observado em hospital pelo nosso projeto.
+
+A pergunta seria se uma placa no ponto de decisão facilita a localização. Podemos
+preparar duas imagens mantendo texto, tamanho e tarefa, alterando a posição e
+alternando a ordem A/B. Hoje conseguimos descrever a imagem e demonstrar a cadeia
+experimental; ainda não comprovamos qual posição é melhor.
+
+Essa aplicação aproxima visão computacional de uma necessidade de orientação das
+pessoas em espaços coletivos, como contribuição proposta à Global Solution e ao
+ODS 11. Não afirmamos melhoria de acessibilidade já demonstrada.”
+
+## Referências para consulta e arguição
+
+Os dois slides finais têm instituições, títulos e links clicáveis. A bibliografia
+completa está em **referencias.md**, incluída no pacote offline. Links externos
+exigem internet; o PDF, as cenas e a demonstração offline continuam independentes.
+As páginas externas não puderam ser consultadas nesta revisão por bloqueio de
+rede; não afirmar que seus conteúdos atuais ou a edição da GS foram confirmados.
+O enunciado PDF fornecido é a fonte efetivamente conferida das exigências da aula.
+
 ## Demonstração visual de PDI (antes da webcam)
 
 1. No estudo, abra **PDI visual**, selecione o cenário e a placa.

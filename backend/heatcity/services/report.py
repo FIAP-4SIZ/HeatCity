@@ -37,6 +37,12 @@ def build_report(data):
     paragraph(
         "Avaliar a localização de sinalizações em cenas de espaços públicos. O estudo usa exclusivamente estimativas experimentais de olhar. Elas não comprovam leitura, compreensão ou acessibilidade."
     )
+    paragraph(
+        "Exemplo ilustrativo: ao entrar pela primeira vez em um hospital, um visitante procura a recepção; a placa fica acima de uma porta lateral, fora do percurso inicial de busca em direção ao corredor. Ele pode precisar parar e pedir orientação. Não é um episódio observado pelo projeto: não houve coleta em hospital ou medição de impacto no atendimento. A hipótese seria comparar, em imagens equivalentes, a placa original e uma alternativa no ponto de decisão, mantendo texto, tamanho e tarefa e alternando a ordem entre participantes. Não há conclusão A/B disponível."
+    )
+    paragraph(
+        "A contribuição proposta à Global Solution é aplicar PDI e visão computacional à experiência de orientação em espaços de uso coletivo. Equipes de sinalização poderiam investigar alternativas de organização antes de intervir. Esse alinhamento com inclusão urbana e ODS 11 é uma motivação, não impacto medido, certificação de acessibilidade ou comprovação de legibilidade. O endereço institucional da Global Solution foi indicado pelo usuário; o conteúdo atual da página não pôde ser confirmado neste ambiente."
+    )
     paragraph("2. Métodos e qualidade", "Heading2")
     paragraph(
         "Cenas e áreas de interesse são normalizadas em [0,1]. OpenCV calcula luminância, contraste local (percentis 1 e 99), nitidez pela variância do Laplaciano e mapas de densidade espacial. São indicadores descritivos, sem certificação de acessibilidade ou OCR."
@@ -208,6 +214,30 @@ def build_report(data):
     paragraph(
         "Referências: enunciado Cognitive Computing-GS2-2026 (Arnaldo Jr); documentação MediaPipe Face Mesh/Iris; código e protocolo do repositório FIAP-4SIZ/HeatCity. Consulte docs/requisitos-mvp.md e docs/protocolo-experimental.md."
     )
+
+    if data.get("references"):
+        paragraph("Fontes identificadas e links", "Heading2")
+        paragraph(
+            "Enunciado primário: Arnaldo Jr / FIAP, Cognitive Computing, Computer Vision And IOT Systems — Global Solution, 2026. PDF fornecido pelo usuário, duas páginas, sem endereço público informado. Os demais endereços abaixo foram identificados, mas a consulta externa foi bloqueada neste ambiente em 11/11/2026. Referências conceituais OpenCV 4.x; runtime instalado OpenCV 5.0.0.93. A fórmula de contraste local e o limite 0,100 são escolhas do projeto."
+        )
+        for reference in data["references"]:
+            label = f"[{reference['id']}] {reference['author']}. {reference['title']}"
+            url = escape(reference["url"], {'"': "&quot;"})
+            story.append(
+                Paragraph(
+                    escape(label)
+                    + '<br/><link href="'
+                    + url
+                    + '">'
+                    + escape(reference["url"])
+                    + "</link>",
+                    styles["BodyText"],
+                )
+            )
+            paragraph(reference["purpose"])
+        paragraph(
+            "Bibliografia completa: docs/referencias.md. Implementação e versões: backend/requirements.lock, frontend/package-lock.json e código do repositório FIAP-4SIZ/HeatCity."
+        )
 
     def footer(canvas, document):
         canvas.setFont("Helvetica", 8)
