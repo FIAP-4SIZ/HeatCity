@@ -1389,18 +1389,3 @@ meter {
     grid-template-columns: 1fr;
   }
 }
-
-.hospital-example {
-  display: grid;
-  gap: 20px;
-}
-.hospital-example article {
-  min-width: 0;
-  display: grid;
-  gap: 12px;
-  align-content: start;
-}
-.hospital-example label:not(.checkbox) {
-  display: grid;
-  gap: 8px;
-}

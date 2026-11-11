@@ -1,5 +1,6 @@
 """API inicial; não armazena frames nem dados de participantes."""
 
+from contextlib import asynccontextmanager
 from dataclasses import asdict
 from time import monotonic
 from typing import Annotated, Literal
@@ -13,7 +14,16 @@ from .calibration import GeometryIssue, build_mesh, fit_calibration
 from .schemas import CameraSettings
 from .workflow import calibration_models, router
 
-app = FastAPI(title="HeatCity", version="1.0.0")
+
+@asynccontextmanager
+async def lifespan(app):
+    from .seed import seed_hospital
+
+    seed_hospital()
+    yield
+
+
+app = FastAPI(title="HeatCity", version="1.0.0", lifespan=lifespan)
 app.include_router(router)
 # Somente autorização temporária para prévia local; sem persistência de sessões.
 approvals: dict[str, float] = {}

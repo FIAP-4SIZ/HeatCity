@@ -1,51 +1,61 @@
-# Estudo de exemplo: orientação na entrada de um hospital
+# Estudo-base: orientação na entrada de um hospital
 
-Título: **Orientação na entrada de um hospital**.
-Objetivo: investigar a localização da placa Recepção em dois posicionamentos.
-Tarefa: **Localize a placa Recepção.**
+O hospital deve aparecer como um estudo normal na lista, sem botão ou fluxo de
+exemplos. Terá os dois cenários originais enviados pelo usuário, quatro AOIs por
+imagem e a tarefa **Localize a placa Recepção**. Nenhuma sessão será inventada.
 
-## Preparação disponível
+## Uso normal
 
-1. Execute Iniciar-HeatCity.cmd e, na página de estudos, clique **Exemplo hospitalar A/B**.
-2. Escolha os arquivos das imagens A e B, com a mesma resolução. São aceitos PNG,
-   JPEG ou WebP, até 4 MB por imagem e 8 megapixels.
-3. Confira as quatro AOIs: Recepção, Pronto Socorro, Ambulatório e Triagem. As
-   caixas iniciais são aproximações das imagens mostradas no chat, normalizadas
-   ao quadro completo. Não são detecções automáticas.
-4. Para ajustar uma caixa, escolha a placa e desenhe novamente sobre a imagem.
-   As imagens permanecem intactas; só as coordenadas são alteradas.
-5. Confirme a revisão e clique **Criar estudo com os dois cenários**. A API cria
-   estudo e cenários numa única transação. Uma imagem inválida não deixa um estudo
-   incompleto. Nenhuma sessão ou participante é pré-preenchido.
-6. Use PDI visual para explorar as imagens. Para testes oculares, use Nova sessão
-   (aprovação obrigatória) ou Ensaio exploratório (não validado e separado).
+1. Execute Iniciar-HeatCity.cmd.
+2. Abra **Orientação na entrada de um hospital** na lista de estudos.
+3. Consulte Cenários e placas e PDI visual, ou inicie Nova sessão.
+4. Cada participante informa código e consentimento e faz a calibração.
+   Ensaios exploratórios continuam fora dos indicadores oficiais.
 
-## Limite do par fornecido
+## Arquivos originais incluídos
 
-As imagens foram informadas pelo usuário como geradas por IA. A versão A mostra
-Recepção à esquerda e a B à direita. Também mudam a distribuição das outras
-placas, uma seta e detalhes das pessoas. Os títulos A/B fazem parte dos estímulos.
-Logo, esse par serve como exemplo ilustrativo de comparação entre cenas, sem
-isolar causalmente o efeito do posicionamento. Não é coleta em hospital real.
-Nenhum resultado humano, melhora de orientação ou superioridade A/B foi medido.
+Os arquivos A.md e B.md enviados pelo usuário foram identificados pelo conteúdo
+como JPEG de 1371 × 1536 pixels. Foram incluídos como `hospital-a.jpg` e
+`hospital-b.jpg`, sem edição, recorte ou recompressão. O manifesto
+`backend/heatcity/fixtures/hospital-study.json` registra SHA-256 de cada original
+junto das oito AOIs. A API e o teste de navegador conferem essa identidade.
+Nenhuma imagem de substituição é usada.
 
-## Base compartilhada para qualquer checkout
+## Preparação da base versionada
 
-O importador, as AOIs iniciais e o teste automatizado estão versionados. O teste
-`frontend/scripts/hospital-smoke.mjs` cria imagens sintéticas de software em
-memória e exercita o fluxo, sem depender das imagens do chat ou de webcam.
-Com API e frontend ativos e Playwright configurado conforme README:
+Somente para reconstruir a fixture a partir dos originais, executar na raiz:
 
 ```sh
-node frontend/scripts/hospital-smoke.mjs
+.venv/bin/python scripts/prepare_hospital_fixture.py "caminho/A.png" "caminho/B.png"
 ```
 
-A CI também executa esse teste. Ele verifica importação, ajuste de AOI, criação
-completa, PDI e ausência de sessões fictícias; não verifica precisão humana.
+O script preserva os bytes das duas imagens, sem cortar ou recriar pixels. Empacota
+as imagens e AOIs iniciais em `backend/heatcity/fixtures/hospital-study.json`.
+As AOIs devem ser conferidas visualmente antes de versionar esse arquivo.
+O arquivo e os JPEGs já estão versionados; um checkout atualizado tem a base pronta.
 
-**Pendente para distribuir a base visual exata:** anexar os dois arquivos originais
-PNG/JPG/WebP ou enviar o JSON completo exportado do estudo criado pelo importador.
-As imagens exibidas inline no chat não estavam disponíveis como arquivos locais
-nesta etapa. Após recebê-las, poderão ser versionadas com AOIs e carregamento rápido,
-sem armazenar resultados ou dados pessoais. Não compartilhar o banco SQLite local
-como fixture, pois ele pode conter sessões reais.
+Ao iniciar a API, o arquivo versionado é carregado como estudo normal de ID
+`hospital-orientacao-base-v1`. Novas inicializações não duplicam nem sobrescrevem
+esse estudo, suas cenas ou sessões. A criação dos dois cenários é transacional.
+Se o estudo-base for excluído, ele volta vazio de participantes na próxima
+inicialização enquanto a fixture continuar incluída no projeto.
+
+A base contém somente imagens/AOIs/protocolo. Não compartilhar o banco SQLite,
+pois ele pode conter participantes e sessões reais.
+
+## Limitações do material
+
+As imagens foram informadas como geradas por IA. A Recepção muda da esquerda
+para a direita, mas também mudam outras placas, uma seta e detalhes das pessoas.
+Os títulos A/B fazem parte dos estímulos. É uma comparação ilustrativa de cenas,
+sem isolamento causal do posicionamento e sem comprovação de melhora.
+Não houve coleta em hospital real.
+
+## Testes de software
+
+A CI executa `frontend/scripts/hospital-smoke.mjs`: abre o estudo carregado na
+lista normal, confere os hashes das imagens originais, as oito AOIs, o PDI e o
+preparo de uma nova sessão sem participante pré-preenchido. A execução requer o
+banco de testes isolado configurado pela CI; não usar em estudos pessoais com
+sessões já preenchidas. Os testes Python verificam validação, transação, identidade
+dos JPEGs e carga idempotente, sem medir precisão ocular humana.

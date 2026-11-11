@@ -46,7 +46,11 @@ def create_study(body: StudyInput):
 
 @router.post("/study-examples/hospital", status_code=201)
 def hospital_example(body: HospitalExampleInput):
-    study_id = identifier()
+    return create_hospital_study(body)
+
+
+def create_hospital_study(body: HospitalExampleInput, study_id=None):
+    study_id = study_id or identifier()
     value = {
         "id": study_id,
         "created_at": now(),
@@ -84,7 +88,15 @@ def hospital_example(body: HospitalExampleInput):
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
     with storage.database() as db:
-        db.execute("INSERT INTO studies(id,payload) VALUES(?,?)", (study_id, json.dumps(value)))
+        inserted = db.execute(
+            "INSERT OR IGNORE INTO studies(id,payload) VALUES(?,?)", (study_id, json.dumps(value))
+        )
+        if not inserted.rowcount:
+            return json.loads(
+                db.execute("SELECT payload FROM studies WHERE id=?", (study_id,)).fetchone()[
+                    "payload"
+                ]
+            )
         for scene in scenarios:
             db.execute(
                 "INSERT INTO scenarios(id,study_id,payload) VALUES(?,?,?)",
