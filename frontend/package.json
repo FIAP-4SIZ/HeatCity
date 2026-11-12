@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
-    "test": "node src/gaze.test.js && node src/signal-analysis.test.js && node src/calibration-archive.test.js",
+    "test": "node src/gaze.test.js && node src/signal-analysis.test.js && node src/calibration-archive.test.js && node src/practice-metrics.test.js",
     "postinstall": "node scripts/copy-model.mjs",
     "test:e2e": "node scripts/mvp-smoke.mjs",
     "format": "prettier --write src scripts vite.config.js index.html package.json",
