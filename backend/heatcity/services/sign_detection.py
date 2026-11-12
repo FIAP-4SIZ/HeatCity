@@ -182,6 +182,7 @@ def detect(frame, reference, plates, annotations=None):
                     )
     metrics = dict(tp=0, fp=0, fn=0, tn=0, abstentions=0, annotations=0, ious=[])
     for annotation in annotations or []:
+        before = metrics.copy()
         result = next(r for r in results if r["name"] == annotation["name"])
         metrics["annotations"] += 1
         positive = result["status"] == "detected"
@@ -201,6 +202,9 @@ def detect(frame, reference, plates, annotations=None):
             metrics["tn"] += 1
         if result["status"] in ("ambiguous", "conflict"):
             metrics["abstentions"] += 1
+        result["evaluation"] = {
+            k: metrics[k] - before[k] for k in ("tp", "fp", "fn", "tn", "abstentions")
+        }
     elapsed = (perf_counter() - start) * 1000
     return dict(
         version="template_multiscale_v1",
@@ -225,6 +229,8 @@ def summarize(frames):
     times = []
     ious = []
     counts = {}
+    details = {}
+    previous = None
     for frame in frames:
         t = frame.get("processing_ms")
         if isinstance(t, (int, float)) and math.isfinite(t) and t >= 0:
@@ -240,6 +246,63 @@ def summarize(frames):
             c = counts.setdefault(name, dict(detected=0, ambiguous=0, not_found=0, conflict=0))
             if result["status"] in c:
                 c[result["status"]] += 1
+            d = details.setdefault(
+                name,
+                dict(
+                    name=name,
+                    frames=0,
+                    detected_seconds=0,
+                    events=0,
+                    first_seen=None,
+                    reasons={},
+                    suggestions={},
+                    scores=[],
+                    gaps=[],
+                    tp=0,
+                    fp=0,
+                    fn=0,
+                    tn=0,
+                    annotations=0,
+                ),
+            )
+            d["frames"] += 1
+            d["scores"].append(float(result["score"]))
+            if result.get("gap") is not None:
+                d["gaps"].append(float(result["gap"]))
+            for key in ("reasons", "suggestions"):
+                for value in set(result.get(key, [])):
+                    d[key][value] = d[key].get(value, 0) + 1
+            if result.get("evaluation") is not None:
+                d["annotations"] += 1
+                for key in ("tp", "fp", "fn", "tn"):
+                    d[key] += result["evaluation"][key]
+            if result["status"] == "detected" and isinstance(frame.get("time"), (int, float)):
+                d["first_seen"] = frame["time"] if d["first_seen"] is None else d["first_seen"]
+                dt = frame["time"] - previous.get("time", frame["time"]) if previous else 0
+                continuous = (
+                    previous
+                    and previous.get("source") == frame.get("source")
+                    and 0 < dt <= 1.5
+                    and any(
+                        r["name"] == name and r["status"] == "detected"
+                        for r in previous.get("signs", [])
+                    )
+                )
+                if continuous:
+                    d["detected_seconds"] += dt
+                else:
+                    d["events"] += 1
+        previous = frame
+    for name, d in details.items():
+        d["mean_score"] = float(np.mean(d.pop("scores")))
+        gaps = d.pop("gaps")
+        d["mean_gap"] = float(np.mean(gaps)) if gaps else None
+        d["detection_fraction"] = counts[name]["detected"] / d["frames"]
+        d["uncertainty_fraction"] = (counts[name]["ambiguous"] + counts[name]["conflict"]) / d[
+            "frames"
+        ]
+        d["precision"] = d["tp"] / (d["tp"] + d["fp"]) if d["tp"] + d["fp"] else None
+        d["recall"] = d["tp"] / (d["tp"] + d["fn"]) if d["tp"] + d["fn"] else None
     return dict(
         frames=len(frames),
         **totals,
@@ -252,6 +315,7 @@ def summarize(frames):
         mean_iou=float(np.mean(ious)) if ious else None,
         mean_processing_ms=float(np.mean(times)) if times else None,
         counts=counts,
+        details=list(details.values()),
     )
 
 
@@ -286,7 +350,7 @@ def report_pdf(frames, title="HeatCity — detecção de placas em vídeo"):
     text(
         "TP exige nome correspondente, decisão detectada e IoU >= 0,5. Placas não anotadas não são tratadas como ausentes. Erro de localização de uma detecção positiva gera FP e FN. Abstenções permanecem visíveis; se a placa estiver presente, contam como FN. Sem anotações não há precisão de acerto mensurada. Quadros correlacionados não são participantes independentes."
     )
-    rows = [["Placa", "Detectada", "Ambígua", "Ausente", "Conflito"]]
+    rows = [["Placa", "Detectada", "Ambígua", "Não localizada", "Conflito"]]
     for name, c in s["counts"].items():
         rows.append(
             [
@@ -304,13 +368,38 @@ def report_pdf(frames, title="HeatCity — detecção de placas em vídeo"):
         )
     )
     story.append(table)
-    text("Dificuldade, dúvidas e melhorias", "Heading2")
-    for result in frames[-1].get("signs", []) if frames else []:
-        text(result["name"], "Heading3")
-        for reason in result.get("reasons", []):
-            text(reason)
-        for suggestion in dict.fromkeys(result.get("suggestions", [])):
-            text("Hipótese a testar: " + suggestion)
+    text("Análise final por placa: dificuldade, acerto e posicionamento", "Heading2")
+    text(
+        "Dificuldade operacional é descrita pela proporção de detecções, ambiguidades, falhas e margens de correlação; não é uma escala de dificuldade humana. Não localizada não significa comprovadamente ausente."
+    )
+    for d in s["details"]:
+        text(d["name"], "Heading3")
+        text(
+            f"Detectada em {d['detection_fraction']:.1%} dos quadros; incerteza em {d['uncertainty_fraction']:.1%}. Similaridade média {fmt(d['mean_score'])}; margem espacial média {fmt(d['mean_gap'])}."
+        )
+        text(
+            f"Tempo detectado estimado {d['detected_seconds']:.2f} s; {d['events']} trechos; primeira detecção em {fmt(d['first_seen'])} s da fonte. Intervalos entre quadros consecutivos detectados são somados somente na mesma fonte e até 1,5 s, sem preencher falhas. Quadro isolado soma zero. Não prova continuidade entre amostras."
+        )
+        text(
+            f"Acerto por placa: {d['annotations']} anotações; precisão {fmt(d['precision'])}; recall {fmt(d['recall'])}; TP={d['tp']}, FP={d['fp']}, FN={d['fn']}, TN={d['tn']}."
+        )
+        if not d["reasons"]:
+            text(
+                "Nenhum alerta heurístico de captura apareceu. Isso não comprova boa legibilidade ou ausência de erros."
+            )
+        for reason, count in sorted(d["reasons"].items(), key=lambda item: -item[1]):
+            text(f"Indício em {count}/{d['frames']} quadros: {reason}")
+        for suggestion, count in sorted(d["suggestions"].items(), key=lambda item: -item[1]):
+            text(f"Hipótese a testar ({count} quadros): {suggestion}")
+        text(
+            "Local da placa: testar instalação frontal ao percurso da câmera, antes do ponto de decisão, sem obstruções e com maior tamanho aparente. Comparar antes/depois com o mesmo trajeto, distância, câmera e iluminação, anotando a posição verdadeira. A análise não determina sozinha uma altura ou coordenada de instalação ideal."
+        )
+    text("Origem das referências", "Heading2")
+    synthetic = sum(f.get("annotationSource") == "synthetic_geometry" for f in frames)
+    manual = sum(f.get("annotationSource") == "manual_operator" for f in frames)
+    text(
+        f"Quadros com referência sintética: {synthetic}; com anotação manual do operador: {manual}. Os demais podem não ter anotação. Referência sintética não demonstra desempenho em vídeo real. A correlação não é probabilidade nem substitui a medição de acerto."
+    )
     text("Limitações e conclusões", "Heading2")
     text(
         "Template matching é sensível a escala, inclinação, oclusão e mudanças de conteúdo. Baixo score não identifica sozinho qual fator causou a falha. Nitidez e contraste descrevem a região candidata e podem pertencer a uma correspondência incorreta. Sugestões de local significam hipóteses sobre visibilidade pela câmera; não demonstram melhor orientação ou acessibilidade humana. Precisam de nova captura/controlada para comparação."

@@ -1,8 +1,58 @@
-# HeatCity
+# HeatCity — localização e acompanhamento de placas em vídeo
 
-MVP acadêmico para investigar atenção visual à sinalização por webcam, com estudos,
-cenários e áreas de interesse, sessões oculares, métricas, heatmaps e relatórios.
-A precisão humana ainda é experimental; uma aprovação numérica não comprova usabilidade.
+**Onde a placa cadastrada aparece e por quanto tempo é detectada?**
+
+MVP de visão computacional clássica: vídeo/webcam → cinza → template matching
+multiescala → localização, incerteza e acompanhamento temporal por placa.
+Sem treino de modelos, sem participante e sem calibração ocular no novo fluxo.
+
+## Novo fluxo principal
+
+1. Execute `Iniciar-HeatCity.cmd`. A página inicial abre **Placas em vídeo**.
+2. Selecione a referência **Cenário simulado A · IA** do hospital já cadastrado.
+3. Abra o vídeo demonstrativo incluído no checkout e clique em **Iniciar análise**.
+   Para vídeo próprio, cadastre antes uma imagem de referência e seus recortes em
+   **Estudos → Cenários e placas**. Também há entrada pela webcam.
+4. Veja caixas, estados incertos, centros detectados e tempo estimado por placa.
+5. Pause para anotar a posição verdadeira de placas ou sua ausência. A anotação
+   mede acerto; não treina nem altera o detector.
+6. Confira a **Análise final: dificuldade e melhorias** e exporte JSON, CSV e PDF.
+
+A análise envia quadros para a API local sem persistir imagens. Solicita até
+1920 × 1080 / 30 FPS na câmera, mas processa quadros reduzidos a 800 px de largura
+em até 2 amostras/s, sem fila. Vídeos devem ser compatíveis com Chrome/Edge,
+por exemplo MP4/H.264 ou WebM. Uso local, sem autenticação.
+
+Tempo detectado é a soma de intervalos entre quadros consecutivos detectados,
+na mesma fonte, com intervalo máximo de 1,5 s. Falhas e ambiguidades interrompem
+o trecho; quadro isolado soma zero. Não comprova continuidade entre amostras.
+Precisão/recall/IoU exigem referências conhecidas; similaridade não é chance de acerto.
+Sugestões de posição são hipóteses para nova captura, sem medir atenção humana.
+
+O exemplo é sintético, derivado da imagem de IA original do usuário: nitidez,
+deslocamento, desfoque e desaparecimento da Recepção. As medições do MP4 decodificado,
+as falhas, os gráficos e o relatório estão em [docs/reports](docs/reports/deteccao-placas-benchmark.json).
+Reproduzir: `PYTHONPATH=backend .venv/bin/python scripts/build_sign_video_demo.py`
+(requer ffmpeg só para regenerar o MP4) e
+`.venv/bin/python scripts/build_sign_presentation.py`.
+No PowerShell, defina `$env:PYTHONPATH="backend"` e use `.venv\Scripts\python.exe`.
+
+## Apresentação atual
+
+[Slides HTML](docs/apresentacao/slides.html), [PDF](docs/apresentacao/slides.pdf),
+[roteiro e limites](docs/apresentacao/ROTEIRO.md),
+[relatório do exemplo](docs/reports/HeatCity-deteccao-placas-exemplo.pdf) e
+[pacote offline](docs/HeatCity-pacote-apresentacao.zip) descrevem o novo foco.
+O atalho `docs/apresentacao/Abrir-apresentacao.cmd` abre a apresentação atual.
+O pacote inclui resultados sintéticos reais calculados, sem participantes fictícios.
+Ainda faltam medições em vídeo real e comparação controlada de posições.
+
+## Histórico: experimento ocular anterior
+
+As seções abaixo documentam a investigação anterior e continuam acessíveis em
+**Diagnósticos / DEV** e nos estudos. Seus resultados e limitações são separados
+do detector de placas. Não são requisitos de uso do novo fluxo.
+Slides anteriores foram arquivados como `docs/apresentacao/historico-ocular-*`.
 
 ## Executar no Windows
 
@@ -19,10 +69,9 @@ esta demonstração de 15 s, com identificação **não validado**. Os mapas sã
 de estimativas; não há taxas de sucesso, tempo de localização ou atenção oficial.
 As autorizações são separadas no servidor: esse ensaio não libera o estudo oficial.
 
-O pacote offline está em [docs/apresentacao](docs/apresentacao/ROTEIRO.md):
-[slides HTML](docs/apresentacao/slides.html), [slides PDF](docs/apresentacao/slides.pdf),
-roteiro de fala, demonstração e plano B. No Windows, o atalho
-**docs/apresentacao/Abrir-apresentacao.cmd** abre os slides no navegador padrão. Não inclui vetores oculares do usuário;
+O pacote offline está em [docs/apresentacao](docs/apresentacao/historico-ocular-ROTEIRO.md):
+[slides HTML](docs/apresentacao/historico-ocular-slides.html), [slides PDF](docs/apresentacao/historico-ocular-slides.pdf),
+roteiro de fala, demonstração e plano B do experimento anterior. O atalho CMD agora abre a apresentação de placas em vídeo. Não inclui vetores oculares do usuário;
 as estatísticas dos diagnósticos são agregadas e identificadas como tentativas.
 
 ## Estudo-base hospitalar

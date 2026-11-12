@@ -33,6 +33,46 @@ class WorkflowTests(unittest.TestCase):
         self.environment.stop()
         self.directory.cleanup()
 
+    def test_video_sign_detection_annotations_report_and_no_human_sessions(self):
+        url = f"/scenarios/{self.scene['id']}/detect-plates"
+        plate = self.scene["plates"][0]
+        annotation = {
+            "name": plate["name"],
+            "present": True,
+            "box": [plate[k] for k in ("x", "y", "width", "height")],
+        }
+        response = self.client.post(
+            url, json={"image": self.scene["image"], "annotations": [annotation]}
+        )
+        self.assertEqual(response.status_code, 200, response.text)
+        result = response.json()
+        self.assertEqual(result["metrics"]["annotations"], 1)
+        self.assertEqual(result["metrics"]["tp"], 1)
+        self.assertEqual(
+            self.client.post(
+                url, json={"image": self.scene["image"], "annotations": [annotation, annotation]}
+            ).status_code,
+            422,
+        )
+        self.assertEqual(
+            self.client.post(
+                url,
+                json={
+                    "image": self.scene["image"],
+                    "annotations": [dict(annotation, box=[0, 0, -1, 0.2])],
+                },
+            ).status_code,
+            422,
+        )
+        pdf = self.client.post(
+            "/sign-detection/report.pdf", json=[dict(result, source="test", time=0)]
+        )
+        self.assertEqual(pdf.status_code, 200, pdf.text[:100])
+        self.assertTrue(pdf.content.startswith(b"%PDF-"))
+        self.assertEqual(
+            self.client.get(f"/studies/{self.study['id']}/results").json()["sessions"], []
+        )
+
     def test_pdi_uses_saved_scenario_without_creating_sessions(self):
         response = self.client.get(f"/scenarios/{self.scene['id']}/pdi")
         self.assertEqual(response.status_code, 200)

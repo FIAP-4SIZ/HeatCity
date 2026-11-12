@@ -65,6 +65,27 @@ class SignDetectionTests(unittest.TestCase):
         self.assertEqual(result["metrics"]["fn"], 1)
         self.assertEqual(result["metrics"]["tp"], 0)
 
+    def test_temporal_summary_breaks_on_gaps_uncertainty_and_source_changes(self):
+        base = detect(self.reference, self.reference, [self.plate])
+        frames = [
+            dict(base, time=0, source="one"),
+            dict(base, time=0.5, source="one"),
+            dict(base, time=5, source="one"),
+            dict(base, time=0, source="two"),
+        ]
+        summary = summarize(frames)["details"][0]
+        self.assertEqual(summary["detected_seconds"], 0.5)
+        self.assertEqual(summary["events"], 3)
+        self.assertIsNone(summary["precision"])
+
+    def test_final_analysis_preserves_reasons_from_earlier_frames(self):
+        result = detect(self.reference, self.reference, [self.plate])
+        earlier = detect(np.full_like(self.reference, 120), self.reference, [self.plate])
+        summary = summarize([earlier, result])["details"][0]
+        self.assertTrue(summary["reasons"])
+        self.assertEqual(summary["frames"], 2)
+        self.assertEqual(summary["detection_fraction"], 0.5)
+
     def test_pdf_contains_a_valid_document(self):
         result = detect(self.reference, self.reference, [self.plate])
         self.assertTrue(report_pdf([result]).startswith(b"%PDF-"))

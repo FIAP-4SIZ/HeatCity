@@ -1,3 +1,4 @@
+import SignDetection from './views/SignDetection.jsx';
 import Diagnostics from './views/Diagnostics.jsx';
 import React, { useEffect, useState } from 'react';
 import { api, post, route, number } from './api.js';
@@ -27,7 +28,7 @@ function Methodology() {
           <br />o que ainda não sabemos.
         </h1>
         <p>
-          HeatCity é um instrumento acadêmico de estimativa de olhar em cenas de sinalização. Os
+          Este experimento ocular é histórico e separado do novo foco em placas no vídeo. Os
           indicadores dependem da qualidade da coleta.
         </p>
       </div>
@@ -164,7 +165,7 @@ export default function App() {
     try {
       await api(`/studies/${studyId}`, null, 'DELETE');
       setRevision((r) => r + 1);
-      route('/');
+      route('/studies');
       setNotice('Estudo e seus registros excluídos.');
     } catch (e) {
       fail(e);
@@ -188,14 +189,17 @@ export default function App() {
         <p className="sidebar-caption">
           LABORATÓRIO DE
           <br />
-          ATENÇÃO VISUAL
+          SINALIZAÇÃO EM VÍDEO
         </p>
         <nav aria-label="Navegação principal">
-          <a className={!['method', 'diagnostics'].includes(path[0]) ? 'active' : ''} href="#/">
+          <a className={!path[0] || path[0] === 'detector' ? 'active' : ''} href="#/detector">
+            <span>▣</span> Placas em vídeo
+          </a>
+          <a className={path[0] === 'studies' ? 'active' : ''} href="#/studies">
             <span>▦</span> Estudos
           </a>
           <a className={path[0] === 'method' ? 'active' : ''} href="#/method">
-            <span>◎</span> Método e qualidade
+            <span>◎</span> Experimento ocular
           </a>
           <a className={path[0] === 'diagnostics' ? 'active' : ''} href="#/diagnostics">
             <span>⌁</span> Diagnósticos / DEV
@@ -224,11 +228,13 @@ export default function App() {
               {path[0] === 'diagnostics'
                 ? 'Diagnósticos / DEV'
                 : path[0] === 'method'
-                  ? 'Método e qualidade'
-                  : study?.title || 'Estudos de sinalização'}
+                  ? 'Experimento ocular (histórico)'
+                  : !path[0] || path[0] === 'detector'
+                    ? 'Localização e acompanhamento de placas em vídeo'
+                    : study?.title || 'Imagens e estudos cadastrados'}
             </span>
           </div>
-          <span className="tag neutral">MVP · Olhar experimental</span>
+          <span className="tag neutral">MVP · Visão computacional</span>
         </header>
         {error && (
           <div className="global-message error" role="alert">
@@ -246,7 +252,9 @@ export default function App() {
             </button>
           </div>
         )}
-        {path[0] === 'diagnostics' ? (
+        {!path[0] || path[0] === 'detector' ? (
+          <SignDetection />
+        ) : path[0] === 'diagnostics' ? (
           <Diagnostics />
         ) : path[0] === 'method' ? (
           <Methodology />
@@ -585,7 +593,7 @@ export default function App() {
           </section>
         )}
         <footer className="app-footer">
-          <span>HeatCity · Transformando olhares em cidades mais inteligentes.</span>
+          <span>HeatCity · Visão computacional para investigar a sinalização.</span>
           <span>Global Solution FIAP · MVP acadêmico</span>
         </footer>
       </main>

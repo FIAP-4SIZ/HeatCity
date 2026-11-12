@@ -1,3 +1,13 @@
+# Fontes da apresentação atual — placas em vídeo
+
+- OpenCV, **Template Matching**: https://docs.opencv.org/4.x/d4/dc6/tutorial_py_template_matching.html — correlação normalizada e busca por referência. O runtime exato consta no JSON do benchmark; a API consultada é a documentação 4.x.
+- Arnaldo Jr., **Lab8 — Template matching**: https://arnaldojr.github.io/cognitivecomputing/aulas/PDI/lab12/Template_matching.html — relação com o conteúdo de aula.
+- OpenCV, **Laplacian Operator**: https://docs.opencv.org/4.x/d5/db5/tutorial_laplace_operator.html — descritor de nitidez, sem inferir legibilidade.
+- Enunciado **Cognitive Computing-GS2-2026.pdf**, fornecido pelo usuário: problema, PDI/visão computacional, demonstração e análise crítica. Não exige MediaPipe como biblioteca específica.
+- Evidência local: `docs/reports/deteccao-placas-benchmark.json`, `frontend/public/detection-demo.json`, scripts `build_sign_video_demo.py` e `build_sign_presentation.py`. As imagens hospitalares originais são de IA e o vídeo demonstrativo é uma transformação controlada dessas imagens.
+
+As fontes abaixo pertencem à investigação ocular e aos materiais anteriores; não fundamentam uma afirmação de acerto do detector atual.
+
 # Referências identificadas e relação com o projeto
 
 Verificação de disponibilidade tentada em 11/11/2026: os sites institucionais e de

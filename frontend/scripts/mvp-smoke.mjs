@@ -61,7 +61,7 @@ const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 let studyId;
 try {
-  await page.goto(base);
+  await page.goto(`${base}/#/studies`);
   await page.getByRole('heading', { name: /Cidades mais claras/ }).waitFor();
   assert.equal(await page.locator('html').getAttribute('data-theme'), 'light');
   await checkContrast(page);

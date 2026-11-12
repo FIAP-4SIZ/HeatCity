@@ -16,7 +16,7 @@ const browser = await chromium.launch({
 });
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1080 } });
-  await page.goto(base);
+  await page.goto(`${base}/#/studies`);
   assert.equal(await page.getByRole('button', { name: 'Exemplo hospitalar A/B' }).count(), 0);
   const card = page.locator('.study-card').filter({
     has: page.getByRole('heading', { name: 'Orientação na entrada de um hospital', exact: true }),

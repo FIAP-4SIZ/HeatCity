@@ -40,7 +40,7 @@ try {
     });
   }
   const before = await (await page.request.get(`${base}/api/studies`)).json();
-  await page.goto(base);
+  await page.goto(`${base}/#/studies`);
   await page.getByRole('button', { name: 'Diagnósticos', exact: true }).click();
   await page.getByRole('heading', { name: 'Diagnóstico do olhar.', exact: true }).waitFor();
   assert.equal(await page.getByLabel('Código do participante').count(), 0);

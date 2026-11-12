@@ -1472,3 +1472,133 @@ meter {
   font-size: 12px;
   padding: 6px 10px;
 }
+
+/* Localização e acompanhamento de placas em vídeo. */
+.sign-detection > .panel,
+.sign-detection > .notice,
+.detector-workspace,
+.sign-detection > .content-grid {
+  margin-bottom: 24px;
+}
+.detector-controls label {
+  display: grid;
+  gap: 8px;
+}
+.detector-controls select {
+  width: 100%;
+}
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin: 16px 0;
+}
+.detector-file {
+  font-size: 13px;
+  font-weight: 650;
+  max-width: 260px;
+}
+.detector-file input {
+  max-width: 100%;
+}
+.detector-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(250px, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.detector-source video {
+  width: 100%;
+  max-height: 240px;
+  background: #16211e;
+  display: block;
+  margin-bottom: 14px;
+}
+.detector-frame {
+  position: relative;
+}
+.detector-frame .scene-image {
+  width: 100%;
+}
+.detector-box {
+  position: absolute;
+  border: 2px solid #f5b900;
+  pointer-events: none;
+}
+.detector-box.detected {
+  border-color: #00c9a2;
+}
+.detector-box.not_found {
+  border-color: #b8c6cb;
+  border-style: dashed;
+}
+.detector-box span {
+  position: absolute;
+  bottom: 100%;
+  left: -2px;
+  color: #fff;
+  background: #243a33;
+  font-size: 10px;
+  padding: 3px 5px;
+  max-width: 180px;
+  white-space: nowrap;
+}
+.detector-box.ambiguous span,
+.detector-box.conflict span {
+  background: #715400;
+}
+.detector-path {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.detector-empty {
+  min-height: 250px;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  color: var(--muted);
+  padding: 30px;
+}
+.sign-detection .table-wrap {
+  overflow-x: auto;
+}
+.sign-detection table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.sign-detection th,
+.sign-detection td {
+  text-align: left;
+  padding: 13px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.sign-detection li {
+  font-size: 13px;
+  line-height: 1.7;
+}
+.sign-detection summary {
+  cursor: pointer;
+  font-weight: 650;
+  margin-bottom: 12px;
+}
+@media (max-width: 1050px) {
+  .detector-workspace {
+    grid-template-columns: 1fr;
+  }
+}
+.sign-detection > .page-title {
+  display: block;
+}
+.sign-detection > .page-title > p {
+  max-width: 850px;
+}
+.detector-box span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
