@@ -63,3 +63,8 @@ Desktop.ini
 
 # Fixtures, notebooks executados, imagens, videos, relatorios e lockfiles
 # sao evidencias do projeto: nao ignorar essas extensoes globalmente.
+
+# Instrucoes e configuracoes locais de agentes de desenvolvimento
+AGENTS.md
+.agents/
+.codex/
