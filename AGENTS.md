@@ -2,20 +2,18 @@
 
 ## Branches e entrega
 
-- A base de integração é `develop`. Use branches curtas `feature/*`, `fix/*` ou
-  `chore/*` criadas a partir da `develop` atualizada, com uma tarefa por branch.
-- Direcione PRs para `develop`. Confira os checks antes de integrar, preserve o
-  histórico e não use force push em branches compartilhadas.
-- `main` está congelada para a entrega em aula com apresentação. Não faça commits,
-  push, merges ou PRs de promoção para `main` até o usuário sinalizar explicitamente
-  que o projeto terminou por completo e autorizar a promoção final. Aprovação de
-  uma etapa, commit, push ou apresentação parcial não é essa autorização.
-- Não crie releases/tags finais nem publique/deploy automaticamente. Somente após
-  autorização final, revise a entrega e remova o bloqueio de promoção do CI em uma
-  alteração explícita antes de abrir PR `develop` → `main`.
+- `main` contém a aplicação, sem a pasta `docs/`. Documentação e materiais de
+  apresentação ficam na `develop`. Preserve essa separação em novas promoções.
+- A promoção de `develop` para `main` e a
+  limpeza das demais branches foram autorizadas explicitamente pelo usuário.
+- Preserve `main` e `develop`. Desenvolva novas tarefas a partir de `develop`,
+  usando branches curtas quando necessário e removendo-as após integração.
+- Confira os checks antes de integrar. Preserve o histórico e não use force push
+  em branches compartilhadas. Novas promoções para `main` dependem de solicitação
+  do usuário; não são automáticas.
 - Commits e pushes de progresso estão autorizados. Não adicione assinaturas
-  automáticas ChatGPT/Codex ou trailers de coautoria de ferramentas.
-- Preserve a estrutura da aplicação. Este fluxo não exige GitButler, Jujutsu,
-  agentes paralelos ou ferramentas de orquestração.
+  ChatGPT/Codex ou trailers de coautoria de ferramentas.
+- Não crie tags, releases ou deploys automaticamente.
+- Preserve a estrutura da aplicação.
 
 Consulte [o fluxo de desenvolvimento](docs/fluxo-desenvolvimento.md).

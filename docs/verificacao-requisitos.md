@@ -4,9 +4,9 @@
 
 Conferência refeita diretamente nas duas páginas de `Cognitive Computing-GS2-2026.pdf`, fornecido pela equipe. Foram revistos código, README, relatório técnico, notebook executado, medições, gráficos, apresentação e testes. A capa tem quatro campos não numerados de nome completo e RM de seis dígitos. A apresentação é apenas PPTX e o roteiro apenas Markdown; o PDF técnico permanece porque é exigido pelo professor.
 
-**Escopo obrigatório:** somente o PDF da disciplina. Conforme esclarecimento da equipe, textos posteriores como CitizenTech são contexto opcional. Os arquivos exigidos para o repositório estão presentes e conferidos; a entrega dos arquivos está apta para push. Submissão na plataforma, demonstração em aula e arguição são etapas posteriores da equipe, não condições prévias para enviar o código.
+**Escopo obrigatório:** somente o PDF da disciplina. Conforme esclarecimento da equipe, textos posteriores como CitizenTech são contexto opcional. Os arquivos exigidos para o repositório estão presentes e conferidos; a entrega dos arquivos foi autorizada para integração na main. Submissão na plataforma, demonstração em aula e arguição são etapas posteriores da equipe, não condições prévias para enviar o código.
 
-**Link para entregar enquanto a main estiver reservada:** https://github.com/FIAP-4SIZ/HeatCity/tree/develop . O endereço raiz abre a branch padrão e pode não mostrar a entrega atual. Conferir o link e o acesso aos arquivos antes de enviar na plataforma. Não foi feita promoção para main.
+**Links após a integração autorizada:** aplicação na main: https://github.com/FIAP-4SIZ/HeatCity ; entrega completa com documentação, PDF e apresentação na develop: https://github.com/FIAP-4SIZ/HeatCity/tree/develop . Por solicitação do usuário, `docs/` existe apenas na develop. As demais branches são removidas; o histórico integrado é preservado.
 
 ## Veredito
 

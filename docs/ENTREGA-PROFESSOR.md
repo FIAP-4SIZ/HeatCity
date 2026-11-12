@@ -87,7 +87,7 @@ de intervalos entre amostras; não é tempo de leitura humana.
 
 **Os arquivos exigidos pelo professor estão completos no repositório:** scripts,
 notebook executado, relatório técnico PDF, visualizações, indicadores com
-comprovação e README de execução. A organização está apta para push na develop.
+comprovação e README de execução. A organização está organizada na develop; a aplicação também está na main, sem docs/.
 
 Após o push, cabe à equipe preencher os nomes/RMs, conferir a abertura do PPTX,
 enviar o link na plataforma/Teams, demonstrar a aplicação em aula e responder à

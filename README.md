@@ -140,7 +140,7 @@ CHROMIUM_PATH=/usr/bin/chromium npm --prefix frontend run test:e2e
 A validação automatizada usa vídeo sintético e webcam simulada. Não comprova
 performance em captura real nem substitui apresentação e arguição individuais.
 [Fontes](docs/referencias.md) · [Fluxo de branches](docs/fluxo-desenvolvimento.md).
-A integração é na develop; main depende da autorização final do usuário.
+A aplicação está na main. A develop mantém os materiais em docs/ e é a base para novas tarefas.
 
 ## Conferência do relatório do exemplo
 

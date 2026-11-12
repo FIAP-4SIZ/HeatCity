@@ -19,18 +19,14 @@ já cumpre esse papel.
 Não é necessário usar merge queue com um único fluxo de trabalho. Se futuramente
 houver contribuições simultâneas, essa configuração pode ser avaliada separadamente.
 
-## Reserva da main
+## Entrega consolidada na main
 
-A `main` preserva seu estado até o usuário declarar o projeto completo para a
-entrega em aula e autorizar sua promoção. O CI rejeita PRs com base `main` enquanto
-essa regra estiver vigente; testes continuam rodando normalmente nas tarefas.
-Executar a apresentação exploratória ou concluir uma etapa não libera a `main`.
+O usuário autorizou explicitamente integrar `develop` em `main` e remover as
+branches auxiliares. O bloqueio temporário de promoção do CI foi retirado;
+os checks de qualidade continuam ativos. `main` contém a aplicação, sem a pasta `docs/`. `develop` mantém a aplicação,
+a documentação e os materiais de entrega, além de ser a base de novas tarefas.
 
-O CI é uma verificação, não uma proteção contra push direto: para bloquear merges
-ou pushes no servidor, um administrador precisa configurar regras do GitHub.
-A API do GitHub não ficou acessível neste ambiente; nenhuma proteção remota ou
-mudança de branch padrão foi aplicada. Ao criar PRs, selecione `develop` explicitamente.
-
-Quando houver autorização final, revisar código, testes, documentação, evidências
-reais, slides e roteiro; liberar o gate em alteração explícita e abrir um PR de
-`develop` para `main`. Não há promoção, tag, release ou deploy automáticos.
+A integração preserva o histórico. A limpeza remove apenas nomes de branches
+já integradas, mantendo os commits acessíveis em `main` e `develop`.
+Novas promoções para main precisam de solicitação do usuário; tags, releases e
+deploys não são automáticos. Não se presume aprovação acadêmica a partir do merge.
