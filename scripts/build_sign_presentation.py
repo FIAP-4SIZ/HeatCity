@@ -199,7 +199,7 @@ def main():
         (
             "Cenário, recortes e posição",
             [
-                "Uma foto de referência, quatro AOIs: Recepção, Pronto Socorro, Ambulatório e Triagem. Cada recorte é um template.",
+                "Uma foto de referência, quatro ROIs: Recepção, Pronto Socorro, Ambulatório e Triagem. Cada recorte é um template.",
                 "Na imagem abaixo, os retângulos são localizações calculadas pelo detector no primeiro quadro do vídeo.",
                 "A foto foi gerada por IA; o vídeo aplica transformações controladas. As caixas são normalizadas entre 0 e 1.",
             ],
@@ -298,7 +298,7 @@ COMO FUNCIONA, PASSO A PASSO
 
 1. Mostramos ao programa qual placa procurar.
 Cadastramos uma foto e desenhamos um retângulo em volta da placa.
-Esse retângulo é uma AOI (área de interesse).
+Esse retângulo é uma ROI (região de interesse).
 O recorte da placa é o template (imagem usada como referência na busca).
 Não há treinamento de um modelo: o recorte é comparado diretamente com o vídeo.
 
@@ -311,19 +311,21 @@ Usamos OpenCV (biblioteca que fornece funções para trabalhar com imagens).
 3. O programa procura regiões parecidas com o recorte.
 Essa técnica se chama template matching (busca por semelhança com uma imagem de referência).
 A busca usa sete tamanhos do recorte. Isso é multiescala (comparação em tamanhos diferentes).
-Assim, a placa pode aparecer maior ou menor que na referência.
+Essa é uma adaptação do HeatCity à busca por template. Ela permite procurar a placa maior ou menor que na referência, dentro dos tamanhos pesquisados.
 
 4. O programa decide se encontrou a placa.
-Cada região recebe um score (valor de semelhança).
-A comparação usa correlação normalizada (cálculo que compara padrões de claro e escuro).
+Cada região recebe um score (valor de correspondência).
+Usamos o método TM_CCOEFF_NORMED do OpenCV: correlação normalizada (comparação dos padrões de claro e escuro, descontando a média de intensidade).
 O resultado precisa passar por limiares (limites mínimos de aceitação).
 Também verificamos a margem (diferença entre a melhor opção e outra opção parecida).
+Esse é um critério adicional do HeatCity para evitar confirmações duvidosas.
 Se houver dúvida, o programa pode deixar de confirmar a detecção.
 Importante: score de 0,8 não significa 80% de chance de acerto.
 
 5. O programa registra posição e tempo.
 Uma bounding box (retângulo de localização) marca a placa encontrada.
 O acompanhamento temporal (registro da mesma placa ao longo dos quadros) permite estimar o tempo detectado.
+Aqui repetimos a detecção e reunimos os resultados pelo nome da placa. Não calculamos seu movimento nem prevemos sua posição entre quadros.
 Somamos o intervalo entre duas detecções consecutivas, se ele for de até 1,5 segundo.
 Uma falha interrompe a contagem. Um quadro isolado soma zero segundo.
 Esse tempo não informa quanto tempo uma pessoa leu ou olhou para a placa.
@@ -356,10 +358,10 @@ Sem respostas conhecidas para comparação, não podemos medir essas taxas.
 O QUE MOSTRAM AS IMAGENS DE PDI?
 
 - Histograma (gráfico da quantidade de pixels claros e escuros): mostra como a iluminação está distribuída na imagem.
-- Contraste local (diferença entre intensidades claras e escuras na região): ajuda a descrever a separação visual dos detalhes.
+- Contraste da região da placa (diferença entre intensidades claras e escuras): ajuda a descrever a separação visual dos detalhes.
 - Laplaciano (filtro que destaca mudanças de intensidade): evidencia contornos e detalhes.
 - Convolução (cálculo que aplica uma pequena máscara sobre pixels vizinhos): é a base desse tipo de filtro.
-- Variância do Laplaciano (quanto a resposta desse filtro varia): ajuda a indicar perda de detalhes em comparação com a referência.
+- Variância do Laplaciano (quanto a resposta desse filtro varia): medida adicional do HeatCity para indicar perda de detalhes em comparação com a referência.
 Essas medidas fornecem indícios. Sozinhas, não provam que uma pessoa consegue ler a placa.
 
 O QUE O EXEMPLO COMPROVA?
@@ -492,8 +494,8 @@ Conferência aprovada para este exemplo controlado, sem generalização para ví
 ## Fala e demonstração (5–7 minutos)
 
 1. Slides 1–3: problema concreto na entrada do hospital, relação com espaços coletivos/Global Solution e motivo do recorte. Não afirmar que o detector mede atenção humana.
-2. Slides 4–6: mostrar imagem, AOIs, cinza, correlação por escalas e tempo acumulado com interrupções. O processamento usa referências conhecidas e critérios fixos, sem treinamento.
-3. Slides 7–9: mostrar números efetivamente calculados, gráfico e falhas. São quadros sintéticos correlacionados, sem resultados humanos. Score de correlação não é precisão.
+2. Slides 4–6: mostrar imagem, ROIs, cinza, correlação por escalas e tempo acumulado com interrupções. O processamento usa referências conhecidas e critérios fixos, sem treinamento.
+3. Slides 7–9: mostrar números efetivamente calculados, gráfico e falhas. São quadros sintéticos correlacionados, sem resultados humanos. Valor de correspondência não é precisão medida.
 4. Slide 10: distinguir indícios medidos de causas e sugestões de local ainda não confirmadas.
 5. Slide 11: abrir a aplicação pela raiz, clicar em Ver exemplo funcionando; a análise inicia automaticamente. Observar perda de detecção sob desfoque e ausência da Recepção no final. Ao terminar, ver o relatório e baixar PDF/JSON/CSV. Para conferir outro quadro, voltar ao vídeo.
 6. Slide 12: apresentar links de documentação, scripts e limites.
@@ -515,7 +517,7 @@ No PowerShell: `$env:PYTHONPATH="backend"` antes de executar os dois scripts. ff
 
 ## Aderência e pendências
 
-- PDI: cinza, contraste local, Laplaciano e recortes visíveis no PDI já existente.
+- PDI: cinza, contraste da região da placa, Laplaciano e recortes visíveis no PDI já existente.
 - Visão computacional: localização de referências nos quadros de vídeo/webcam por template matching; conteúdo alinhado ao laboratório de aula.
 - Evidência reproduzível: vídeo, geometria conhecida, medições por quadro, gráfico, PDF e código versionados.
 - Análise crítica: dúvida, falhas, tempo estimado e sugestões de posição por placa, sem inferência de atenção/leitura.
