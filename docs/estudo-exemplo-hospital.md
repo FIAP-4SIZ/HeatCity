@@ -14,3 +14,7 @@ acerto; uma referência diferente não recebe resultados conhecidos do exemplo.
 As duas imagens também alteram pessoas, setas e outras placas; não são experimento
 causal de posicionamento. A demonstração em vídeo aplica transformações controladas
 à imagem A e permanece identificada como sintética.
+
+## Papel das duas imagens
+
+A é a referência inicial única da demonstração. B fica recolhida como material alternativo; não participa do vídeo de exemplo. O fluxo começa exibindo recortes das placas, não duas fotografias concorrentes. O relatório abre após concluir a análise e distingue acerto conhecido de precisão não medida.

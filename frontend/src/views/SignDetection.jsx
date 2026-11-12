@@ -1,3 +1,6 @@
+import AnalysisReport from '../components/AnalysisReport.jsx';
+import PlateCrops from '../components/PlateCrops.jsx';
+import { referenceLabel } from '../reference-labels.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { api, post, number } from '../api.js';
 import Scene from '../components/Scene.jsx';
@@ -26,6 +29,7 @@ async function imageHash(image) {
 export default function SignDetection({ referenceId }) {
   const [scenarios, setScenarios] = useState([]),
     [selected, setSelected] = useState('');
+  const [phase, setPhase] = useState('prepare');
   const [source, setSource] = useState(null),
     [ready, setReady] = useState(false),
     [running, setRunning] = useState(false);
@@ -97,6 +101,12 @@ export default function SignDetection({ referenceId }) {
     setReady(false);
     setSource(null);
     clearResults();
+    setPhase('prepare');
+  }
+  function finish() {
+    stop();
+    setPhase('report');
+    window.scrollTo(0, 0);
   }
   async function loadSource(kind, file) {
     closeSource();
@@ -140,6 +150,7 @@ export default function SignDetection({ referenceId }) {
         next = { kind, id: `video-${Date.now()}`, label: file.name, url: objectUrl.current };
       }
       setSource(next);
+      setPhase('analyze');
       clock.current = performance.now();
     } catch (e) {
       setError(e.message || 'Não foi possível abrir a câmera ou o vídeo.');
@@ -230,6 +241,7 @@ export default function SignDetection({ referenceId }) {
     if (records.length >= 300 && running) {
       stop();
       setStatus('Limite de 300 quadros atingido. Exporte o ensaio antes de iniciar outro.');
+      setPhase('report');
     }
   }, [records.length, running]);
   async function start() {
@@ -292,53 +304,98 @@ export default function SignDetection({ referenceId }) {
     }
   }
   const frame = snapshot?.record;
+  function exportJson() {
+    saveBlob(
+      new Blob(
+        [
+          JSON.stringify(
+            {
+              version: 1,
+              method: 'template_multiscale_v1',
+              source: source ? { id: source.id, kind: source.kind, label: source.label } : null,
+              reference: scenario
+                ? { id: scenario.id, name: scenario.name, plates: scenario.plates }
+                : null,
+              maxGapSeconds: MAX_GAP_SECONDS,
+              summary,
+              frames: records,
+            },
+            null,
+            2,
+          ),
+        ],
+        { type: 'application/json' },
+      ),
+      'heatcity-placas-video.json',
+    );
+  }
   return (
     <section className="sign-detection">
       <div className="page-title">
-        <p className="eyebrow">VISÃO COMPUTACIONAL · SEM TREINAMENTO</p>
-        <h1>
-          Localização e acompanhamento
-          <br />
-          de placas em vídeo.
-        </h1>
-        <p>Onde a placa cadastrada aparece e por quanto tempo é detectada?</p>
+        <p className="eyebrow">HEATCITY · PLACAS EM VÍDEO</p>
+        <h1>Onde a placa aparece?</h1>
+        <p>Escolha as placas, analise um vídeo e veja o que dificultou a detecção.</p>
       </div>
-      <div className="notice">
-        <strong>Da referência ao resultado.</strong>
-        <p>
-          Cadastre a imagem e o recorte de cada placa. O OpenCV procura essas referências nos
-          quadros do vídeo por correlação em múltiplas escalas. Use uma imagem conhecida para
-          localizar as placas em cada quadro.
-        </p>
-      </div>
+      <ol className="analysis-steps" aria-label="Etapas da análise">
+        {[
+          ['prepare', 'Escolher as placas'],
+          ['analyze', 'Analisar o vídeo'],
+          ['report', 'Ver o relatório'],
+        ].map(([value, label], i) => (
+          <li key={value} aria-current={phase === value ? 'step' : undefined}>
+            <span>{i + 1}</span>
+            {label}
+          </li>
+        ))}
+      </ol>
       {error && (
         <p className="global-message error" role="alert">
           {error}
         </p>
       )}
-      <div className="panel detector-controls">
-        <label>
-          Referência cadastrada
-          <select
-            value={selected}
-            disabled={running || busy || !!source}
-            onChange={(e) => {
-              setSelected(e.target.value);
-              clearResults();
-              setPlateName(scenarios.find((s) => s.id === e.target.value)?.plates[0]?.name || '');
-            }}
-          >
-            {scenarios.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.projectTitle} · {s.name}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div className="panel detector-controls" hidden={phase !== 'prepare'}>
+        <p className="eyebrow">ETAPA 1 · PREPARAR</p>
+        <h2>Estas são as placas que vamos procurar.</h2>
+        <p>
+          Os recortes abaixo são o padrão visual usado pelo detector. Basta uma imagem de referência
+          compatível com o vídeo; não é necessário escolher um par A/B.
+        </p>
+        {scenario && (
+          <>
+            <strong>{referenceLabel(scenario)}</strong>
+            <PlateCrops reference={scenario} />
+          </>
+        )}
+        <details>
+          <summary>Escolher outra referência cadastrada</summary>
+          <label>
+            Referência cadastrada
+            <select
+              value={selected}
+              disabled={!!source || busy}
+              onChange={(e) => {
+                setSelected(e.target.value);
+                clearResults();
+                setPlateName(scenarios.find((s) => s.id === e.target.value)?.plates[0]?.name || '');
+              }}
+            >
+              {scenarios.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {referenceLabel(s)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="small">
+            A imagem alternativa B do hospital foi mantida no catálogo como material de origem. Ela
+            não é usada no vídeo demonstrativo e não precisa ser selecionada para começar.
+          </p>
+        </details>
+        <h3>Agora escolha o vídeo.</h3>
         <div className="button-row">
           <button
-            className="secondary"
-            disabled={!scenario || busy || running}
+            className="primary"
+            disabled={!scenario || busy}
             onClick={() => loadSource('demo')}
           >
             Abrir vídeo demonstrativo
@@ -349,7 +406,7 @@ export default function SignDetection({ referenceId }) {
               aria-label="Abrir meu vídeo"
               type="file"
               accept="video/*"
-              disabled={!scenario || busy || running}
+              disabled={!scenario || busy}
               onChange={(e) => {
                 loadSource('file', e.target.files[0]);
                 e.target.value = '';
@@ -358,31 +415,39 @@ export default function SignDetection({ referenceId }) {
           </label>
           <button
             className="secondary"
-            disabled={!scenario || busy || running}
+            disabled={!scenario || busy}
             onClick={() => loadSource('camera')}
           >
             Abrir webcam
           </button>
-          {source && (
-            <button className="text-button" onClick={closeSource}>
-              Fechar fonte
-            </button>
-          )}
         </div>
         <p className="small">
-          Webcam: solicita até 1920 × 1080 / 30 FPS; o navegador negocia os recursos disponíveis. A
-          análise reduz a largura a 800 px e amostra até 2 quadros/s, sem fila. Os quadros são
-          enviados à API local e não são persistidos. Evite dados pessoais no vídeo.
+          O exemplo já vem pronto e é sintético. Para um vídeo próprio, use uma imagem nítida das
+          placas que aparecem nele. Quadros são enviados à API local e não são salvos.
         </p>
         <a
           className="text-link"
           href={scenario ? `#/references/${scenario.projectId}` : '#/references'}
         >
-          Cadastrar ou consultar imagens e recortes de placas →
+          Cadastrar placas de outro ambiente →
         </a>
       </div>
+      {phase === 'analyze' && (
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">ETAPA 2 · ANALISAR</p>
+            <h2>Inicie e acompanhe as caixas no vídeo.</h2>
+            <p>
+              Ao terminar, o relatório será aberto automaticamente. Você também pode concluir antes.
+            </p>
+          </div>
+          <button className="text-button" onClick={closeSource}>
+            Fechar fonte
+          </button>
+        </div>
+      )}
       {source && (
-        <div className="detector-workspace">
+        <div className="detector-workspace" hidden={phase !== 'analyze'}>
           <article className="panel">
             <div className="section-heading">
               <h2>Quadro analisado</h2>
@@ -487,6 +552,9 @@ export default function SignDetection({ referenceId }) {
                 Mostrar centros detectados
               </label>
             </div>
+            <button className="primary" disabled={!records.length} onClick={finish}>
+              Concluir análise e ver relatório →
+            </button>
           </article>
           <aside className="panel detector-source">
             <h2>Fonte do vídeo</h2>
@@ -505,6 +573,8 @@ export default function SignDetection({ referenceId }) {
               }}
               onEnded={() => {
                 setRunning(false);
+                setPhase('report');
+                window.scrollTo(0, 0);
                 setStatus('Vídeo concluído. Exporte os resultados ou confira um quadro.');
               }}
               onSeeking={() => {
@@ -540,7 +610,7 @@ export default function SignDetection({ referenceId }) {
           </aside>
         </div>
       )}
-      <article className="panel">
+      <article className="panel" hidden={phase !== 'analyze'}>
         <h2>Acompanhamento por placa</h2>
         <p>
           {records.length} quadros analisados ·{' '}
@@ -585,42 +655,7 @@ export default function SignDetection({ referenceId }) {
           imagem.
         </p>
       </article>
-      {frame && (
-        <div className="content-grid">
-          {frame.signs.map((s) => (
-            <article key={s.name} className="panel">
-              <span className={`tag ${s.status === 'detected' ? '' : 'neutral'}`}>
-                {labels[s.status]}
-              </span>
-              <h3>{s.name}</h3>
-              <p>
-                Similaridade {number(s.score, 3)} · margem para outra posição {number(s.gap, 3)}.
-                Correlação não é probabilidade de acerto.
-              </p>
-              <ul>
-                {s.reasons.map((r) => (
-                  <li key={r}>{r}</li>
-                ))}
-              </ul>
-              {s.suggestions.length > 0 && (
-                <>
-                  <h4>Hipóteses de melhoria</h4>
-                  <ul>
-                    {s.suggestions.map((r) => (
-                      <li key={r}>{r}</li>
-                    ))}
-                  </ul>
-                </>
-              )}
-              <p className="small">
-                Teste alterações em nova captura: foco, tamanho aparente, contraste e posição. Não
-                conclui legibilidade ou melhor orientação humana.
-              </p>
-            </article>
-          ))}
-        </div>
-      )}
-      {snapshot && !running && (
+      {snapshot && !running && phase === 'analyze' && (
         <article className="panel">
           <h2>Conferir o acerto com uma referência conhecida</h2>
           <p>
@@ -683,156 +718,32 @@ export default function SignDetection({ referenceId }) {
           </ul>
         </article>
       )}
-      <article className="panel">
-        <h2>Precisão medida e exportação</h2>
-        <p>
-          {summary.annotations} referências anotadas · TP {summary.tp} · FP {summary.fp} · FN{' '}
-          {summary.fn} · TN {summary.tn} · abstenções {summary.abstentions}
-        </p>
-        <p>
-          Precisão: <strong>{number(summary.precision, 3)}</strong> · Recall:{' '}
-          <strong>{number(summary.recall, 3)}</strong> · IoU médio:{' '}
-          <strong>{number(summary.meanIou, 3)}</strong>
-        </p>
-        <p className="small">
-          Sem referência conhecida, as métricas ficam indisponíveis. Acerto exige identidade correta
-          e IoU ≥ 0,5. Erro de posição gera FP e FN; abstenção com placa presente gera FN. No
-          demonstrativo, a referência é sintética. Vídeos próprios exigem anotação manual para medir
-          acerto.
-        </p>
+
+      {phase === 'report' && records.length > 0 && (
+        <AnalysisReport
+          summary={summary}
+          records={records}
+          source={source}
+          onReview={() => setPhase('analyze')}
+          onRestart={closeSource}
+          onJson={exportJson}
+          onCsv={() =>
+            saveBlob(
+              new Blob(['\ufeff' + csvTracking(records)], { type: 'text/csv;charset=utf-8' }),
+              'heatcity-placas-video.csv',
+            )
+          }
+          onPdf={exportPdf}
+          busy={busy}
+        />
+      )}
+      {phase === 'analyze' && !running && records.length > 0 && (
         <div className="button-row">
-          <button
-            className="secondary"
-            disabled={!records.length}
-            onClick={() =>
-              saveBlob(
-                new Blob(
-                  [
-                    JSON.stringify(
-                      {
-                        version: 1,
-                        method: 'template_multiscale_v1',
-                        source: source
-                          ? { id: source.id, kind: source.kind, label: source.label }
-                          : null,
-                        reference: scenario
-                          ? { id: scenario.id, name: scenario.name, plates: scenario.plates }
-                          : null,
-                        maxGapSeconds: MAX_GAP_SECONDS,
-                        summary,
-                        frames: records,
-                      },
-                      null,
-                      2,
-                    ),
-                  ],
-                  { type: 'application/json' },
-                ),
-                'heatcity-placas-video.json',
-              )
-            }
-          >
-            Baixar diagnóstico JSON
-          </button>
-          <button
-            className="secondary"
-            disabled={!records.length}
-            onClick={() =>
-              saveBlob(
-                new Blob(['\ufeff' + csvTracking(records)], { type: 'text/csv;charset=utf-8' }),
-                'heatcity-placas-video.csv',
-              )
-            }
-          >
-            Baixar CSV
-          </button>
-          <button className="primary" disabled={!records.length || busy} onClick={exportPdf}>
-            Baixar relatório PDF
+          <button className="primary" onClick={finish}>
+            Ver relatório atualizado →
           </button>
         </div>
-        <p className="small">
-          Histórico temporário de até 300 quadros, sem imagens nos arquivos exportados. Ao trocar de
-          fonte, os resultados são limpos. Exporte antes. Uso local, sem autenticação.
-        </p>
-      </article>
-      {records.length > 0 && (
-        <article className="panel detector-final">
-          <p className="eyebrow">CONSOLIDADO DO ENSAIO</p>
-          <h2>Análise final: dificuldade e melhorias</h2>
-          <p>
-            A dificuldade é descrita pela frequência de detecções, falhas e incertezas, sem uma nota
-            artificial de legibilidade humana. O consolidado considera todos os quadros deste
-            ensaio.
-          </p>
-          {summary.signs.map((s) => (
-            <section key={s.name}>
-              <h3>{s.name}</h3>
-              <p>
-                Detectada em {number((100 * s.detectedFrames) / records.length)}% dos quadros;
-                incerta em {number((100 * s.uncertainFrames) / records.length)}%. Similaridade média{' '}
-                {number(s.meanScore, 3)}; margem espacial média {number(s.meanGap, 3)}. Precisão por
-                placa {number(s.precision, 3)}; recall {number(s.recall, 3)} ({s.annotations}{' '}
-                anotações).
-              </p>
-              <h4>O que contribuiu para a dúvida?</h4>
-              {Object.keys(s.reasons).length ? (
-                <ul>
-                  {Object.entries(s.reasons)
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([text, count]) => (
-                      <li key={text}>
-                        {text} — {count}/{records.length} quadros.
-                      </li>
-                    ))}
-                </ul>
-              ) : (
-                <p>Nenhum alerta heurístico apareceu. Isso não comprova ausência de erros.</p>
-              )}
-              <h4>Sugestões de posição e captura para testar</h4>
-              <ul>
-                {Object.keys(s.suggestions).map((text) => (
-                  <li key={text}>{text}</li>
-                ))}
-                <li>
-                  Testar a placa frontal ao percurso da câmera, antes do ponto de decisão e sem
-                  obstruções. Comparar antes/depois com o mesmo trajeto, distância, câmera e
-                  iluminação, anotando a posição real.
-                </li>
-              </ul>
-            </section>
-          ))}
-          <p className="small">
-            Baixa similaridade não identifica uma causa única. As sugestões não determinam uma
-            altura ou local ideal e precisam de nova captura. O PDF inclui este consolidado por
-            placa.
-          </p>
-        </article>
       )}
-      <details className="panel">
-        <summary>Método, limites e fontes</summary>
-        <p>
-          OpenCV: cinza, correlação normalizada TM_CCOEFF_NORMED em sete escalas, picos espaciais
-          alternativos e conflitos entre identidades. Similaridade mínima 0,72; margem espacial
-          0,06; margem entre identidades 0,08. Critérios heurísticos, sem treinamento ou ajuste por
-          dados. Template matching perde robustez com perspectiva, escala fora da busca, oclusão e
-          placas visualmente semelhantes. Não há OCR nem reconhecimento de placas desconhecidas.
-        </p>
-        <p>
-          <a href="https://docs.opencv.org/4.x/d4/dc6/tutorial_py_template_matching.html">
-            Documentação OpenCV: Template Matching
-          </a>{' '}
-          ·{' '}
-          <a href="https://arnaldojr.github.io/cognitivecomputing/aulas/PDI/lab12/Template_matching.html">
-            Aula: Template matching
-          </a>
-        </p>
-        <p>
-          Exemplo de problema: uma placa de Recepção pode ficar pequena, desfocada ou semelhante às
-          demais na câmera da entrada de um hospital. A análise ajuda a testar hipóteses de
-          visibilidade da sinalização, relacionadas a ambientes coletivos mais acessíveis e à Global
-          Solution. Confirmar que uma pessoa encontra ou compreende a placa exige outro estudo.
-        </p>
-      </details>
     </section>
   );
 }

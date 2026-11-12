@@ -12,6 +12,17 @@ try {
     requests = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('request', (r) => requests.push(r.url()));
+  await page.goto(`${base}/#/references/hospital-orientacao-base-v1`);
+  await page.locator('.alternative-references > summary').waitFor();
+  assert.equal(await page.locator('.reference-card:visible').count(), 1);
+  assert.match(
+    await page.locator('.reference-card:visible h2').innerText(),
+    /placas do vídeo de exemplo/,
+  );
+  await page.locator('.alternative-references > summary').click();
+  assert.equal(await page.locator('.reference-card:visible').count(), 2);
+  await page.locator('.alternative-references > summary').click();
+  await page.screenshot({ path: '/tmp/heatcity-hospital-one-reference.png', fullPage: true });
   await page.goto(`${base}/#/references`);
   await page.getByRole('heading', { name: 'As placas começam aqui.' }).waitFor();
   await page.getByRole('button', { name: '+ Novo projeto' }).click();

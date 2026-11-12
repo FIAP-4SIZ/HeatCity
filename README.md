@@ -26,7 +26,22 @@ npm --prefix frontend run dev -- --port 5173 --strictPort
 
 Abra http://127.0.0.1:5173. Não há serviço externo obrigatório nem modelo a baixar.
 
-## Fluxo da aplicação
+## Como começar sem confundir as etapas
+
+Na tela inicial há três etapas: **Escolher as placas → Analisar o vídeo → Ver o relatório**.
+Os quatro recortes do hospital são a referência inicial pronta. Basta abrir o vídeo
+demonstrativo e iniciar a análise; o relatório abre ao terminar.
+
+A imagem B está preservada como material alternativo no catálogo. Ela veio da antiga
+comparação A/B e não é necessária nem usada no vídeo de exemplo. Para detectar placas,
+use uma imagem compatível com o seu vídeo, não um par de imagens quase iguais.
+
+O relatório separa **detecção** de **acerto comprovado**: ele sempre resume os tempos
+e indícios de dificuldade; precisão/recall exigem posições verdadeiras anotadas.
+No exemplo, a referência é geométrica e sintética. Em vídeo próprio, a conferência é
+manual e opcional; sem ela, a precisão aparece como ainda não medida.
+
+## Cadastro e detalhes do fluxo
 
 1. **Referências de placas:** crie um projeto, envie uma imagem nítida do ambiente
    e marque recortes com nomes únicos. PNG/JPEG/WebP até 4 MB, 8 MP e mínimo de

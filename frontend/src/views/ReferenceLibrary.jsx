@@ -1,3 +1,4 @@
+import { isHospitalAlternative, referenceLabel } from '../reference-labels.js';
 import React, { useEffect, useState } from 'react';
 import { api, post, route } from '../api.js';
 import ReferenceEditor from './ReferenceEditor.jsx';
@@ -62,13 +63,53 @@ export default function ReferenceLibrary({ projectId }) {
       setError(e.message);
     }
   }
+  const referenceCard = (r) => (
+    <article className="panel reference-card" key={r.id}>
+      <div className="reference-cover">
+        <img src={r.image} alt={`Imagem de referência: ${r.name}`} />
+        <span className="tag">{r.plates.length} placas</span>
+      </div>
+      <div className="reference-info">
+        <h2>{referenceLabel(r)}</h2>
+        <p className="small">
+          {r.width} × {r.height} px · {r.plates.map((p) => p.name).join(' · ')}
+        </p>
+        <div className="button-row">
+          <a className="primary button-link" href={`#/analysis/${r.id}`}>
+            Analisar vídeo →
+          </a>
+          <button
+            className="text-button danger"
+            onClick={() =>
+              remove(`/references/${r.id}`, 'Excluir esta imagem e seus recortes de referência?')
+            }
+          >
+            Excluir referência
+          </button>
+        </div>
+        <details>
+          <summary>Recortes cadastrados</summary>
+          <ul>
+            {r.plates.map((p) => (
+              <li key={p.name}>
+                {p.name} — x {p.x.toFixed(3)}, y {p.y.toFixed(3)}, largura {p.width.toFixed(3)},
+                altura {p.height.toFixed(3)}
+              </li>
+            ))}
+          </ul>
+        </details>
+      </div>
+    </article>
+  );
   return (
     <section>
       <div className="page-title">
         <p className="eyebrow">CATÁLOGO DE REFERÊNCIAS</p>
         <h1>{project?.title || 'As placas começam aqui.'}</h1>
         <p>
-          {project?.objective ||
+          {(project?.id === 'hospital-orientacao-base-v1'
+            ? 'A referência principal fornece os recortes das placas para o vídeo de exemplo. Você não precisa comparar duas imagens para analisar um vídeo.'
+            : project?.objective) ||
             'Organize ambientes, envie imagens nítidas e delimite as placas que o detector deve procurar.'}
         </p>
       </div>
@@ -125,7 +166,11 @@ export default function ReferenceLibrary({ projectId }) {
                 <span className="card-icon">▣</span>
                 <p className="eyebrow">PROJETO DE SINALIZAÇÃO</p>
                 <h2>{p.title}</h2>
-                <p>{p.objective}</p>
+                <p>
+                  {p.id === 'hospital-orientacao-base-v1'
+                    ? 'Um exemplo pronto: placas cadastradas e vídeo sintético para entender o fluxo.'
+                    : p.objective}
+                </p>
                 <a className="text-link" href={`#/references/${p.id}`}>
                   Abrir projeto →
                 </a>
@@ -148,8 +193,12 @@ export default function ReferenceLibrary({ projectId }) {
                 ← Todos os projetos
               </a>
               <span className="tag neutral">
-                {project.references.length} imagens ·{' '}
-                {project.references.reduce((n, r) => n + r.plates.length, 0)} placas
+                {project.references.filter((r) => !isHospitalAlternative(r)).length} imagens
+                principais ·{' '}
+                {project.references
+                  .filter((r) => !isHospitalAlternative(r))
+                  .reduce((n, r) => n + r.plates.length, 0)}{' '}
+                recortes
               </span>
             </div>
             <div className="button-row">
@@ -181,48 +230,21 @@ export default function ReferenceLibrary({ projectId }) {
           ) : (
             <>
               <div className="reference-grid">
-                {project.references.map((r) => (
-                  <article className="panel reference-card" key={r.id}>
-                    <div className="reference-cover">
-                      <img src={r.image} alt={`Imagem de referência: ${r.name}`} />
-                      <span className="tag">{r.plates.length} placas</span>
-                    </div>
-                    <div className="reference-info">
-                      <h2>{r.name}</h2>
-                      <p className="small">
-                        {r.width} × {r.height} px · {r.plates.map((p) => p.name).join(' · ')}
-                      </p>
-                      <div className="button-row">
-                        <a className="primary button-link" href={`#/analysis/${r.id}`}>
-                          Analisar vídeo →
-                        </a>
-                        <button
-                          className="text-button danger"
-                          onClick={() =>
-                            remove(
-                              `/references/${r.id}`,
-                              'Excluir esta imagem e seus recortes de referência?',
-                            )
-                          }
-                        >
-                          Excluir referência
-                        </button>
-                      </div>
-                      <details>
-                        <summary>Recortes cadastrados</summary>
-                        <ul>
-                          {r.plates.map((p) => (
-                            <li key={p.name}>
-                              {p.name} — x {p.x.toFixed(3)}, y {p.y.toFixed(3)}, largura{' '}
-                              {p.width.toFixed(3)}, altura {p.height.toFixed(3)}
-                            </li>
-                          ))}
-                        </ul>
-                      </details>
-                    </div>
-                  </article>
-                ))}
+                {project.references.filter((r) => !isHospitalAlternative(r)).map(referenceCard)}
               </div>
+              {project.references.some(isHospitalAlternative) && (
+                <details className="panel alternative-references">
+                  <summary>Material alternativo: outra imagem do hospital</summary>
+                  <p>
+                    A imagem B veio da comparação anterior de posicionamentos. Ela não é necessária
+                    para o vídeo de exemplo, que usa a imagem A. Só escolha outra referência se ela
+                    corresponder ao conteúdo do seu próprio vídeo.
+                  </p>
+                  <div className="reference-grid">
+                    {project.references.filter(isHospitalAlternative).map(referenceCard)}
+                  </div>
+                </details>
+              )}
               {!project.references.length && (
                 <div className="empty panel">
                   <h2>Adicione uma imagem do ambiente.</h2>

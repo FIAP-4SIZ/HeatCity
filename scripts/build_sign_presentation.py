@@ -161,7 +161,7 @@ def main():
         (
             "Cenário, recortes e posição",
             [
-                "A imagem original do hospital enviada pelo usuário é preservada como referência normal no catálogo.",
+                "A imagem A fornece os quatro recortes da demonstração; B fica como material alternativo e não é usada no vídeo.",
                 "As AOIs delimitam Recepção, Pronto Socorro, Ambulatório e Triagem. Os retângulos encontrados são coordenadas normalizadas no quadro.",
                 "A/B originais também mudam pessoas, setas e outras placas: não isolam o efeito da posição da Recepção.",
             ],
@@ -216,9 +216,9 @@ def main():
         (
             "Demonstração e próxima evidência",
             [
-                "1. Iniciar-HeatCity.cmd → Análise de vídeo → referência Cenário A.",
+                "1. Iniciar-HeatCity.cmd → Escolher as placas: os quatro recortes do hospital já estão prontos.",
                 "2. Abrir vídeo demonstrativo → Iniciar análise → observar caixas e tempos.",
-                "3. Pausar → conferir anotação → exportar JSON, CSV e PDF com a análise final.",
+                "3. Ao terminar, o relatório abre automaticamente. Exportar JSON, CSV e PDF; voltar ao vídeo para conferir quadros, se necessário.",
                 "4. Próxima etapa: vídeo real das placas cadastradas; anotar posições/ausências e medir precisão, recall, IoU e falhas.",
                 "Conclusão: MVP funcional para localizar referências em quadros; acompanhamento amostrado e generalização ainda limitada.",
             ],
@@ -320,7 +320,7 @@ Esta é a apresentação do detector de placas em vídeo.
 2. Slides 4–6: mostrar imagem, AOIs, cinza, correlação por escalas e tempo acumulado com interrupções. O processamento usa referências conhecidas e critérios fixos, sem treinamento.
 3. Slides 7–9: mostrar números efetivamente calculados, gráfico e falhas. São quadros sintéticos correlacionados, sem resultados humanos. Score de correlação não é precisão.
 4. Slide 10: distinguir indícios medidos de causas e sugestões de local ainda não confirmadas.
-5. Slide 11: abrir a aplicação pela raiz, selecionar Cenário A, abrir vídeo demonstrativo e iniciar análise. Observar perda de detecção sob desfoque e ausência da Recepção no final. Pausar, marcar uma posição real se desejar e baixar PDF/JSON/CSV.
+5. Slide 11: abrir a aplicação pela raiz, usar os quatro recortes prontos, abrir o vídeo demonstrativo e iniciar análise. Observar perda de detecção sob desfoque e ausência da Recepção no final. Ao terminar, ver o relatório e baixar PDF/JSON/CSV. Para conferir outro quadro, voltar ao vídeo.
 6. Slide 12: apresentar links de documentação, scripts e limites.
 
 ## Plano B offline
