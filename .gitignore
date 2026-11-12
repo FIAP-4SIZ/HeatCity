@@ -66,3 +66,8 @@ Desktop.ini
 
 # Exclusivo da main: a documentacao e a apresentacao ficam na develop.
 /docs/
+
+# Instrucoes e configuracoes locais de agentes de desenvolvimento
+AGENTS.md
+.agents/
+.codex/
