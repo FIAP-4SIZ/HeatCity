@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from .analysis import Area, Sample, analyze
 from .calibration import GeometryIssue, build_mesh, fit_calibration
 from .schemas import CameraSettings
+from .sign_api import router as sign_router
 from .workflow import calibration_models, router
 
 
@@ -25,6 +26,7 @@ async def lifespan(app):
 
 app = FastAPI(title="HeatCity", version="1.0.0", lifespan=lifespan)
 app.include_router(router)
+app.include_router(sign_router)
 # Somente autorização temporária para prévia local; sem persistência de sessões.
 approvals: dict[str, float] = {}
 
