@@ -13,11 +13,11 @@ sintético reproduzível. Ele não demonstra ainda melhoria de orientação huma
 
 ## O que o professor solicita e onde encontrar
 
-Conferido no enunciado `Cognitive Computing-GS2-2026.pdf`, páginas 1 e 2.
+A fonte dos requisitos obrigatórios é somente `Cognitive Computing-GS2-2026.pdf`, páginas 1 e 2. Textos enviados posteriormente, incluindo CitizenTech, são contexto opcional e não acrescentam condições para o push ou a entrega.
 
 | Solicitação | Abrir ou mostrar | Situação |
 |---|---|---|
-| Solução aplicada à Global Solution | [Contexto, CitizenTech e limites](verificacao-requisitos.md) | Proposta alinhada; necessidade de campo e benefício ainda sem evidência |
+| Solução aplicada à Global Solution | [Contexto, método e limites](verificacao-requisitos.md) | Proposta de revisão da sinalização apresentada; o PDF não exige comprovação de impacto em campo |
 | PDI e visão computacional, com justificativa técnica | [Método e execução](../README.md), [PDI visual](apresentacao/deteccao-pdi.png) e aplicação | Implementados no MVP |
 | Scripts e notebooks produzidos | [Scripts](../scripts/), [código do detector](../backend/heatcity/services/sign_detection.py), [notebook executado](../notebooks/analise-deteccao-placas.ipynb) | Disponíveis |
 | PDF com contexto, métodos, análises e considerações finais | [Relatório técnico PDF](reports/HeatCity-deteccao-placas-exemplo.pdf) | Disponível; resultados sintéticos identificados |
@@ -33,7 +33,7 @@ técnico; não é necessário transformar os slides em PDF.
 
 ## Sequência para mostrar ao professor
 
-1. **Problema e cidadão:** explicar a dificuldade ilustrativa de encontrar a
+1. **Problema proposto:** explicar a dificuldade ilustrativa de encontrar a
    Recepção antes de escolher o corredor. A proposta apoia a revisão da
    sinalização; não mede leitura ou atenção das pessoas.
 2. **Método:** mostrar uma foto cadastrada, as ROIs das quatro placas e o PDI
@@ -83,15 +83,21 @@ de intervalos entre amostras; não é tempo de leitura humana.
   declarar que o material é uma evidência gravada: isso não substitui a
   demonstração prática exigida.
 
-## Pendências que impedem declarar tudo integralmente atendido
+## Situação da entrega e próximos passos
 
-1. **Fundamentação CitizenTech:** a proposta é coerente, mas falta evidência de
-   necessidade observada no território e benefício concreto. O professor não
-   exige entrevista formal nem taxa mínima de acerto; ainda assim, o alinhamento
-   à Global Solution não pode ser confundido com impacto já demonstrado.
-2. **Ações da equipe:** preencher identificação, conferir PowerPoint e execução
-   física, enviar o link na plataforma, demonstrar em aula e realizar a arguição.
+**Os arquivos exigidos pelo professor estão completos no repositório:** scripts,
+notebook executado, relatório técnico PDF, visualizações, indicadores com
+comprovação e README de execução. A organização está apta para push na develop.
 
-Os arquivos obrigatórios estão presentes. A entrega completa ainda não pode ser
-certificada somente a partir deles. A [conferência detalhada](verificacao-requisitos.md)
-registra testes e limites, sem estimar nota ou garantir aprovação.
+Após o push, cabe à equipe preencher os nomes/RMs, conferir a abertura do PPTX,
+enviar o link na plataforma/Teams, demonstrar a aplicação em aula e responder à
+arguição individual. Essas ações não são condições anteriores ao push.
+
+CitizenTech, entrevistas, comprovação de benefício humano, teste A/B e novas
+capturas reais podem enriquecer o trabalho, mas não são exigências explícitas
+adicionais desse PDF nem pendências bloqueadoras da entrega dos arquivos.
+Os resultados sintéticos continuam identificados como tais; isso é uma limitação
+experimental, não uma ausência dos arquivos solicitados.
+
+A [conferência detalhada](verificacao-requisitos.md) separa requisitos do documento,
+limitações técnicas e ações da apresentação. Não atribui nota nem garante aprovação.
