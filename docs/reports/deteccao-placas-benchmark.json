@@ -18,7 +18,7 @@
     "precision": 1.0,
     "recall": 0.7333333333333333,
     "mean_iou": 0.7139711645412861,
-    "mean_processing_ms": 200.4829640409298,
+    "mean_processing_ms": 207.8408812499788,
     "counts": {
       "Recepção": {
         "detected": 12,
@@ -80,8 +80,8 @@
         "first_seen": 0.0,
         "reasons": {
           "Similaridade abaixo do limite; não identifica a causa isoladamente.": 6,
-          "Menor variação pelo Laplaciano que a referência redimensionada; compatível com desfoque ou perda de detalhes.": 6,
-          "Mais de uma posição tem correlação semelhante.": 6
+          "Mais de uma posição tem correlação semelhante.": 6,
+          "Menor variação pelo Laplaciano que a referência redimensionada; compatível com desfoque ou perda de detalhes.": 6
         },
         "suggestions": {
           "Melhorar foco, reduzir movimento e posicionar a placa onde tenha maior tamanho aparente.": 6,
@@ -108,12 +108,12 @@
         "first_seen": 0.0,
         "reasons": {
           "Similaridade abaixo do limite; não identifica a causa isoladamente.": 6,
-          "Candidato próximo da borda do quadro; pode ser recortado.": 6,
-          "Mais de uma posição tem correlação semelhante.": 6
+          "Mais de uma posição tem correlação semelhante.": 6,
+          "Candidato próximo da borda do quadro; pode ser recortado.": 6
         },
         "suggestions": {
-          "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.": 6,
           "Testar posição mais central no campo de visão e sem obstruções.": 6,
+          "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.": 6,
           "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis.": 6
         },
         "tp": 18,
@@ -136,12 +136,12 @@
         "first_seen": 0.0,
         "reasons": {
           "Similaridade abaixo do limite; não identifica a causa isoladamente.": 6,
-          "Candidato próximo da borda do quadro; pode ser recortado.": 6,
-          "Mais de uma posição tem correlação semelhante.": 6
+          "Mais de uma posição tem correlação semelhante.": 6,
+          "Candidato próximo da borda do quadro; pode ser recortado.": 6
         },
         "suggestions": {
-          "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.": 6,
           "Testar posição mais central no campo de visão e sem obstruções.": 6,
+          "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.": 6,
           "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis.": 6
         },
         "tp": 18,
@@ -163,7 +163,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 199.3074090059963,
+      "processing_ms": 231.77668800008178,
       "signs": [
         {
           "name": "Recepção",
@@ -333,7 +333,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 209.07027399516664,
+      "processing_ms": 211.43839000023945,
       "signs": [
         {
           "name": "Recepção",
@@ -503,7 +503,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 197.4348630028544,
+      "processing_ms": 208.6851359999855,
       "signs": [
         {
           "name": "Recepção",
@@ -673,7 +673,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 202.63329800218344,
+      "processing_ms": 200.78525000008085,
       "signs": [
         {
           "name": "Recepção",
@@ -843,7 +843,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 197.9135799992946,
+      "processing_ms": 199.18659799986926,
       "signs": [
         {
           "name": "Recepção",
@@ -1013,7 +1013,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 215.30931000597775,
+      "processing_ms": 189.26034700007222,
       "signs": [
         {
           "name": "Recepção",
@@ -1183,7 +1183,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 209.96500899491366,
+      "processing_ms": 207.35506799974246,
       "signs": [
         {
           "name": "Recepção",
@@ -1353,7 +1353,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 208.2056930012186,
+      "processing_ms": 189.54787900020165,
       "signs": [
         {
           "name": "Recepção",
@@ -1523,7 +1523,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 210.43219899729593,
+      "processing_ms": 190.22281599973212,
       "signs": [
         {
           "name": "Recepção",
@@ -1693,7 +1693,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 203.67062300647376,
+      "processing_ms": 194.78152599958776,
       "signs": [
         {
           "name": "Recepção",
@@ -1863,7 +1863,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 201.6168989939615,
+      "processing_ms": 185.97907000003033,
       "signs": [
         {
           "name": "Recepção",
@@ -2033,7 +2033,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 194.6455520010204,
+      "processing_ms": 188.8849859997208,
       "signs": [
         {
           "name": "Recepção",
@@ -2203,7 +2203,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 196.92138099344447,
+      "processing_ms": 195.86624299972755,
       "signs": [
         {
           "name": "Recepção",
@@ -2403,7 +2403,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 195.08906999544706,
+      "processing_ms": 227.12618200012002,
       "signs": [
         {
           "name": "Recepção",
@@ -2603,7 +2603,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 201.13000299897976,
+      "processing_ms": 223.1256210002357,
       "signs": [
         {
           "name": "Recepção",
@@ -2803,7 +2803,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 199.14556299772812,
+      "processing_ms": 214.32219300004363,
       "signs": [
         {
           "name": "Recepção",
@@ -3003,7 +3003,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 194.6379099972546,
+      "processing_ms": 230.9128460001375,
       "signs": [
         {
           "name": "Recepção",
@@ -3203,7 +3203,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 192.17259300057776,
+      "processing_ms": 206.84357400023146,
       "signs": [
         {
           "name": "Recepção",
@@ -3403,7 +3403,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 186.36399199749576,
+      "processing_ms": 201.6026060000513,
       "signs": [
         {
           "name": "Recepção",
@@ -3577,7 +3577,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 187.01599899941357,
+      "processing_ms": 213.012771999729,
       "signs": [
         {
           "name": "Recepção",
@@ -3751,7 +3751,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 198.32670500181848,
+      "processing_ms": 208.5153180000816,
       "signs": [
         {
           "name": "Recepção",
@@ -3925,7 +3925,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 217.6680109987501,
+      "processing_ms": 230.05145399974936,
       "signs": [
         {
           "name": "Recepção",
@@ -4099,7 +4099,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 196.8224719967111,
+      "processing_ms": 218.0238770001779,
       "signs": [
         {
           "name": "Recepção",
@@ -4273,7 +4273,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 196.0927289983374,
+      "processing_ms": 220.8747099998618,
       "signs": [
         {
           "name": "Recepção",

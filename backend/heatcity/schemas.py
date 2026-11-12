@@ -44,14 +44,3 @@ class ReferenceInput(Contract):
                 ) > max(a.y, b.y):
                     raise ValueError("Os recortes das placas não podem se sobrepor.")
         return self
-
-
-class HospitalInput(Contract):
-    scenarios: tuple[ReferenceInput, ReferenceInput]
-
-    @model_validator(mode="after")
-    def labels(self):
-        expected = {"Recepção", "Pronto Socorro", "Ambulatório", "Triagem"}
-        if any({p.name for p in scene.plates} != expected for scene in self.scenarios):
-            raise ValueError("Cada imagem deve conter as quatro placas do hospital.")
-        return self

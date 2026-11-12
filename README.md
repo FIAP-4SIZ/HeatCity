@@ -1,18 +1,82 @@
 # HeatCity — placas em vídeo
 
-**Onde a placa cadastrada aparece e por quanto tempo é detectada?**
+**Onde a placa aparece e por quanto tempo é detectada?**
 
-O HeatCity localiza referências de placas nos quadros de um vídeo ou webcam e
-consolida posições, tempo estimado, dificuldade e acerto mensurado.
-Usa OpenCV e template matching multiescala, sem treinamento de modelos.
+CitizenTech: uma câmera e a análise local ajudam responsáveis por espaços
+coletivos a revisar placas e levantar melhorias para testar. Beneficiários
+propostos: pacientes, acompanhantes e visitantes que precisam localizar serviços.
 
-## Executar
+O estado atual é um **MVP técnico funcional com evidência sintética**. Necessidade
+de campo e benefício concreto para cidadãos ainda não estão demonstrados.
+Veja a [conferência dos requisitos](docs/verificacao-requisitos.md), que diferencia
+as exigências da disciplina da fundamentação CitizenTech.
 
-No Windows, execute **Iniciar-HeatCity.cmd**. O launcher verifica/instala Python
-3.12 e Node.js, prepara dependências e abre o navegador padrão. Chrome e Edge
-permitem webcam em localhost; áudio não é solicitado. Encerre pelo terminal.
+## Começar no Windows
 
-Em Linux/macOS, com Python 3.12 e Node.js ≥ 22.12:
+Execute **Iniciar-HeatCity.cmd**. Ele verifica/instala Python 3.12 e Node.js,
+prepara as dependências e abre o navegador padrão. Encerre pelo terminal.
+
+Na página inicial há duas escolhas:
+
+- **Ver exemplo funcionando:** um clique inicia um vídeo sintético de 12 s e
+  abre o relatório ao terminar. Foto e quatro recortes já estão incluídos.
+- **Começar com meu vídeo:** cadastre uma foto nítida do ambiente, marque as
+  placas e selecione o vídeo. A análise começa automaticamente. Para medir
+  acerto, pause e confira a posição verdadeira de placas em quadros.
+
+**Minhas fotos** permite cadastrar, usar e excluir fotos. O PDI visual e a
+explicação técnica ficam nos links do rodapé. Não é necessário criar projetos
+manualmente. Webcam é uma opção dentro do fluxo de vídeo próprio; áudio não é usado.
+
+## O que o relatório informa
+
+- Detecções, incertezas, trechos e tempo detectado estimado por placa.
+- Precisão/recall somente quando houver posições/presenças verdadeiras anotadas.
+  Sem conferência, aparece **Precisão ainda não medida**.
+- Indícios de dificuldade: margens pequenas, confusão entre placas, desfoque,
+  contraste, tamanho aparente e proximidade da borda. Não provam uma causa única.
+- Sugestões de posição e captura a testar. Não calculam altura ideal nem comprovam
+  melhor orientação, leitura ou acessibilidade humana.
+- Exportações PDF, JSON e CSV. Os resultados ficam em memória até 300 quadros;
+  exporte antes de trocar de fonte ou fechar a página.
+
+O exemplo tem 24 quadros correlacionados, 96 anotações, 66 TP, 0 FP, 24 FN e 6 TN:
+precisão 1,000, recall 0,733. As falhas sob desfoque permanecem no resultado.
+O [notebook executado](notebooks/analise-deteccao-placas.ipynb) recalcula esses valores
+independentemente a partir das caixas e das posições conhecidas.
+
+## Método e limites
+
+OpenCV: cinza, recortes e template matching normalizado em sete escalas fixas,
+com picos alternativos e conflitos entre identidades. Sem treinamento de modelos.
+O PDI mostra recortes, cinza, Laplaciano, histograma e contraste.
+
+Captura solicitada: até 1920 × 1080 / 30 FPS, negociados com o navegador.
+Análise: largura até 800 px, até 2 amostras/s, sem fila. Tempo detectado soma
+intervalos entre detecções consecutivas da mesma placa, na mesma fonte, com
+`0 < Δt ≤ 1,5 s`. Falhas e ambiguidades interrompem a contagem; uma amostra isolada
+soma zero. Não se comprova presença contínua entre amostras.
+
+Acerto exige identidade correta e IoU ≥ 0,5. Precisão = TP/(TP+FP);
+recall = TP/(TP+FN). Uma posição positiva incorreta gera FP e FN.
+Placa presente com abstenção gera FN. Correlação não é probabilidade de acerto.
+Perspectiva, oclusão, escala e placas semelhantes limitam o método.
+
+## Dados e infraestrutura
+
+SQLite local guarda fotos e recortes. Quadros são enviados à API local e não são
+persistidos; exports não contêm vídeo. Use referências sem pessoas identificáveis.
+Não há autenticação nem preparação para serviço público compartilhado.
+
+Após instalar dependências, a análise funciona localmente, sem inferência externa.
+Instalação inicial exige internet, Python e Node, o que limita acesso. A limpeza
+na atualização remove apenas ativos distribuídos que foram descontinuados,
+preservando fotos personalizadas. Migrações existentes continuam para atualizar
+bancos antigos de forma transacional.
+
+## Executar manualmente
+
+Python 3.12 e Node.js ≥ 22.12:
 
 ```sh
 python3.12 -m venv .venv
@@ -24,100 +88,36 @@ PYTHONPATH=backend .venv/bin/python -m uvicorn heatcity.api:app --host 127.0.0.1
 npm --prefix frontend run dev -- --port 5173 --strictPort
 ```
 
-Abra http://127.0.0.1:5173. Não há serviço externo obrigatório nem modelo a baixar.
-
-## Como começar sem confundir as etapas
-
-Na tela inicial há três etapas: **Escolher as placas → Analisar o vídeo → Ver o relatório**.
-Os quatro recortes do hospital são a referência inicial pronta. Basta abrir o vídeo
-demonstrativo e iniciar a análise; o relatório abre ao terminar.
-
-A imagem B está preservada como material alternativo no catálogo. Ela veio da antiga
-comparação A/B e não é necessária nem usada no vídeo de exemplo. Para detectar placas,
-use uma imagem compatível com o seu vídeo, não um par de imagens quase iguais.
-
-O relatório separa **detecção** de **acerto comprovado**: ele sempre resume os tempos
-e indícios de dificuldade; precisão/recall exigem posições verdadeiras anotadas.
-No exemplo, a referência é geométrica e sintética. Em vídeo próprio, a conferência é
-manual e opcional; sem ela, a precisão aparece como ainda não medida.
-
-## Cadastro e detalhes do fluxo
-
-1. **Referências de placas:** crie um projeto, envie uma imagem nítida do ambiente
-   e marque recortes com nomes únicos. PNG/JPEG/WebP até 4 MB, 8 MP e mínimo de
-   200 px por lado. Referências salvas são imutáveis; outra captura é outra referência.
-2. **Análise de vídeo:** selecione a referência e abra MP4/H.264, WebM ou webcam.
-   As caixas indicam candidatos detectados, ambíguos, em conflito ou não localizados.
-3. **Acompanhamento:** consulte primeira detecção, trechos, tempo detectado,
-   quadros válidos/incertos e centros acumulados das placas.
-4. **Conferência:** pause e marque a posição verdadeira ou a ausência de cada
-   placa. Apenas placas anotadas entram no cálculo; a marcação não treina o detector.
-5. **Análise final:** veja dificuldade por placa, indícios de falha, acerto e
-   hipóteses de melhoria de posição. Exporte JSON, CSV e PDF antes de trocar de fonte.
-6. **PDI visual:** explore recortes, cinza, histograma, contraste e Laplaciano.
-
-O hospital A/B com as **imagens originais fornecidas pelo usuário** já integra o
-catálogo após qualquer checkout. Não há um botão especial para criar exemplos.
-O vídeo demonstrativo de 12 s é sintético e usa a referência A conferida por hash.
-Somente nesse exemplo a anotação geométrica conhecida é aplicada automaticamente.
-Vídeos próprios exigem marcação manual para medir acerto.
-
-## Métricas e limites
-
-- **Tempo detectado:** soma de intervalos entre detecções consecutivas da mesma
-  placa, na mesma fonte, com `0 < Δt ≤ 1,5 s`. Falhas, ambiguidades e intervalos
-  maiores interrompem o trecho. Uma amostra isolada soma zero; não se comprova
-  presença contínua entre os quadros amostrados.
-- **Acerto:** identidade correta e IoU ≥ 0,5. Precisão = TP/(TP+FP);
-  recall = TP/(TP+FN). Sem referências conhecidas, ficam indisponíveis.
-  Erro de localização gera FP e FN; abstenção com placa presente gera FN.
-- **Dificuldade:** proporção de detecções e incertezas, margens de correlação,
-  perda de nitidez/contraste, tamanho aparente e proximidade da borda. Baixo score
-  não identifica uma causa única. Correlação não é probabilidade de acerto.
-- **Posição:** sugestões são hipóteses a comparar em nova captura com mesmo
-  percurso, câmera, distância e iluminação; não determinam altura ideal de instalação
-  nem comprovam legibilidade, orientação ou acessibilidade humana.
-
-A captura solicita até 1920 × 1080 / 30 FPS, negociados com o navegador. A análise
-usa largura até 800 px e até 2 amostras/s, sem fila. Perspectiva, mudanças de escala,
-oclusão e placas semelhantes limitam o template matching.
-
-## Dados locais e atualização
-
-O SQLite em `data/heatcity.sqlite3` guarda somente projetos, imagens de referência e
-recortes. Quadros de vídeo são enviados à API local e não são persistidos.
-Resultados ficam em memória até 300 quadros; trocar de fonte ou recarregar limpa
-o histórico. Exportações não contêm imagens de vídeo. Uso local, sem autenticação.
-
-Na atualização do banco v1 para v2, os cadastros de imagens e recortes são preservados;
-as tabelas e registros de sessões do domínio retirado são removidos em transação.
-Nenhuma captura pessoal é necessária para usar o projeto.
+Abra http://127.0.0.1:5173. MP4/H.264 e WebM dependem de suporte do navegador.
+Chrome e Edge aceitam câmera em localhost. No Windows, use `.venv\Scripts\python.exe`.
 
 ## Evidência e apresentação
 
-[Slides HTML](docs/apresentacao/slides.html) · [Slides PDF](docs/apresentacao/slides.pdf) ·
+[Slides HTML](docs/apresentacao/slides.html) · [PDF](docs/apresentacao/slides.pdf) ·
 [Roteiro](docs/apresentacao/ROTEIRO.md) · [Pacote offline](docs/HeatCity-pacote-apresentacao.zip) ·
-[Relatório detalhado](docs/reports/HeatCity-deteccao-placas-exemplo.pdf) ·
-[Medições por quadro](docs/reports/deteccao-placas-benchmark.json).
+[Relatório](docs/reports/HeatCity-deteccao-placas-exemplo.pdf) ·
+[Medições](docs/reports/deteccao-placas-benchmark.json) ·
+[Exemplo](docs/exemplo-hospital.md).
 
-O experimento sintético possui 24 quadros analisados e 96 referências conhecidas:
-66 TP, 0 FP, 24 FN e 6 TN; precisão 1,000 e recall 0,733. As falhas sob desfoque
-permanecem no resultado. Quadros correlacionados da mesma foto não estimam
-performance em vídeo real. Ainda faltam captura real anotada e comparação
-controlada de posicionamentos.
-
-Reprodução, a partir da raiz:
+Regenerar vídeo/medições (requer ffmpeg somente para recriar o MP4 já incluído):
 
 ```sh
 PYTHONPATH=backend .venv/bin/python scripts/build_sign_video_demo.py
 .venv/bin/python scripts/build_sign_presentation.py
 ```
 
-O primeiro script requer ffmpeg **somente para regenerar** o MP4 já incluído.
-No PowerShell: `$env:PYTHONPATH="backend"`; use `.venv\Scripts\python.exe`.
-As versões do runtime e o SHA-256 do vídeo constam no JSON do benchmark.
+Reexecutar notebook, com dependências opcionais isoladas:
 
-## Verificar
+```sh
+python3.12 -m venv .analysis-venv
+.analysis-venv/bin/python -m pip install -r notebooks/requirements.txt
+.analysis-venv/bin/python scripts/build_analysis_notebook.py
+```
+
+Os arquivos de entrada estão no checkout. Execute o notebook depois de regenerar
+as medições. No PowerShell, defina `$env:PYTHONPATH="backend"` para o primeiro script.
+
+## Testes
 
 ```sh
 .venv/bin/python -m pip install -r backend/requirements-dev.txt
@@ -131,7 +131,7 @@ npm --prefix frontend run build
 CHROMIUM_PATH=/usr/bin/chromium npm --prefix frontend run test:e2e
 ```
 
-Os testes usam imagens e vídeo sintéticos e webcam simulada; não comprovam
-acurácia em captura real. Documentação: [método e requisitos](docs/requisitos-mvp.md),
-[fontes](docs/referencias.md) e [fluxo de branches](docs/fluxo-desenvolvimento.md).
-A integração é na `develop`; `main` permanece reservada à entrega final autorizada.
+A validação automatizada usa vídeo sintético e webcam simulada. Não comprova
+performance em captura real nem substitui apresentação e arguição individuais.
+[Fontes](docs/referencias.md) · [Fluxo de branches](docs/fluxo-desenvolvimento.md).
+A integração é na develop; main depende da autorização final do usuário.

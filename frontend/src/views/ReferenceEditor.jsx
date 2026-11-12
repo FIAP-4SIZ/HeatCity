@@ -52,8 +52,12 @@ export default function ReferenceEditor({ project, onSaved, onCancel }) {
     setBusy(true);
     setError('');
     try {
-      await post(`/projects/${project.id}/references`, { name, image: scene.image, plates });
-      onSaved();
+      const saved = await post(`/projects/${project.id}/references`, {
+        name,
+        image: scene.image,
+        plates,
+      });
+      await onSaved(saved);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -64,24 +68,24 @@ export default function ReferenceEditor({ project, onSaved, onCancel }) {
     <section className="panel reference-editor">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">IMAGEM E RECORTES</p>
-          <h2>Onde estão as placas?</h2>
+          <p className="eyebrow">CADASTRAR FOTO</p>
+          <h2>Envie a foto e marque suas placas.</h2>
         </div>
         <button className="secondary" onClick={onCancel}>
           Cancelar
         </button>
       </div>
       <p className="muted">
-        Use uma imagem do ambiente, nomeie cada placa e arraste para delimitar sua área. As
-        referências salvas são imutáveis; crie outra imagem para comparar alterações.
+        Use uma imagem do ambiente, nomeie cada placa e arraste para delimitar sua área. Depois de
+        salvar, você poderá escolher o vídeo a analisar.
       </p>
       <div className="form-row">
         <label>
-          Nome da referência
+          Nome da foto
           <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
         </label>
         <label>
-          Imagem do ambiente
+          Foto do ambiente
           <input type="file" accept="image/png,image/jpeg,image/webp" onChange={upload} />
         </label>
       </div>
@@ -91,7 +95,7 @@ export default function ReferenceEditor({ project, onSaved, onCancel }) {
             <Scene scenario={scene} plates={plates} edit onArea={addArea} />
             <div>
               <label>
-                Próxima placa
+                Nome da placa
                 <input
                   value={label}
                   placeholder="Ex.: Recepção"
@@ -125,7 +129,7 @@ export default function ReferenceEditor({ project, onSaved, onCancel }) {
             disabled={busy || !plates.length || !name.trim()}
             onClick={save}
           >
-            {busy ? 'Salvando…' : 'Salvar referência e placas'}
+            {busy ? 'Salvando…' : 'Salvar foto e placas'}
           </button>
         </>
       )}

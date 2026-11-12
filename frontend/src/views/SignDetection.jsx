@@ -1,8 +1,9 @@
 import AnalysisReport from '../components/AnalysisReport.jsx';
 import PlateCrops from '../components/PlateCrops.jsx';
-import { referenceLabel } from '../reference-labels.js';
+import ReferenceEditor from './ReferenceEditor.jsx';
+import { loadReferences, uploadProject } from '../references.js';
 import React, { useEffect, useRef, useState } from 'react';
-import { api, post, number } from '../api.js';
+import { post, number } from '../api.js';
 import Scene from '../components/Scene.jsx';
 import { summarizeTracking, csvTracking, MAX_GAP_SECONDS } from '../sign-tracking.js';
 
@@ -30,6 +31,8 @@ export default function SignDetection({ referenceId }) {
   const [scenarios, setScenarios] = useState([]),
     [selected, setSelected] = useState('');
   const [phase, setPhase] = useState('prepare');
+  const [inputMode, setInputMode] = useState(referenceId ? 'custom' : 'choose');
+  const [editingProject, setEditingProject] = useState(null);
   const [source, setSource] = useState(null),
     [ready, setReady] = useState(false),
     [running, setRunning] = useState(false);
@@ -42,32 +45,25 @@ export default function SignDetection({ referenceId }) {
   const [busy, setBusy] = useState(false),
     [plateName, setPlateName] = useState(''),
     [annotations, setAnnotations] = useState({});
-  const [drawing, setDrawing] = useState(false),
-    [showPath, setShowPath] = useState(false);
+  const [drawing, setDrawing] = useState(false);
   const video = useRef(null),
     stream = useRef(null),
     epoch = useRef(0),
     objectUrl = useRef(null),
     clock = useRef(0),
-    inFlight = useRef(false);
+    inFlight = useRef(false),
+    autoStarted = useRef(null);
   const scenario = scenarios.find((s) => s.id === selected);
   const summary = summarizeTracking(records);
-  const last = records.at(-1);
   useEffect(() => {
     let active = true;
-    api('/projects')
-      .then(async (projects) => {
-        const full = await Promise.all(projects.map((s) => api(`/projects/${s.id}`)));
-        const all = full.flatMap((s) =>
-          s.references.map((c) => ({ ...c, projectTitle: s.title, projectId: s.id })),
-        );
+    loadReferences()
+      .then((all) => {
         if (active) {
           setScenarios(all);
           const initial =
-            all.find((s) => s.id === referenceId) ||
-            all.find(
-              (s) => s.projectId === 'hospital-orientacao-base-v1' && s.name.includes(' A '),
-            ) ||
+            all.find((r) => r.id === referenceId) ||
+            all.find((r) => r.fixture_key === 'hospital-signs') ||
             all[0];
           setSelected(initial?.id || '');
           setPlateName(initial?.plates[0]?.name || '');
@@ -102,13 +98,15 @@ export default function SignDetection({ referenceId }) {
     setSource(null);
     clearResults();
     setPhase('prepare');
+    setInputMode('choose');
+    setEditingProject(null);
   }
   function finish() {
     stop();
     setPhase('report');
     window.scrollTo(0, 0);
   }
-  async function loadSource(kind, file) {
+  async function loadSource(kind, file, reference = scenario) {
     closeSource();
     setError('');
     setBusy(true);
@@ -130,9 +128,9 @@ export default function SignDetection({ referenceId }) {
         if (!response.ok) throw new Error('Vídeo demonstrativo indisponível.');
         const metadata = await response.json();
         const validReference =
-          scenario &&
-          (await imageHash(scenario.image)) === metadata.reference_sha256 &&
-          JSON.stringify(scenario.plates) === JSON.stringify(metadata.plates);
+          reference &&
+          (await imageHash(reference.image)) === metadata.reference_sha256 &&
+          JSON.stringify(reference.plates) === JSON.stringify(metadata.plates);
         next = {
           kind,
           id: `demo-${Date.now()}`,
@@ -140,16 +138,13 @@ export default function SignDetection({ referenceId }) {
           url: '/detection-demo.mp4',
           metadata: validReference ? metadata : null,
         };
-        if (!validReference)
-          setStatus(
-            'Referência diferente da cena A original: a demonstração funciona, mas sem anotação automática de acerto.',
-          );
+        if (!validReference) throw new Error('A foto do exemplo não confere com o vídeo incluído.');
       } else {
         if (!file) return;
         objectUrl.current = URL.createObjectURL(file);
         next = { kind, id: `video-${Date.now()}`, label: file.name, url: objectUrl.current };
       }
-      setSource(next);
+      setSource({ ...next, autoStart: true });
       setPhase('analyze');
       clock.current = performance.now();
     } catch (e) {
@@ -334,11 +329,13 @@ export default function SignDetection({ referenceId }) {
       <div className="page-title">
         <p className="eyebrow">HEATCITY · PLACAS EM VÍDEO</p>
         <h1>Onde a placa aparece?</h1>
-        <p>Escolha as placas, analise um vídeo e veja o que dificultou a detecção.</p>
+        <p>
+          Localize placas em um vídeo e veja um relatório de detecção, dificuldades e sugestões.
+        </p>
       </div>
       <ol className="analysis-steps" aria-label="Etapas da análise">
         {[
-          ['prepare', 'Escolher as placas'],
+          ['prepare', 'Escolher entrada'],
           ['analyze', 'Analisar o vídeo'],
           ['report', 'Ver o relatório'],
         ].map(([value, label], i) => (
@@ -353,90 +350,156 @@ export default function SignDetection({ referenceId }) {
           {error}
         </p>
       )}
-      <div className="panel detector-controls" hidden={phase !== 'prepare'}>
-        <p className="eyebrow">ETAPA 1 · PREPARAR</p>
-        <h2>Estas são as placas que vamos procurar.</h2>
-        <p>
-          Os recortes abaixo são o padrão visual usado pelo detector. Basta uma imagem de referência
-          compatível com o vídeo; não é necessário escolher um par A/B.
-        </p>
-        {scenario && (
-          <>
-            <strong>{referenceLabel(scenario)}</strong>
-            <PlateCrops reference={scenario} />
-          </>
-        )}
-        <details>
-          <summary>Escolher outra referência cadastrada</summary>
-          <label>
-            Referência cadastrada
-            <select
-              value={selected}
-              disabled={!!source || busy}
-              onChange={(e) => {
-                setSelected(e.target.value);
-                clearResults();
-                setPlateName(scenarios.find((s) => s.id === e.target.value)?.plates[0]?.name || '');
+      {phase === 'prepare' && inputMode === 'choose' && (
+        <div className="start-options">
+          <article className="panel start-card">
+            <p className="eyebrow">PARA CONHECER O PROJETO</p>
+            <h2>Veja um exemplo pronto.</h2>
+            <p>
+              Um vídeo de 12 segundos com quatro placas. A análise roda e abre o relatório
+              automaticamente.
+            </p>
+            <button
+              className="primary"
+              disabled={busy || !scenarios.some((r) => r.fixture_key === 'hospital-signs')}
+              onClick={() => {
+                const ref = scenarios.find((r) => r.fixture_key === 'hospital-signs');
+                setSelected(ref.id);
+                setPlateName(ref.plates[0].name);
+                loadSource('demo', null, ref);
               }}
             >
-              {scenarios.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {referenceLabel(s)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <p className="small">
-            A imagem alternativa B do hospital foi mantida no catálogo como material de origem. Ela
-            não é usada no vídeo demonstrativo e não precisa ser selecionada para começar.
-          </p>
-        </details>
-        <h3>Agora escolha o vídeo.</h3>
-        <div className="button-row">
+              Ver exemplo funcionando
+            </button>
+          </article>
+          <article className="panel start-card">
+            <p className="eyebrow">PARA ANALISAR SEU AMBIENTE</p>
+            <h2>Use seu próprio vídeo.</h2>
+            <p>
+              Primeiro cadastre uma foto nítida com as placas. Depois escolha um vídeo que mostre
+              essas mesmas placas.
+            </p>
+            <button
+              className="secondary"
+              onClick={() => {
+                setInputMode('custom');
+                setSelected('');
+              }}
+            >
+              Começar com meu vídeo
+            </button>
+          </article>
+        </div>
+      )}
+      {phase === 'prepare' && inputMode === 'custom' && (
+        <div className="panel detector-controls">
           <button
-            className="primary"
-            disabled={!scenario || busy}
-            onClick={() => loadSource('demo')}
+            className="text-button"
+            onClick={() => {
+              setInputMode('choose');
+              setEditingProject(null);
+            }}
           >
-            Abrir vídeo demonstrativo
+            ← Voltar ao início
           </button>
-          <label className="detector-file">
-            Abrir meu vídeo
-            <input
-              aria-label="Abrir meu vídeo"
-              type="file"
-              accept="video/*"
-              disabled={!scenario || busy}
-              onChange={(e) => {
-                loadSource('file', e.target.files[0]);
-                e.target.value = '';
+          <h2>1. Escolha uma foto com suas placas.</h2>
+          <p>
+            A foto fornece o padrão visual que será procurado. Se ainda não cadastrou uma, use
+            “Cadastrar foto”.
+          </p>
+          {editingProject ? (
+            <ReferenceEditor
+              project={editingProject}
+              onCancel={() => setEditingProject(null)}
+              onSaved={async (saved) => {
+                try {
+                  const all = await loadReferences();
+                  setScenarios(all);
+                  const ref = all.find((r) => r.id === saved.id);
+                  setSelected(ref?.id || '');
+                  setPlateName(ref?.plates[0]?.name || '');
+                  setEditingProject(null);
+                } catch (e) {
+                  setError(e.message);
+                }
               }}
             />
-          </label>
-          <button
-            className="secondary"
-            disabled={!scenario || busy}
-            onClick={() => loadSource('camera')}
-          >
-            Abrir webcam
-          </button>
+          ) : (
+            <>
+              <label>
+                Foto cadastrada
+                <select
+                  value={selected}
+                  onChange={(e) => {
+                    setSelected(e.target.value);
+                    setPlateName(
+                      scenarios.find((r) => r.id === e.target.value)?.plates[0]?.name || '',
+                    );
+                  }}
+                >
+                  <option value="">Selecione uma foto</option>
+                  {scenarios.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                className="secondary"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  try {
+                    setEditingProject(await uploadProject());
+                  } catch (e) {
+                    setError(e.message);
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                Cadastrar foto
+              </button>
+              {scenario && (
+                <>
+                  <PlateCrops reference={scenario} />
+                  <h2>2. Escolha o vídeo para começar.</h2>
+                  <p>Depois de selecionar o arquivo, a análise inicia automaticamente.</p>
+                  <label className="primary button-link video-upload">
+                    Selecionar vídeo e analisar
+                    <input
+                      aria-label="Selecionar vídeo e analisar"
+                      type="file"
+                      accept="video/*"
+                      disabled={busy}
+                      onChange={(e) => {
+                        if (e.target.files[0]) loadSource('file', e.target.files[0]);
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                  <details className="webcam-option">
+                    <summary>Usar webcam em vez de um arquivo</summary>
+                    <button
+                      className="secondary"
+                      disabled={busy}
+                      onClick={() => loadSource('camera')}
+                    >
+                      Analisar webcam
+                    </button>
+                  </details>
+                </>
+              )}
+            </>
+          )}
         </div>
-        <p className="small">
-          O exemplo já vem pronto e é sintético. Para um vídeo próprio, use uma imagem nítida das
-          placas que aparecem nele. Quadros são enviados à API local e não são salvos.
-        </p>
-        <a
-          className="text-link"
-          href={scenario ? `#/references/${scenario.projectId}` : '#/references'}
-        >
-          Cadastrar placas de outro ambiente →
-        </a>
-      </div>
+      )}
       {phase === 'analyze' && (
         <div className="section-heading">
           <div>
             <p className="eyebrow">ETAPA 2 · ANALISAR</p>
-            <h2>Inicie e acompanhe as caixas no vídeo.</h2>
+            <h2>{running ? 'Análise em andamento.' : 'Vídeo pausado.'}</h2>
             <p>
               Ao terminar, o relatório será aberto automaticamente. Você também pode concluir antes.
             </p>
@@ -450,7 +513,7 @@ export default function SignDetection({ referenceId }) {
         <div className="detector-workspace" hidden={phase !== 'analyze'}>
           <article className="panel">
             <div className="section-heading">
-              <h2>Quadro analisado</h2>
+              <h2>Placas localizadas no vídeo</h2>
               <span className="tag neutral">{running ? 'ANALISANDO' : 'PAUSADO'}</span>
             </div>
             {snapshot ? (
@@ -501,28 +564,6 @@ export default function SignDetection({ referenceId }) {
                         </span>
                       </div>
                     ))}
-                {showPath && !drawing && (
-                  <svg
-                    className="detector-path"
-                    viewBox="0 0 100 100"
-                    preserveAspectRatio="none"
-                    aria-label="Centros das detecções nos quadros analisados"
-                  >
-                    {summary.signs.map((s, i) => (
-                      <g key={s.name}>
-                        {s.path.map((p, j) => (
-                          <circle
-                            key={j}
-                            cx={p.x * 100}
-                            cy={p.y * 100}
-                            r="0.4"
-                            fill={['#f62e51', '#00d9cf', '#f5c800', '#a389ff'][i % 4]}
-                          />
-                        ))}
-                      </g>
-                    ))}
-                  </svg>
-                )}
               </div>
             ) : (
               <div className="detector-empty">
@@ -534,7 +575,7 @@ export default function SignDetection({ referenceId }) {
             </p>
             <div className="button-row">
               <button
-                className="primary"
+                className="secondary"
                 onClick={running ? stop : start}
                 disabled={!ready || busy || records.length >= 300}
               >
@@ -543,17 +584,9 @@ export default function SignDetection({ referenceId }) {
               <button className="secondary" onClick={freeze} disabled={!ready || running || busy}>
                 Analisar quadro atual
               </button>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={showPath}
-                  onChange={(e) => setShowPath(e.target.checked)}
-                />{' '}
-                Mostrar centros detectados
-              </label>
             </div>
             <button className="primary" disabled={!records.length} onClick={finish}>
-              Concluir análise e ver relatório →
+              Terminar e ver relatório
             </button>
           </article>
           <aside className="panel detector-source">
@@ -569,7 +602,11 @@ export default function SignDetection({ referenceId }) {
               }}
               onLoadedData={() => {
                 setReady(true);
-                setStatus('Fonte pronta. Clique em Iniciar análise.');
+                setStatus('Vídeo pronto.');
+                if (source.autoStart && autoStarted.current !== source.id) {
+                  autoStarted.current = source.id;
+                  start();
+                }
               }}
               onEnded={() => {
                 setRunning(false);
@@ -588,11 +625,8 @@ export default function SignDetection({ referenceId }) {
             {source.kind === 'demo' && (
               <p className="small">
                 Demonstração sintética: imagem hospitalar gerada por IA, deslocamento, desfoque e
-                remoção de uma placa.{' '}
-                {source.metadata
-                  ? 'Referência original conferida: posições conhecidas permitem medir acerto automaticamente.'
-                  : 'Sem referência geométrica automática para esta seleção.'}{' '}
-                Não é uma captura real nem estudo com pessoas.
+                remoção de uma placa. Posições conhecidas permitem medir o acerto neste exemplo. Não
+                é uma captura real nem estudo com pessoas.
               </p>
             )}
             {source.kind === 'camera' && (
@@ -610,51 +644,6 @@ export default function SignDetection({ referenceId }) {
           </aside>
         </div>
       )}
-      <article className="panel" hidden={phase !== 'analyze'}>
-        <h2>Acompanhamento por placa</h2>
-        <p>
-          {records.length} quadros analisados ·{' '}
-          {last ? `${number(last.time, 2)} s na fonte` : 'sem coleta'} ·{' '}
-          {last
-            ? `${number(last.processing_ms, 0)} ms no último processamento`
-            : 'aguardando vídeo'}
-        </p>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Placa</th>
-                <th>Tempo detectado estimado</th>
-                <th>Primeira detecção</th>
-                <th>Trechos detectados</th>
-                <th>Quadros detectados / analisados</th>
-                <th>Quadros incertos</th>
-              </tr>
-            </thead>
-            <tbody>
-              {summary.signs.map((s) => (
-                <tr key={s.name}>
-                  <td>{s.name}</td>
-                  <td>{number(s.detectedSeconds, 2)} s</td>
-                  <td>{number(s.firstSeen, 2)} s</td>
-                  <td>{s.events}</td>
-                  <td>
-                    {s.detectedFrames} / {records.length}
-                  </td>
-                  <td>{s.uncertainFrames}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p className="small">
-          Tempo = soma dos intervalos entre detecções consecutivas da mesma placa, na mesma fonte,
-          com intervalo máximo de {MAX_GAP_SECONDS} s. Intervalos maiores, falhas e ambiguidades
-          interrompem o trecho. O primeiro quadro isolado soma 0 s. A amostragem não comprova
-          presença contínua entre quadros. Centros acumulados mostram a trajetória da placa na
-          imagem.
-        </p>
-      </article>
       {snapshot && !running && phase === 'analyze' && (
         <article className="panel">
           <h2>Conferir o acerto com uma referência conhecida</h2>
@@ -676,7 +665,6 @@ export default function SignDetection({ referenceId }) {
               className="secondary"
               onClick={() => {
                 setDrawing(!drawing);
-                setShowPath(false);
               }}
             >
               {drawing ? 'Encerrar marcação' : 'Marcar posição real'}

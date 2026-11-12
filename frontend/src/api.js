@@ -17,11 +17,5 @@ export async function api(path, body, method = 'GET') {
   return response.status === 204 ? null : response.json();
 }
 export const post = (path, body) => api(path, body, 'POST');
-export const route = (path) => {
-  window.location.hash = path;
-};
 export const number = (value, digits = 1) =>
   value == null ? '—' : Number(value).toLocaleString('pt-BR', { maximumFractionDigits: digits });
-export function download(path) {
-  window.open(`/api${path}`, '_blank', 'noopener');
-}

@@ -9,7 +9,7 @@ Esta é a apresentação do detector de placas em vídeo.
 2. Slides 4–6: mostrar imagem, AOIs, cinza, correlação por escalas e tempo acumulado com interrupções. O processamento usa referências conhecidas e critérios fixos, sem treinamento.
 3. Slides 7–9: mostrar números efetivamente calculados, gráfico e falhas. São quadros sintéticos correlacionados, sem resultados humanos. Score de correlação não é precisão.
 4. Slide 10: distinguir indícios medidos de causas e sugestões de local ainda não confirmadas.
-5. Slide 11: abrir a aplicação pela raiz, usar os quatro recortes prontos, abrir o vídeo demonstrativo e iniciar análise. Observar perda de detecção sob desfoque e ausência da Recepção no final. Ao terminar, ver o relatório e baixar PDF/JSON/CSV. Para conferir outro quadro, voltar ao vídeo.
+5. Slide 11: abrir a aplicação pela raiz, clicar em Ver exemplo funcionando; a análise inicia automaticamente. Observar perda de detecção sob desfoque e ausência da Recepção no final. Ao terminar, ver o relatório e baixar PDF/JSON/CSV. Para conferir outro quadro, voltar ao vídeo.
 6. Slide 12: apresentar links de documentação, scripts e limites.
 
 ## Plano B offline
@@ -33,11 +33,11 @@ No PowerShell: `$env:PYTHONPATH="backend"` antes de executar os dois scripts. ff
 - Visão computacional: localização de referências nos quadros de vídeo/webcam por template matching; conteúdo alinhado ao laboratório de aula.
 - Evidência reproduzível: vídeo, geometria conhecida, medições por quadro, gráfico, PDF e código versionados.
 - Análise crítica: dúvida, falhas, tempo estimado e sugestões de posição por placa, sem inferência de atenção/leitura.
-- Ainda faltam: medições confiáveis em vídeo real e comparação controlada de posicionamentos. As imagens A/B originais mudam múltiplos elementos e não isolam uma variável.
+- Ainda faltam: medições em captura real e evidências de benefício para cidadãos. O PDF da disciplina não exige relato ou entrevista formal na apresentação. Não há ganho de orientação humana comprovado.
 - O projeto fornece scripts reproduzíveis e resultados sintéticos identificados; não apresenta resultados humanos.
 
 ## Conferência tripla desta apresentação
 
 1. Narrativa: título, pergunta, demonstração e conclusão descrevem placas em vídeo, com catálogo de referências e sem treinamento.
 2. Evidência: números e gráficos vêm do mesmo JSON gerado pelo detector sobre MP4 decodificado; falhas e origem sintética são explicitadas.
-3. Entrega: links, slides HTML/PDF, roteiro, MP4, relatório e scripts integram o pacote; a interface é verificada separadamente em navegador.
+3. Entrega: links, slides HTML/PDF, roteiro, MP4, relatório, scripts e notebook executado integram a entrega; a interface é verificada separadamente em navegador.

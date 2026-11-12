@@ -1,0 +1,38 @@
+{
+  "reference": {
+    "name": "Placas do hospital",
+    "image": "hospital.jpg",
+    "plates": [
+      {
+        "name": "Recepção",
+        "x": 0.087527352297593,
+        "y": 0.2649739583333333,
+        "width": 0.21152443471918309,
+        "height": 0.07161458333333333
+      },
+      {
+        "name": "Pronto Socorro",
+        "x": 0.3070751276440554,
+        "y": 0.2662760416666667,
+        "width": 0.19912472647702406,
+        "height": 0.0703125
+      },
+      {
+        "name": "Ambulatório",
+        "x": 0.5142231947483589,
+        "y": 0.2662760416666667,
+        "width": 0.21517140773158278,
+        "height": 0.0703125
+      },
+      {
+        "name": "Triagem",
+        "x": 0.738147337709701,
+        "y": 0.2662760416666667,
+        "width": 0.2013129102844639,
+        "height": 0.0703125
+      }
+    ]
+  },
+  "source": "Imagem original fornecida pelo usuário, gerada por IA.",
+  "source_sha256": "55e8e9f790355c0cf1ff5b2b465dbaf59984b52687dea739b3bd50bd9c17b8e2"
+}

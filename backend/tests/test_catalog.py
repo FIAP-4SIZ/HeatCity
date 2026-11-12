@@ -11,11 +11,12 @@ from unittest.mock import patch
 
 import numpy as np
 from fastapi.testclient import TestClient
+from helpers import demo_scene
 
 from heatcity import storage
 from heatcity.api import app
 from heatcity.seed import HOSPITAL_ID, seed_hospital
-from heatcity.services.vision import demo_scene, png_url
+from heatcity.services.vision import png_url
 
 
 class CatalogTests(unittest.TestCase):
@@ -43,16 +44,33 @@ class CatalogTests(unittest.TestCase):
         seed_hospital()
         seed_hospital()
         hospital = self.client.get(f"/projects/{HOSPITAL_ID}").json()
-        self.assertEqual(len(hospital["references"]), 2)
+        self.assertEqual(len(hospital["references"]), 1)
         fixtures = Path(__file__).resolve().parents[1] / "heatcity/fixtures"
-        for reference in hospital["references"]:
-            label = "a" if " A " in reference["name"] else "b"
-            self.assertEqual(
-                base64.b64decode(reference["image"].split(",")[1]),
-                (fixtures / f"hospital-{label}.jpg").read_bytes(),
-            )
+        self.assertEqual(
+            base64.b64decode(hospital["references"][0]["image"].split(",")[1]),
+            (fixtures / "hospital.jpg").read_bytes(),
+        )
         self.assertEqual(len(self.client.get("/projects").json()), 2)
         self.assertNotIn("example_protocol", hospital)
+
+    def test_seed_reconciles_owned_assets_without_deleting_custom_photos(self):
+        import hashlib
+
+        seed_hospital()
+        retired = self.client.post(f"/projects/{HOSPITAL_ID}/references", json=demo_scene()).json()
+        custom_body = {
+            **demo_scene(),
+            "name": "Minha foto",
+            "image": png_url(np.full((200, 200, 3), 90, np.uint8)),
+        }
+        custom = self.client.post(f"/projects/{HOSPITAL_ID}/references", json=custom_body).json()
+        digest = hashlib.sha256(base64.b64decode(retired["image"].split(",")[1])).hexdigest()
+        with patch("heatcity.seed.RETIRED_FIXTURE_HASHES", {digest}):
+            seed_hospital()
+        ids = {r["id"] for r in self.client.get(f"/projects/{HOSPITAL_ID}").json()["references"]}
+        self.assertNotIn(retired["id"], ids)
+        self.assertIn(custom["id"], ids)
+        self.assertEqual(len(ids), 2)
 
     def test_create_and_delete_reference_and_project_cascade(self):
         url = f"/references/{self.reference['id']}"
@@ -159,7 +177,7 @@ class CatalogTests(unittest.TestCase):
     def test_lifespan_starts_and_loads_the_catalog(self):
         with TestClient(app) as client:
             self.assertEqual(client.get("/health").status_code, 200)
-            self.assertEqual(len(client.get(f"/projects/{HOSPITAL_ID}").json()["references"]), 2)
+            self.assertEqual(len(client.get(f"/projects/{HOSPITAL_ID}").json()["references"]), 1)
 
     def test_health_identifies_the_new_domain(self):
         self.assertEqual(self.client.get("/health").json()["version"], "2.0.0")

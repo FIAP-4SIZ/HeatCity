@@ -13,7 +13,6 @@ export function summarizeTracking(frames) {
           detectedFrames: 0,
           uncertainFrames: 0,
           firstSeen: null,
-          path: [],
           reasons: {},
           suggestions: {},
           scores: [],
@@ -44,12 +43,6 @@ export function summarizeTracking(frames) {
         previous.signs.some((s) => s.name === sign.name && s.status === 'detected');
       if (continuous) row.detectedSeconds += dt;
       else row.events++;
-      if (sign.box)
-        row.path.push({
-          time: frame.time,
-          x: sign.box[0] + sign.box[2] / 2,
-          y: sign.box[1] + sign.box[3] / 2,
-        });
     }
     previous = frame;
   }
