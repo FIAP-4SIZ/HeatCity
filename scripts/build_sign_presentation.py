@@ -387,6 +387,9 @@ As sugestões de posição são possibilidades para testar, não garantias de um
     package = ROOT / "docs/HeatCity-pacote-apresentacao.zip"
     with zipfile.ZipFile(package, "w", zipfile.ZIP_DEFLATED) as z:
         paths = [
+            ROOT / "docs/ENTREGA-PROFESSOR.md",
+            ROOT / "README.md",
+            ROOT / "backend/heatcity/services/sign_detection.py",
             OUT / "slides.pptx",
             OUT / "ROTEIRO.md",
             OUT / "Abrir-apresentacao.cmd",

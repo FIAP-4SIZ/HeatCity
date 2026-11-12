@@ -1,15 +1,20 @@
 # HeatCity — placas em vídeo
 
+**Entrega e apresentação:** [guia único para o professor](docs/ENTREGA-PROFESSOR.md)
+— arquivos exigidos, sequência da demonstração, resultados e pendências.
+
 **Onde a placa aparece e por quanto tempo é detectada?**
 
-CitizenTech: uma câmera e a análise local ajudam responsáveis por espaços
+Contexto opcional CitizenTech: uma câmera e a análise local ajudam responsáveis por espaços
 coletivos a revisar placas e levantar melhorias para testar. Beneficiários
 propostos: pacientes, acompanhantes e visitantes que precisam localizar serviços.
 
 O estado atual é um **MVP técnico funcional com evidência sintética**. Necessidade
 de campo e benefício concreto para cidadãos ainda não estão demonstrados.
 Veja a [conferência dos requisitos](docs/verificacao-requisitos.md), que diferencia
-as exigências da disciplina da fundamentação CitizenTech.
+as exigências do PDF da disciplina do contexto opcional CitizenTech. Os arquivos
+solicitados estão presentes; a evidência sintética é uma limitação declarada,
+não um requisito adicional de pesquisa de campo.
 
 ## Começar no Windows
 

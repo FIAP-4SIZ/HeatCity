@@ -4,13 +4,15 @@
 
 Conferência refeita diretamente nas duas páginas de `Cognitive Computing-GS2-2026.pdf`, fornecido pela equipe. Foram revistos código, README, relatório técnico, notebook executado, medições, gráficos, apresentação e testes. A capa tem quatro campos não numerados de nome completo e RM de seis dígitos. A apresentação é apenas PPTX e o roteiro apenas Markdown; o PDF técnico permanece porque é exigido pelo professor.
 
-**Não considerar a entrega integralmente concluída:** o MVP tem evidência técnica controlada, mas não comprova necessidade observada no território ou melhoria para cidadãos. Submissão, demonstração presencial e arguição são etapas da equipe que o repositório não comprova.
+**Escopo obrigatório:** somente o PDF da disciplina. Conforme esclarecimento da equipe, textos posteriores como CitizenTech são contexto opcional. Os arquivos exigidos para o repositório estão presentes e conferidos; a entrega dos arquivos está apta para push. Submissão na plataforma, demonstração em aula e arguição são etapas posteriores da equipe, não condições prévias para enviar o código.
 
 **Link para entregar enquanto a main estiver reservada:** https://github.com/FIAP-4SIZ/HeatCity/tree/develop . O endereço raiz abre a branch padrão e pode não mostrar a entrega atual. Conferir o link e o acesso aos arquivos antes de enviar na plataforma. Não foi feita promoção para main.
 
 ## Veredito
 
-O HeatCity condiz com a disciplina como **MVP de PDI e visão computacional para apoiar a revisão de sinalização**. A implementação e os resultados sintéticos são verificáveis. O alinhamento a CitizenTech é conceitual e explicitado; necessidade observada no território, adoção e melhoria concreta para cidadãos ainda não estão demonstradas. Isso não equivale a afirmar que a apresentação exige entrevista formal ou a estimar uma nota.
+O HeatCity atende aos requisitos de arquivos da disciplina como **MVP de PDI e visão computacional para apoiar a revisão de sinalização**: código, notebook executado, PDF técnico, gráficos, métricas comprovadas e README. O problema, as escolhas técnicas e as limitações são documentados. A avaliação do professor permanece necessária; presença dos arquivos não garante nota.
+
+A evidência é sintética e não comprova desempenho em campo. Essa limitação deve ser explicada na análise crítica. O documento não exige uma demonstração adicional de impacto humano para autorizar a entrega dos arquivos.
 
 ## O PDF da matéria exige relato real na apresentação?
 
@@ -19,13 +21,13 @@ O HeatCity condiz com a disciplina como **MVP de PDI e visão computacional para
 - “Demonstração prática: exibição da aplicação criada em execução.”
 - “Arguição individual”, baseada no relatório: problema, metodologia, técnicas, implementação e resultados.
 
-Na página 1, o PDF exige uma solução aplicada à Global Solution, justificativa técnica e avaliação crítica dos resultados. O texto geral de CitizenTech fornecido pelo usuário, separadamente, pede identificar um problema real, observar o território e escutar quem convive com o problema. Um relato pode sustentar essa fundamentação; não há no PDF da disciplina exigência de entrevista gravada, quantidade mínima de participantes ou experimento comparativo de posicionamentos.
+Na página 1, o PDF exige uma solução aplicada à Global Solution, justificativa técnica e avaliação crítica dos resultados. O texto de CitizenTech foi fornecido separadamente e não é critério obrigatório desta conferência. Não há no PDF da disciplina exigência de entrevista gravada, quantidade mínima de participantes ou experimento comparativo de posicionamentos.
 
 ## Conferência item a item da disciplina
 
 | Exigência | Situação | Evidência ou limite |
 |---|---|---|
-| Solução aplicada à Global Solution | Parcial: proposta coerente, impacto não comprovado | CitizenTech definido abaixo; falta evidência de campo e do benefício |
+| Solução aplicada à Global Solution | Proposta apresentada | Revisão de sinalização em espaços coletivos; contexto e justificativa documentados. Impacto humano não é declarado como comprovado nem exigido como entrega adicional |
 | Aplicar PDI e visão computacional do semestre | Atende no protótipo | Cinza, recortes, histograma, Laplaciano e template matching multiescala em vídeo |
 | Justificar técnicas e avaliar criticamente | Atende no ensaio apresentado | README, método, relatório, notebook; falhas e limites permanecem visíveis |
 | Scripts e notebooks produzidos | Atende | `scripts/build_sign_video_demo.py`, `scripts/build_analysis_notebook.py`, notebook executado em `notebooks/analise-deteccao-placas.ipynb` |
@@ -40,7 +42,7 @@ Pesos do PDF: relevância do problema 1,5; rigor técnico 2,5; análise dos resu
 
 ## O que o enunciado não torna obrigatório
 
-O professor permite escolher problema, técnicas e ferramentas. Não determina MediaPipe, rastreamento ocular, treinamento de modelos, IoT físico, uso de todos os Labs, taxa mínima de acerto, teste A/B, quantidade de participantes ou formato PDF para os slides. O PDF obrigatório é o documento técnico. A proposta deve aplicar PDI e visão computacional, justificar escolhas e analisar resultados; o HeatCity implementa esses pontos no protótipo. O texto separado de CitizenTech pede uma necessidade real e benefício concreto, cuja demonstração ainda falta.
+O professor permite escolher problema, técnicas e ferramentas. Não determina MediaPipe, rastreamento ocular, treinamento de modelos, IoT físico, uso de todos os Labs, taxa mínima de acerto, teste A/B, quantidade de participantes ou formato PDF para os slides. O PDF obrigatório é o documento técnico. A proposta deve aplicar PDI e visão computacional, justificar escolhas e analisar resultados; o HeatCity implementa esses pontos no protótipo. Textos separados sobre CitizenTech não ampliam os requisitos obrigatórios da entrega.
 
 ## Verificações executadas nesta revisão
 
@@ -52,7 +54,9 @@ O professor permite escolher problema, técnicas e ferramentas. Não determina M
 
 Esses checks verificam software e artefatos. Não substituem teste de webcam física, observação de campo ou a apresentação em sala.
 
-## Necessidade humana e CitizenTech
+## Contexto opcional: necessidade humana e CitizenTech
+
+Esta seção descreve possibilidades e limites da proposta, não requisitos adicionais do professor. A ausência dessas evidências não bloqueia o push ou a entrega dos arquivos.
 
 - **Cidadão beneficiado proposto:** paciente, acompanhante ou visitante que precisa encontrar um serviço como a Recepção.
 - **Problema proposto:** sinalização pequena no percurso, desfocada na captura, obstruída ou visualmente confundível pode dificultar a localização de informações. O caso do hospital é ilustrativo; não foi apresentado um diagnóstico de campo verificável neste material.
@@ -74,7 +78,7 @@ No experimento versionado: 24 quadros correlacionados, 96 anotações de posiç�
 
 Isso comprova funcionamento controlado do software sobre o exemplo de IA. Não comprova desempenho em vídeos reais, leitura de placas, redução de pedidos de ajuda ou ganho de acessibilidade. O app separa acerto conhecido de precisão não medida, e registra falhas em vez de convertê-las em acertos.
 
-## Próximas evidências prioritárias
+## Melhorias opcionais após a entrega dos arquivos
 
 1. Documentar uma observação ou relato consentido sobre dificuldade real de sinalização, sem coletar nomes ou dados sensíveis. Isso fundamenta a necessidade CitizenTech; não é uma exigência autônoma de relato na apresentação da matéria.
 2. Capturar um vídeo real compatível com uma foto de referência. Conferir posições/ausências em quadros e baixar o relatório.
