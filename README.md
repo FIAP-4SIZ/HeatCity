@@ -93,9 +93,8 @@ Chrome e Edge aceitam câmera em localhost. No Windows, use `.venv\Scripts\pytho
 
 ## Evidência e apresentação
 
-[Apresentação editável PPTX](docs/apresentacao/slides.pptx) · [Prévia HTML](docs/apresentacao/slides.html) ·
-[Fala por slide e conceitos (TXT)](docs/apresentacao/ROTEIRO.txt) ·
-[Guia de demonstração](docs/apresentacao/ROTEIRO.md) · [Pacote offline](docs/HeatCity-pacote-apresentacao.zip) ·
+[Apresentação editável PPTX](docs/apresentacao/slides.pptx) ·
+[Roteiro de fala e conceitos (MD)](docs/apresentacao/ROTEIRO.md) · [Pacote offline](docs/HeatCity-pacote-apresentacao.zip) ·
 [Relatório](docs/reports/HeatCity-deteccao-placas-exemplo.pdf) ·
 [Medições](docs/reports/deteccao-placas-benchmark.json) ·
 [Exemplo](docs/exemplo-hospital.md).
@@ -104,6 +103,7 @@ Regenerar vídeo/medições (requer ffmpeg somente para recriar o MP4 já inclu�
 
 ```sh
 PYTHONPATH=backend .venv/bin/python scripts/build_sign_video_demo.py
+.venv/bin/python -m pip install -r scripts/requirements-presentation.txt
 .venv/bin/python scripts/build_sign_presentation.py
 ```
 

@@ -406,7 +406,12 @@ def report_pdf(frames, title="HeatCity — detecção de placas em vídeo"):
     text(
         "TP exige nome correspondente, decisão detectada e IoU >= 0,5. Placas não anotadas não são tratadas como ausentes. Erro de localização de uma detecção positiva gera FP e FN. Abstenções permanecem visíveis; se a placa estiver presente, contam como FN. Sem anotações não há precisão de acerto mensurada. Quadros correlacionados não são participantes independentes."
     )
-    rows = [["Placa", "Detectada", "Ambígua", "Não localizada", "Conflito"]]
+    rows = [
+        [
+            Paragraph(label, styles["BodyText"])
+            for label in ("Placa", "Detectada", "Ambígua", "Não localizada", "Conflito")
+        ]
+    ]
     for name, c in s["counts"].items():
         rows.append(
             [
@@ -414,7 +419,7 @@ def report_pdf(frames, title="HeatCity — detecção de placas em vídeo"):
                 *[str(c[k]) for k in ("detected", "ambiguous", "not_found", "conflict")],
             ]
         )
-    table = Table(rows, colWidths=[180, 65, 65, 65, 65], repeatRows=1)
+    table = Table(rows, colWidths=[170, 65, 65, 90, 65], repeatRows=1)
     table.setStyle(
         TableStyle(
             [
@@ -475,7 +480,7 @@ def report_pdf(frames, title="HeatCity — detecção de placas em vídeo"):
         "Template matching é sensível a escala, inclinação, oclusão e mudanças de conteúdo. Baixo score não identifica sozinho qual fator causou a falha. Nitidez e contraste descrevem a região candidata e podem pertencer a uma correspondência incorreta. Sugestões de local significam hipóteses sobre visibilidade pela câmera; não demonstram melhor orientação ou acessibilidade humana. Precisam de nova captura/controlada para comparação."
     )
     text(
-        "Referências: OpenCV Template Matching — https://docs.opencv.org/4.x/d4/dc6/tutorial_py_template_matching.html ; laboratório de aula — https://arnaldojr.github.io/cognitivecomputing/aulas/PDI/lab12/Template_matching.html ; código HeatCity, requisitos congelados e roteiro do repositório. Enunciado Cognitive Computing-GS2-2026, fornecido pela disciplina."
+        "Referências: OpenCV Template Matching — https://docs.opencv.org/4.x/d4/dc6/tutorial_py_template_matching.html ; laboratório de aula — https://arnaldojr.github.io/cognitivecomputing/aulas/PDI/lab12/Template_matching.html ."
     )
     SimpleDocTemplate(output, leftMargin=42, rightMargin=42, topMargin=42, bottomMargin=42).build(
         story

@@ -1,5 +1,13 @@
 # Conferência da proposta e dos requisitos
 
+## Revisão de 12/11/2026
+
+Conferência refeita diretamente nas duas páginas de `Cognitive Computing-GS2-2026.pdf`, fornecido pela equipe. Foram revistos código, README, relatório técnico, notebook executado, medições, gráficos, apresentação e testes. A capa tem quatro campos não numerados de nome completo e RM de seis dígitos. A apresentação é apenas PPTX e o roteiro apenas Markdown; o PDF técnico permanece porque é exigido pelo professor.
+
+**Não considerar a entrega integralmente concluída:** o MVP tem evidência técnica controlada, mas não comprova necessidade observada no território ou melhoria para cidadãos. Submissão, demonstração presencial e arguição são etapas da equipe que o repositório não comprova.
+
+**Link para entregar enquanto a main estiver reservada:** https://github.com/FIAP-4SIZ/HeatCity/tree/develop . O endereço raiz abre a branch padrão e pode não mostrar a entrega atual. Conferir o link e o acesso aos arquivos antes de enviar na plataforma. Não foi feita promoção para main.
+
 ## Veredito
 
 O HeatCity condiz com a disciplina como **MVP de PDI e visão computacional para apoiar a revisão de sinalização**. A implementação e os resultados sintéticos são verificáveis. O alinhamento a CitizenTech é conceitual e explicitado; necessidade observada no território, adoção e melhoria concreta para cidadãos ainda não estão demonstradas. Isso não equivale a afirmar que a apresentação exige entrevista formal ou a estimar uma nota.
@@ -26,9 +34,23 @@ Na página 1, o PDF exige uma solução aplicada à Global Solution, justificati
 | README e execução clara | Implementado e testado por software | Exemplo em um clique; foto → vídeo próprio; launcher Windows e comandos manuais. O último ensaio físico no computador da apresentação é responsabilidade da equipe |
 | Informar endereço do GitHub no Teams/plataforma | Pendente da equipe | Ter código enviado ao GitHub não comprova a submissão na plataforma |
 | Demonstrar a aplicação em execução na aula | Preparado; apresentação ainda pendente | Testes de navegador com vídeo versionado e webcam simulada não substituem a demonstração presencial |
-| Arguição individual | Pendente da equipe | Roteiro oferece perguntas; cada integrante deve compreender código e resultados |
+| Arguição individual | Pendente da equipe | Roteiro explica fala, método e termos; cada integrante deve compreender código e resultados |
 
 Pesos do PDF: relevância do problema 1,5; rigor técnico 2,5; análise dos resultados 2,0; clareza/código 1,0; demonstração em sala 1,5; arguição 1,5. Esta conferência não atribui pontuação nem garante avaliação do professor.
+
+## O que o enunciado não torna obrigatório
+
+O professor permite escolher problema, técnicas e ferramentas. Não determina MediaPipe, rastreamento ocular, treinamento de modelos, IoT físico, uso de todos os Labs, taxa mínima de acerto, teste A/B, quantidade de participantes ou formato PDF para os slides. O PDF obrigatório é o documento técnico. A proposta deve aplicar PDI e visão computacional, justificar escolhas e analisar resultados; o HeatCity implementa esses pontos no protótipo. O texto separado de CitizenTech pede uma necessidade real e benefício concreto, cuja demonstração ainda falta.
+
+## Verificações executadas nesta revisão
+
+- Backend: 25 testes, incluindo detecção, métricas, catálogo, relatório e codificação do exemplo no Windows.
+- Frontend: seis testes de contagem temporal e captura, formatação e build de produção.
+- Navegador: exemplo completo, relatórios PDF/JSON/CSV, vídeo próprio sem precisão inventada, anotação manual, webcam simulada, cadastro e PDI; também tela estreita.
+- Notebook reexecutado: hash do MP4, contagens e IoU conferidos independentemente; entradas e saídas estão versionadas.
+- Apresentação: 12 slides, quatro campos de nome completo/RM, notas de fala, fontes externas, pacote sem HTML/TXT de apresentação. Abertura nativa no PowerPoint precisa ser conferida na máquina da equipe.
+
+Esses checks verificam software e artefatos. Não substituem teste de webcam física, observação de campo ou a apresentação em sala.
 
 ## Necessidade humana e CitizenTech
 
