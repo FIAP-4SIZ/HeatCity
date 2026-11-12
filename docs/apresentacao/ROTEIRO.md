@@ -11,8 +11,8 @@ Conferência aprovada para este exemplo controlado, sem generalização para ví
 ## Fala e demonstração (5–7 minutos)
 
 1. Slides 1–3: problema concreto na entrada do hospital, relação com espaços coletivos/Global Solution e motivo do recorte. Não afirmar que o detector mede atenção humana.
-2. Slides 4–6: mostrar imagem, AOIs, cinza, correlação por escalas e tempo acumulado com interrupções. O processamento usa referências conhecidas e critérios fixos, sem treinamento.
-3. Slides 7–9: mostrar números efetivamente calculados, gráfico e falhas. São quadros sintéticos correlacionados, sem resultados humanos. Score de correlação não é precisão.
+2. Slides 4–6: mostrar imagem, ROIs, cinza, correlação por escalas e tempo acumulado com interrupções. O processamento usa referências conhecidas e critérios fixos, sem treinamento.
+3. Slides 7–9: mostrar números efetivamente calculados, gráfico e falhas. São quadros sintéticos correlacionados, sem resultados humanos. Valor de correspondência não é precisão medida.
 4. Slide 10: distinguir indícios medidos de causas e sugestões de local ainda não confirmadas.
 5. Slide 11: abrir a aplicação pela raiz, clicar em Ver exemplo funcionando; a análise inicia automaticamente. Observar perda de detecção sob desfoque e ausência da Recepção no final. Ao terminar, ver o relatório e baixar PDF/JSON/CSV. Para conferir outro quadro, voltar ao vídeo.
 6. Slide 12: apresentar links de documentação, scripts e limites.
@@ -34,7 +34,7 @@ No PowerShell: `$env:PYTHONPATH="backend"` antes de executar os dois scripts. ff
 
 ## Aderência e pendências
 
-- PDI: cinza, contraste local, Laplaciano e recortes visíveis no PDI já existente.
+- PDI: cinza, contraste da região da placa, Laplaciano e recortes visíveis no PDI já existente.
 - Visão computacional: localização de referências nos quadros de vídeo/webcam por template matching; conteúdo alinhado ao laboratório de aula.
 - Evidência reproduzível: vídeo, geometria conhecida, medições por quadro, gráfico, PDF e código versionados.
 - Análise crítica: dúvida, falhas, tempo estimado e sugestões de posição por placa, sem inferência de atenção/leitura.
