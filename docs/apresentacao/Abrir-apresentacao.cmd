@@ -1,2 +1,2 @@
 @echo off
-start "" "%~dp0slides.html"
+start "" "%~dp0slides.pptx"
