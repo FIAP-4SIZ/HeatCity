@@ -151,7 +151,7 @@ def main():
         (
             "PDI e visão computacional",
             [
-                "1. Captura negociada e amostragem de até 2 quadros/s; largura reduzida a 800 px.",
+                "1. Vídeo próprio/webcam: até 2 amostras/s. Exemplo: 24 quadros fixos do arquivo; largura até 800 px.",
                 "2. Cinza → recortes de referência → TM_CCOEFF_NORMED em 7 escalas fixas.",
                 "3. Similaridade ≥ 0,72 e margem espacial ≥ 0,06. Conflito entre identidades: margem 0,08.",
                 "4. Laplaciano, contraste e tamanho aparente descrevem indícios de dificuldade. Os limites são heurísticos, sem treino.",
@@ -172,7 +172,7 @@ def main():
             [
                 "Somar Δt apenas quando a mesma placa é detectada em dois quadros consecutivos da mesma fonte, com 0 < Δt ≤ 1,5 s.",
                 "Falha, ambiguidade ou intervalo maior interrompe o trecho. Um quadro isolado representa 0 s.",
-                "Tempo do arquivo vem da mídia, não da duração de processamento. Não se prova presença contínua entre amostras.",
+                "Os 24 quadros do exemplo são decodificados e reprocessados na API; o tempo é do arquivo, não da duração do processamento. Não se prova presença contínua entre amostras.",
                 "Centros acumulados mostram a trajetória na imagem; representam as posições das placas detectadas.",
             ],
         ),
@@ -200,7 +200,7 @@ def main():
             "Análise final por placa",
             plate_lines
             + [
-                "Desfoque/desaparecimento reduzem a disponibilidade. Precisão considera só anotações e não é o score de correlação.",
+                "As 24 perdas com placas presentes ocorrem no desfoque; 6 ausências da Recepção são reconhecidas corretamente e não são falhas. Precisão não é o score de correlação.",
                 "A aplicação e o relatório consolidam causas possíveis, margens, trechos detectados, falhas e sugestões por placa.",
             ],
         ),
@@ -374,6 +374,7 @@ No PowerShell: `$env:PYTHONPATH="backend"` antes de executar os dois scripts. ff
             ROOT / "notebooks/requirements.txt",
             ROOT / "scripts/build_analysis_notebook.py",
             ROOT / "docs/verificacao-requisitos.md",
+            ROOT / "docs/verificacao-exemplo-sintetico.md",
         ]
         for path in paths:
             z.write(path, path.relative_to(ROOT))

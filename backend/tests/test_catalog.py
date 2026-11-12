@@ -179,6 +179,26 @@ class CatalogTests(unittest.TestCase):
             self.assertEqual(client.get("/health").status_code, 200)
             self.assertEqual(len(client.get(f"/projects/{HOSPITAL_ID}").json()["references"]), 1)
 
+    def test_example_decodes_real_file_and_rejects_unmatched_reference(self):
+        seed_hospital()
+        ref = self.client.get(f"/projects/{HOSPITAL_ID}").json()["references"][0]
+        url = f"/references/{ref['id']}/detect-demo-frame"
+        start = self.client.post(url, json={"frame_index": 0})
+        self.assertEqual(start.status_code, 200, start.text)
+        self.assertEqual(start.json()["time"], 0)
+        self.assertEqual(start.json()["result"]["metrics"]["tp"], 4)
+        self.assertTrue(start.json()["preview"].startswith("data:image/png;base64,"))
+        absent = self.client.post(url, json={"frame_index": 108}).json()
+        self.assertEqual(absent["result"]["metrics"]["tn"], 1)
+        self.assertEqual(absent["result"]["metrics"]["tp"], 3)
+        self.assertEqual(self.client.post(url, json={"frame_index": 1}).status_code, 422)
+        self.assertEqual(
+            self.client.post(
+                f"/references/{self.reference['id']}/detect-demo-frame", json={"frame_index": 0}
+            ).status_code,
+            422,
+        )
+
     def test_health_identifies_the_new_domain(self):
         self.assertEqual(self.client.get("/health").json()["version"], "2.0.0")
         paths = self.client.get("/openapi.json").json()["paths"]

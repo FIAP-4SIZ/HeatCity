@@ -29,6 +29,15 @@ try {
   assert.equal(await page.locator('.start-card').count(), 2);
   assert.equal(await page.getByLabel('Foto cadastrada').count(), 0);
   await page.screenshot({ path: '/tmp/heatcity-simple-home.png', fullPage: true });
+  // Deliberately delay one actual API request; the decoded source grid must not skip frames.
+  let delayed = false;
+  await page.route('**/detect-demo-frame', async (route) => {
+    if (!delayed && route.request().postDataJSON().frame_index === 6) {
+      delayed = true;
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+    await route.continue();
+  });
   await page.getByRole('button', { name: 'Ver exemplo funcionando' }).click();
   await page.locator('.detector-frame').waitFor();
   await page.getByRole('button', { name: 'Pausar análise' }).waitFor();
@@ -39,11 +48,30 @@ try {
   await page.getByText('Acerto medido em um exemplo sintético.', { exact: true }).waitFor();
   assert.equal(await page.locator('.report-plate').count(), 4);
   const data = JSON.parse((await download('Baixar diagnóstico JSON')).toString());
-  assert.ok(data.frames.length >= 8);
+  assert.equal(data.frames.length, 24);
+  assert.deepEqual(
+    data.frames.map((f) => f.frame_index),
+    Array.from({ length: 24 }, (_, i) => i * 6),
+  );
+  assert.deepEqual(
+    data.frames.map((f) => f.time),
+    Array.from({ length: 24 }, (_, i) => i / 2),
+  );
+  assert.equal(data.summary.tp, 66);
+  assert.equal(data.summary.fp, 0);
+  assert.equal(data.summary.fn, 24);
+  assert.equal(data.summary.tn, 6);
+  const reception = data.summary.signs.find((s) => s.name === 'Recepção');
+  assert.equal(reception.knownAbsentFrames, 6);
+  assert.equal(reception.fn, 6);
+  assert.equal(reception.detectedSeconds, 5.5);
+  assert.ok(
+    data.frames.every((f) => f.signs.every((s) => s.status === 'detected' || s.quality === null)),
+  );
   assert.ok(data.summary.annotations > 0);
   assert.ok(data.summary.signs.some((s) => s.detectedSeconds > 0));
   assert.ok(data.frames.some((f) => f.signs.some((s) => s.status === 'not_found')));
-  assert.ok(data.frames.every((f) => !f.image));
+  assert.ok(data.frames.every((f) => !f.image && !f.preview));
   assert.equal((await download('Baixar relatório PDF')).subarray(0, 5).toString(), '%PDF-');
   assert.match((await download('Baixar CSV')).toString(), /tempo_s/);
   await page.screenshot({ path: '/tmp/heatcity-simple-report.png', fullPage: true });

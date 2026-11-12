@@ -42,6 +42,49 @@ export default function AnalysisReport({
             : 'O sistema consegue relatar detecções e dificuldades, mas precisa da posição verdadeira para saber se acertou. Volte ao vídeo, pause e confira um quadro. Similaridade não substitui essa conferência.'}
         </p>
       </div>
+      {source.kind === 'demo' && (
+        <article className="panel">
+          <h2>O que aconteceu em cada trecho?</h2>
+          <p>
+            O exemplo contém imagem nítida, deslocamento, desfoque e remoção da Recepção. São{' '}
+            {records.length}/24 quadros da grade fixa. Cada quadro foi decodificado do arquivo e
+            processado novamente; o relatório não usa previsões prontas. O desfoque é uma
+            transformação conhecida do experimento; essas perdas não comprovam um problema de
+            instalação da placa.
+          </p>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Trecho</th>
+                  <th>Quadros</th>
+                  <th>Acertos</th>
+                  <th>Perdas com placa presente</th>
+                  <th>Ausências corretas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.conditions.map((c) => (
+                  <tr key={c.condition}>
+                    <td>
+                      {{
+                        referencia_nitida: 'Imagem nítida',
+                        deslocamento: 'Deslocamento',
+                        desfoque: 'Desfoque',
+                        recepcao_ausente: 'Recepção ausente',
+                      }[c.condition] || c.condition}
+                    </td>
+                    <td>{c.frames}</td>
+                    <td>{c.tp}</td>
+                    <td>{c.fn}</td>
+                    <td>{c.tn}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </article>
+      )}
       <article className="panel detector-final">
         <h2>Análise final: dificuldade e melhorias</h2>
         <p>
@@ -71,13 +114,29 @@ export default function AnalysisReport({
                 </dd>
               </div>
               <div>
-                <dt>Quadros incertos</dt>
+                <dt>Correspondências ambíguas</dt>
                 <dd>{s.uncertainFrames}</dd>
               </div>
               <div>
-                <dt>Não localizada</dt>
+                <dt>Não localizada (total)</dt>
                 <dd>{records.length - s.detectedFrames - s.uncertainFrames}</dd>
               </div>
+              {s.annotations > 0 && (
+                <>
+                  <div>
+                    <dt>Ausência confirmada</dt>
+                    <dd>
+                      {s.knownAbsentFrames} quadros ({s.tn} reconhecidos corretamente)
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Falhas com placa presente</dt>
+                    <dd>
+                      {s.fn} de {s.knownPresentFrames} quadros anotados
+                    </dd>
+                  </div>
+                </>
+              )}
               <div>
                 <dt>Precisão por placa</dt>
                 <dd>
@@ -100,16 +159,24 @@ export default function AnalysisReport({
                 ? 'A placa foi detectada em todos os quadros analisados.'
                 : 'A localização não permaneceu disponível em todos os quadros.'}{' '}
               A proporção de detecções descreve o comportamento do sistema; não mede dificuldade de
-              leitura humana.
+              leitura humana.{' '}
+              {s.knownAbsentFrames > 0 &&
+                `${s.knownAbsentFrames} quadros com ausência confirmada foram excluídos dos indícios de dificuldade.`}
             </p>
             <h4>O que pode explicar a dúvida?</h4>
+            {s.knownAbsentFrames === records.length && (
+              <p>
+                A placa estava ausente em todos os quadros anotados; estes dados não permitem
+                avaliar a dificuldade ou sugerir outro local para ela.
+              </p>
+            )}
             {Object.keys(s.reasons).length ? (
               <ul>
                 {Object.entries(s.reasons)
                   .sort((a, b) => b[1] - a[1])
                   .map(([text, count]) => (
                     <li key={text}>
-                      {text} — {count}/{records.length} quadros.
+                      {text} — {count} quadros, sem incluir ausências confirmadas.
                     </li>
                   ))}
               </ul>
@@ -121,11 +188,13 @@ export default function AnalysisReport({
               {Object.keys(s.suggestions).map((text) => (
                 <li key={text}>{text}</li>
               ))}
-              <li>
-                Testar uma posição frontal ao trajeto da câmera, antes do ponto de decisão, sem
-                obstruções e com tamanho aparente suficiente. Comparar antes/depois com o mesmo
-                trajeto, distância e iluminação.
-              </li>
+              {s.knownAbsentFrames !== records.length && (
+                <li>
+                  Testar uma posição frontal ao trajeto da câmera, antes do ponto de decisão, sem
+                  obstruções e com tamanho aparente suficiente. Comparar antes/depois com o mesmo
+                  trajeto, distância e iluminação.
+                </li>
+              )}
             </ul>
             <details>
               <summary>Números técnicos desta placa</summary>

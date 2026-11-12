@@ -123,11 +123,13 @@ def main():
             )
         capture.release()
     metadata = {
-        "version": 1,
+        "version": 2,
         "source": "synthetic_from_ai_image_not_human_study",
         "reference_sha256": hashlib.sha256(raw).hexdigest(),
+        "video_sha256": hashlib.sha256(video.read_bytes()).hexdigest(),
         "plates": scene["plates"],
         "fps": 12,
+        "sample_frame_indices": list(range(0, 144, 6)),
         "duration": 12,
         "segments": segments,
     }

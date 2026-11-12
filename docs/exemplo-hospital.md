@@ -16,3 +16,9 @@ de conferência manual para medir acerto.
 CitizenTech: exemplo técnico de apoio à revisão de sinalização. Não representa
 observação de campo, participantes nem melhoria humana comprovada. Veja
 [conferência dos requisitos](verificacao-requisitos.md).
+
+A demonstração decodifica na API os quadros 0, 6, 12, …, 138 (24 instantes,
+de 0 a 11,5 s). As previsões são recalculadas pelo detector, sem copiar o
+benchmark. O processamento pode durar mais ou menos que os 12 s do arquivo.
+Vídeo próprio e webcam continuam amostrados ao vivo. Veja os
+[valores esperados](verificacao-exemplo-sintetico.md).

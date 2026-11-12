@@ -86,6 +86,38 @@ class SignDetectionTests(unittest.TestCase):
         self.assertEqual(summary["frames"], 2)
         self.assertEqual(summary["detection_fraction"], 0.5)
 
+    def test_known_absence_is_not_a_failure_or_a_difficulty_hint(self):
+        result = detect(
+            np.zeros_like(self.reference),
+            self.reference,
+            [self.plate],
+            [dict(name="Recepção", present=False)],
+        )
+        detail = summarize([result])["details"][0]
+        self.assertEqual(detail["known_absent_frames"], 1)
+        self.assertEqual(detail["tn"], 1)
+        self.assertEqual(detail["fn"], 0)
+        self.assertEqual(detail["reasons"], {})
+        self.assertEqual(detail["suggestions"], {})
+
+    def test_rejected_region_does_not_diagnose_the_real_plate_position(self):
+        result = detect(
+            np.zeros_like(self.reference),
+            self.reference,
+            [self.plate],
+            [dict(name="Recepção", present=True, box=self.box)],
+        )
+        sign = result["signs"][0]
+        self.assertEqual(result["metrics"]["fn"], 1)
+        self.assertIsNone(sign["quality"])
+        self.assertFalse(
+            any(
+                word in text
+                for text in sign["reasons"]
+                for word in ("borda", "contraste", "Laplaciano")
+            )
+        )
+
     def test_pdf_contains_a_valid_document(self):
         result = detect(self.reference, self.reference, [self.plate])
         self.assertTrue(report_pdf([result]).startswith(b"%PDF-"))

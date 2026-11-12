@@ -18,7 +18,7 @@
     "precision": 1.0,
     "recall": 0.7333333333333333,
     "mean_iou": 0.7139711645412861,
-    "mean_processing_ms": 207.8408812499788,
+    "mean_processing_ms": 233.02993883332115,
     "counts": {
       "Recepção": {
         "detected": 12,
@@ -45,6 +45,40 @@
         "conflict": 0
       }
     },
+    "conditions": [
+      {
+        "condition": "referencia_nitida",
+        "frames": 6,
+        "tp": 24,
+        "fp": 0,
+        "fn": 0,
+        "tn": 0
+      },
+      {
+        "condition": "deslocamento",
+        "frames": 6,
+        "tp": 24,
+        "fp": 0,
+        "fn": 0,
+        "tn": 0
+      },
+      {
+        "condition": "desfoque",
+        "frames": 6,
+        "tp": 0,
+        "fp": 0,
+        "fn": 24,
+        "tn": 0
+      },
+      {
+        "condition": "recepcao_ausente",
+        "frames": 6,
+        "tp": 18,
+        "fp": 0,
+        "fn": 0,
+        "tn": 6
+      }
+    ],
     "details": [
       {
         "name": "Recepção",
@@ -53,18 +87,18 @@
         "events": 1,
         "first_seen": 0.0,
         "reasons": {
-          "Similaridade abaixo do limite; não identifica a causa isoladamente.": 12,
-          "Mais de uma posição tem correlação semelhante.": 12
+          "Similaridade abaixo do limite; não identifica a causa isoladamente.": 6
         },
         "suggestions": {
-          "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.": 12,
-          "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis.": 12
+          "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.": 6
         },
         "tp": 12,
         "fp": 0,
         "fn": 6,
         "tn": 6,
         "annotations": 24,
+        "known_present_frames": 18,
+        "known_absent_frames": 6,
         "mean_score": 0.5759204663336277,
         "mean_gap": 0.12151430050532024,
         "detection_fraction": 0.5,
@@ -79,20 +113,18 @@
         "events": 2,
         "first_seen": 0.0,
         "reasons": {
-          "Similaridade abaixo do limite; não identifica a causa isoladamente.": 6,
-          "Mais de uma posição tem correlação semelhante.": 6,
-          "Menor variação pelo Laplaciano que a referência redimensionada; compatível com desfoque ou perda de detalhes.": 6
+          "Similaridade abaixo do limite; não identifica a causa isoladamente.": 6
         },
         "suggestions": {
-          "Melhorar foco, reduzir movimento e posicionar a placa onde tenha maior tamanho aparente.": 6,
-          "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.": 6,
-          "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis.": 6
+          "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.": 6
         },
         "tp": 18,
         "fp": 0,
         "fn": 6,
         "tn": 0,
         "annotations": 24,
+        "known_present_frames": 24,
+        "known_absent_frames": 0,
         "mean_score": 0.7324989711244901,
         "mean_gap": 0.4339408886929353,
         "detection_fraction": 0.75,
@@ -107,20 +139,18 @@
         "events": 2,
         "first_seen": 0.0,
         "reasons": {
-          "Similaridade abaixo do limite; não identifica a causa isoladamente.": 6,
-          "Mais de uma posição tem correlação semelhante.": 6,
-          "Candidato próximo da borda do quadro; pode ser recortado.": 6
+          "Similaridade abaixo do limite; não identifica a causa isoladamente.": 6
         },
         "suggestions": {
-          "Testar posição mais central no campo de visão e sem obstruções.": 6,
-          "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.": 6,
-          "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis.": 6
+          "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.": 6
         },
         "tp": 18,
         "fp": 0,
         "fn": 6,
         "tn": 0,
         "annotations": 24,
+        "known_present_frames": 24,
+        "known_absent_frames": 0,
         "mean_score": 0.6852110996842384,
         "mean_gap": 0.24729939177632332,
         "detection_fraction": 0.75,
@@ -135,20 +165,18 @@
         "events": 2,
         "first_seen": 0.0,
         "reasons": {
-          "Similaridade abaixo do limite; não identifica a causa isoladamente.": 6,
-          "Mais de uma posição tem correlação semelhante.": 6,
-          "Candidato próximo da borda do quadro; pode ser recortado.": 6
+          "Similaridade abaixo do limite; não identifica a causa isoladamente.": 6
         },
         "suggestions": {
-          "Testar posição mais central no campo de visão e sem obstruções.": 6,
-          "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.": 6,
-          "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis.": 6
+          "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.": 6
         },
         "tp": 18,
         "fp": 0,
         "fn": 6,
         "tn": 0,
         "annotations": 24,
+        "known_present_frames": 24,
+        "known_absent_frames": 0,
         "mean_score": 0.7423267600437006,
         "mean_gap": 0.20479472974936166,
         "detection_fraction": 0.75,
@@ -163,7 +191,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 231.77668800008178,
+      "processing_ms": 219.67878699979337,
       "signs": [
         {
           "name": "Recepção",
@@ -190,6 +218,7 @@
           },
           "ground_truth_iou": 0.977214544341882,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -222,6 +251,7 @@
           },
           "ground_truth_iou": 0.9684423140490245,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -254,6 +284,7 @@
           },
           "ground_truth_iou": 0.978124403293779,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -286,6 +317,7 @@
           },
           "ground_truth_iou": 0.9718127424690403,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -333,7 +365,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 211.43839000023945,
+      "processing_ms": 202.8837719999501,
       "signs": [
         {
           "name": "Recepção",
@@ -360,6 +392,7 @@
           },
           "ground_truth_iou": 0.977214544341882,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -392,6 +425,7 @@
           },
           "ground_truth_iou": 0.9684423140490245,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -424,6 +458,7 @@
           },
           "ground_truth_iou": 0.978124403293779,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -456,6 +491,7 @@
           },
           "ground_truth_iou": 0.9718127424690403,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -503,7 +539,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 208.6851359999855,
+      "processing_ms": 230.9406949998447,
       "signs": [
         {
           "name": "Recepção",
@@ -530,6 +566,7 @@
           },
           "ground_truth_iou": 0.977214544341882,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -562,6 +599,7 @@
           },
           "ground_truth_iou": 0.9684423140490245,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -594,6 +632,7 @@
           },
           "ground_truth_iou": 0.978124403293779,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -626,6 +665,7 @@
           },
           "ground_truth_iou": 0.9718127424690403,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -673,7 +713,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 200.78525000008085,
+      "processing_ms": 233.42968999986624,
       "signs": [
         {
           "name": "Recepção",
@@ -700,6 +740,7 @@
           },
           "ground_truth_iou": 0.977214544341882,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -732,6 +773,7 @@
           },
           "ground_truth_iou": 0.9684423140490245,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -764,6 +806,7 @@
           },
           "ground_truth_iou": 0.978124403293779,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -796,6 +839,7 @@
           },
           "ground_truth_iou": 0.9718127424690403,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -843,7 +887,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 199.18659799986926,
+      "processing_ms": 233.1952660006209,
       "signs": [
         {
           "name": "Recepção",
@@ -870,6 +914,7 @@
           },
           "ground_truth_iou": 0.977214544341882,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -902,6 +947,7 @@
           },
           "ground_truth_iou": 0.9684423140490245,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -934,6 +980,7 @@
           },
           "ground_truth_iou": 0.978124403293779,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -966,6 +1013,7 @@
           },
           "ground_truth_iou": 0.9718127424690403,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -1013,7 +1061,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 189.26034700007222,
+      "processing_ms": 236.61758200069016,
       "signs": [
         {
           "name": "Recepção",
@@ -1040,6 +1088,7 @@
           },
           "ground_truth_iou": 0.977214544341882,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -1072,6 +1121,7 @@
           },
           "ground_truth_iou": 0.9684423140490245,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -1104,6 +1154,7 @@
           },
           "ground_truth_iou": 0.978124403293779,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -1136,6 +1187,7 @@
           },
           "ground_truth_iou": 0.9718127424690403,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -1183,7 +1235,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 207.35506799974246,
+      "processing_ms": 236.20763200051442,
       "signs": [
         {
           "name": "Recepção",
@@ -1210,6 +1262,7 @@
           },
           "ground_truth_iou": 0.9772145443418803,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -1242,6 +1295,7 @@
           },
           "ground_truth_iou": 0.9684423140490235,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -1274,6 +1328,7 @@
           },
           "ground_truth_iou": 0.978124403293779,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -1306,6 +1361,7 @@
           },
           "ground_truth_iou": 0.9718127424690403,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -1353,7 +1409,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 189.54787900020165,
+      "processing_ms": 207.0368939994296,
       "signs": [
         {
           "name": "Recepção",
@@ -1380,6 +1436,7 @@
           },
           "ground_truth_iou": 0.9772145443418803,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -1412,6 +1469,7 @@
           },
           "ground_truth_iou": 0.9684423140490235,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -1444,6 +1502,7 @@
           },
           "ground_truth_iou": 0.978124403293779,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -1476,6 +1535,7 @@
           },
           "ground_truth_iou": 0.9718127424690403,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -1523,7 +1583,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 190.22281599973212,
+      "processing_ms": 257.70359099988127,
       "signs": [
         {
           "name": "Recepção",
@@ -1550,6 +1610,7 @@
           },
           "ground_truth_iou": 0.9772145443418803,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -1582,6 +1643,7 @@
           },
           "ground_truth_iou": 0.9684423140490235,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -1614,6 +1676,7 @@
           },
           "ground_truth_iou": 0.978124403293779,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -1646,6 +1709,7 @@
           },
           "ground_truth_iou": 0.9718127424690403,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -1693,7 +1757,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 194.78152599958776,
+      "processing_ms": 219.9565689998053,
       "signs": [
         {
           "name": "Recepção",
@@ -1720,6 +1784,7 @@
           },
           "ground_truth_iou": 0.9772145443418803,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -1752,6 +1817,7 @@
           },
           "ground_truth_iou": 0.9684423140490235,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -1784,6 +1850,7 @@
           },
           "ground_truth_iou": 0.978124403293779,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -1816,6 +1883,7 @@
           },
           "ground_truth_iou": 0.9718127424690403,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -1863,7 +1931,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 185.97907000003033,
+      "processing_ms": 224.52111399979913,
       "signs": [
         {
           "name": "Recepção",
@@ -1890,6 +1958,7 @@
           },
           "ground_truth_iou": 0.9772145443418803,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -1922,6 +1991,7 @@
           },
           "ground_truth_iou": 0.9684423140490235,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -1954,6 +2024,7 @@
           },
           "ground_truth_iou": 0.978124403293779,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -1986,6 +2057,7 @@
           },
           "ground_truth_iou": 0.9718127424690403,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -2033,7 +2105,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 188.8849859997208,
+      "processing_ms": 224.26827199979016,
       "signs": [
         {
           "name": "Recepção",
@@ -2060,6 +2132,7 @@
           },
           "ground_truth_iou": 0.9772145443418803,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -2092,6 +2165,7 @@
           },
           "ground_truth_iou": 0.9684423140490235,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -2124,6 +2198,7 @@
           },
           "ground_truth_iou": 0.978124403293779,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -2156,6 +2231,7 @@
           },
           "ground_truth_iou": 0.9718127424690403,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -2203,7 +2279,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 195.86624299972755,
+      "processing_ms": 235.662245999265,
       "signs": [
         {
           "name": "Recepção",
@@ -2219,23 +2295,15 @@
           ],
           "scale": 0.5,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 55.316964285714285,
-            "contrast": 0.7770034816132283,
-            "sharpness": 12682.779017857143,
-            "reference_sharpness": 11504.488865858842,
-            "reference_contrast": 0.7808219142428223,
-            "height_pixels": 32.0
-          },
+          "quality": null,
           "ground_truth_iou": 0.0,
           "evaluation": {
+            "present": true,
             "tp": 0,
             "fp": 0,
             "fn": 1,
@@ -2257,25 +2325,15 @@
           ],
           "scale": 0.8,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante.",
-            "Menor variação pelo Laplaciano que a referência redimensionada; compatível com desfoque ou perda de detalhes."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis.",
-            "Melhorar foco, reduzir movimento e posicionar a placa onde tenha maior tamanho aparente."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 152.20708661417322,
-            "contrast": 0.6442390255460795,
-            "sharpness": 10.350253109306218,
-            "reference_sharpness": 5746.419885696571,
-            "reference_contrast": 0.7777777743209877,
-            "height_pixels": 50.0
-          },
+          "quality": null,
           "ground_truth_iou": 0.0,
           "evaluation": {
+            "present": true,
             "tp": 0,
             "fp": 0,
             "fn": 1,
@@ -2297,25 +2355,15 @@
           ],
           "scale": 0.8,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante.",
-            "Candidato próximo da borda do quadro; pode ser recortado."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis.",
-            "Testar posição mais central no campo de visão e sem obstruções."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 48.23434782608695,
-            "contrast": 0.7754385937703909,
-            "sharpness": 7718.0150723797515,
-            "reference_sharpness": 5009.5389350766645,
-            "reference_contrast": 0.7797453822309796,
-            "height_pixels": 50.0
-          },
+          "quality": null,
           "ground_truth_iou": 0.0,
           "evaluation": {
+            "present": true,
             "tp": 0,
             "fp": 0,
             "fn": 1,
@@ -2337,25 +2385,15 @@
           ],
           "scale": 0.6666666666666666,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante.",
-            "Candidato próximo da borda do quadro; pode ser recortado."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis.",
-            "Testar posição mais central no campo de visão e sem obstruções."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 48.38117489986649,
-            "contrast": 0.7754385937703909,
-            "sharpness": 8524.032265193031,
-            "reference_sharpness": 5931.910878005961,
-            "reference_contrast": 0.8105282179399438,
-            "height_pixels": 42.00000000000001
-          },
+          "quality": null,
           "ground_truth_iou": 0.0,
           "evaluation": {
+            "present": true,
             "tp": 0,
             "fp": 0,
             "fn": 1,
@@ -2403,7 +2441,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 227.12618200012002,
+      "processing_ms": 242.24683800002822,
       "signs": [
         {
           "name": "Recepção",
@@ -2419,23 +2457,15 @@
           ],
           "scale": 0.5,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 55.31622023809524,
-            "contrast": 0.7770034816132283,
-            "sharpness": 12682.765625,
-            "reference_sharpness": 11504.488865858842,
-            "reference_contrast": 0.7808219142428223,
-            "height_pixels": 32.0
-          },
+          "quality": null,
           "ground_truth_iou": 0.0,
           "evaluation": {
+            "present": true,
             "tp": 0,
             "fp": 0,
             "fn": 1,
@@ -2457,25 +2487,15 @@
           ],
           "scale": 0.8,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante.",
-            "Menor variação pelo Laplaciano que a referência redimensionada; compatível com desfoque ou perda de detalhes."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis.",
-            "Melhorar foco, reduzir movimento e posicionar a placa onde tenha maior tamanho aparente."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 152.20708661417322,
-            "contrast": 0.6442390255460795,
-            "sharpness": 10.350253109306218,
-            "reference_sharpness": 5746.419885696571,
-            "reference_contrast": 0.7777777743209877,
-            "height_pixels": 50.0
-          },
+          "quality": null,
           "ground_truth_iou": 0.0,
           "evaluation": {
+            "present": true,
             "tp": 0,
             "fp": 0,
             "fn": 1,
@@ -2497,25 +2517,15 @@
           ],
           "scale": 0.8,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante.",
-            "Candidato próximo da borda do quadro; pode ser recortado."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis.",
-            "Testar posição mais central no campo de visão e sem obstruções."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 48.23434782608695,
-            "contrast": 0.7754385937703909,
-            "sharpness": 7718.0150723797515,
-            "reference_sharpness": 5009.5389350766645,
-            "reference_contrast": 0.7797453822309796,
-            "height_pixels": 50.0
-          },
+          "quality": null,
           "ground_truth_iou": 0.0,
           "evaluation": {
+            "present": true,
             "tp": 0,
             "fp": 0,
             "fn": 1,
@@ -2537,25 +2547,15 @@
           ],
           "scale": 0.6666666666666666,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante.",
-            "Candidato próximo da borda do quadro; pode ser recortado."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis.",
-            "Testar posição mais central no campo de visão e sem obstruções."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 48.38072986203827,
-            "contrast": 0.7754385937703909,
-            "sharpness": 8524.024254512124,
-            "reference_sharpness": 5931.910878005961,
-            "reference_contrast": 0.8105282179399438,
-            "height_pixels": 42.00000000000001
-          },
+          "quality": null,
           "ground_truth_iou": 0.0,
           "evaluation": {
+            "present": true,
             "tp": 0,
             "fp": 0,
             "fn": 1,
@@ -2603,7 +2603,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 223.1256210002357,
+      "processing_ms": 233.42009499992855,
       "signs": [
         {
           "name": "Recepção",
@@ -2619,23 +2619,15 @@
           ],
           "scale": 0.5,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 55.316964285714285,
-            "contrast": 0.7770034816132283,
-            "sharpness": 12682.779017857143,
-            "reference_sharpness": 11504.488865858842,
-            "reference_contrast": 0.7808219142428223,
-            "height_pixels": 32.0
-          },
+          "quality": null,
           "ground_truth_iou": 0.0,
           "evaluation": {
+            "present": true,
             "tp": 0,
             "fp": 0,
             "fn": 1,
@@ -2657,25 +2649,15 @@
           ],
           "scale": 0.8,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante.",
-            "Menor variação pelo Laplaciano que a referência redimensionada; compatível com desfoque ou perda de detalhes."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis.",
-            "Melhorar foco, reduzir movimento e posicionar a placa onde tenha maior tamanho aparente."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 152.20267716535434,
-            "contrast": 0.6442390255460795,
-            "sharpness": 10.359072006944013,
-            "reference_sharpness": 5746.419885696571,
-            "reference_contrast": 0.7777777743209877,
-            "height_pixels": 50.0
-          },
+          "quality": null,
           "ground_truth_iou": 0.0,
           "evaluation": {
+            "present": true,
             "tp": 0,
             "fp": 0,
             "fn": 1,
@@ -2697,25 +2679,15 @@
           ],
           "scale": 0.8,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante.",
-            "Candidato próximo da borda do quadro; pode ser recortado."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis.",
-            "Testar posição mais central no campo de visão e sem obstruções."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 48.23434782608695,
-            "contrast": 0.7754385937703909,
-            "sharpness": 7718.0150723797515,
-            "reference_sharpness": 5009.5389350766645,
-            "reference_contrast": 0.7797453822309796,
-            "height_pixels": 50.0
-          },
+          "quality": null,
           "ground_truth_iou": 0.0,
           "evaluation": {
+            "present": true,
             "tp": 0,
             "fp": 0,
             "fn": 1,
@@ -2737,25 +2709,15 @@
           ],
           "scale": 0.6666666666666666,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante.",
-            "Candidato próximo da borda do quadro; pode ser recortado."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis.",
-            "Testar posição mais central no campo de visão e sem obstruções."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 48.38117489986649,
-            "contrast": 0.7754385937703909,
-            "sharpness": 8524.032265193031,
-            "reference_sharpness": 5931.910878005961,
-            "reference_contrast": 0.8105282179399438,
-            "height_pixels": 42.00000000000001
-          },
+          "quality": null,
           "ground_truth_iou": 0.0,
           "evaluation": {
+            "present": true,
             "tp": 0,
             "fp": 0,
             "fn": 1,
@@ -2803,7 +2765,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 214.32219300004363,
+      "processing_ms": 233.84463799993682,
       "signs": [
         {
           "name": "Recepção",
@@ -2819,23 +2781,15 @@
           ],
           "scale": 0.5,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 55.31622023809524,
-            "contrast": 0.7770034816132283,
-            "sharpness": 12682.765625,
-            "reference_sharpness": 11504.488865858842,
-            "reference_contrast": 0.7808219142428223,
-            "height_pixels": 32.0
-          },
+          "quality": null,
           "ground_truth_iou": 0.0,
           "evaluation": {
+            "present": true,
             "tp": 0,
             "fp": 0,
             "fn": 1,
@@ -2857,25 +2811,15 @@
           ],
           "scale": 0.8,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante.",
-            "Menor variação pelo Laplaciano que a referência redimensionada; compatível com desfoque ou perda de detalhes."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis.",
-            "Melhorar foco, reduzir movimento e posicionar a placa onde tenha maior tamanho aparente."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 152.20267716535434,
-            "contrast": 0.6442390255460795,
-            "sharpness": 10.359072006944013,
-            "reference_sharpness": 5746.419885696571,
-            "reference_contrast": 0.7777777743209877,
-            "height_pixels": 50.0
-          },
+          "quality": null,
           "ground_truth_iou": 0.0,
           "evaluation": {
+            "present": true,
             "tp": 0,
             "fp": 0,
             "fn": 1,
@@ -2897,25 +2841,15 @@
           ],
           "scale": 0.8,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante.",
-            "Candidato próximo da borda do quadro; pode ser recortado."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis.",
-            "Testar posição mais central no campo de visão e sem obstruções."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 48.23434782608695,
-            "contrast": 0.7754385937703909,
-            "sharpness": 7718.0150723797515,
-            "reference_sharpness": 5009.5389350766645,
-            "reference_contrast": 0.7797453822309796,
-            "height_pixels": 50.0
-          },
+          "quality": null,
           "ground_truth_iou": 0.0,
           "evaluation": {
+            "present": true,
             "tp": 0,
             "fp": 0,
             "fn": 1,
@@ -2937,25 +2871,15 @@
           ],
           "scale": 0.6666666666666666,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante.",
-            "Candidato próximo da borda do quadro; pode ser recortado."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis.",
-            "Testar posição mais central no campo de visão e sem obstruções."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 48.38072986203827,
-            "contrast": 0.7754385937703909,
-            "sharpness": 8524.024254512124,
-            "reference_sharpness": 5931.910878005961,
-            "reference_contrast": 0.8105282179399438,
-            "height_pixels": 42.00000000000001
-          },
+          "quality": null,
           "ground_truth_iou": 0.0,
           "evaluation": {
+            "present": true,
             "tp": 0,
             "fp": 0,
             "fn": 1,
@@ -3003,7 +2927,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 230.9128460001375,
+      "processing_ms": 234.02402000010625,
       "signs": [
         {
           "name": "Recepção",
@@ -3019,23 +2943,15 @@
           ],
           "scale": 0.5,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 55.316964285714285,
-            "contrast": 0.7770034816132283,
-            "sharpness": 12682.779017857143,
-            "reference_sharpness": 11504.488865858842,
-            "reference_contrast": 0.7808219142428223,
-            "height_pixels": 32.0
-          },
+          "quality": null,
           "ground_truth_iou": 0.0,
           "evaluation": {
+            "present": true,
             "tp": 0,
             "fp": 0,
             "fn": 1,
@@ -3057,25 +2973,15 @@
           ],
           "scale": 0.8,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante.",
-            "Menor variação pelo Laplaciano que a referência redimensionada; compatível com desfoque ou perda de detalhes."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis.",
-            "Melhorar foco, reduzir movimento e posicionar a placa onde tenha maior tamanho aparente."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 152.20267716535434,
-            "contrast": 0.6442390255460795,
-            "sharpness": 10.359072006944013,
-            "reference_sharpness": 5746.419885696571,
-            "reference_contrast": 0.7777777743209877,
-            "height_pixels": 50.0
-          },
+          "quality": null,
           "ground_truth_iou": 0.0,
           "evaluation": {
+            "present": true,
             "tp": 0,
             "fp": 0,
             "fn": 1,
@@ -3097,25 +3003,15 @@
           ],
           "scale": 0.8,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante.",
-            "Candidato próximo da borda do quadro; pode ser recortado."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis.",
-            "Testar posição mais central no campo de visão e sem obstruções."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 48.23434782608695,
-            "contrast": 0.7754385937703909,
-            "sharpness": 7718.0150723797515,
-            "reference_sharpness": 5009.5389350766645,
-            "reference_contrast": 0.7797453822309796,
-            "height_pixels": 50.0
-          },
+          "quality": null,
           "ground_truth_iou": 0.0,
           "evaluation": {
+            "present": true,
             "tp": 0,
             "fp": 0,
             "fn": 1,
@@ -3137,25 +3033,15 @@
           ],
           "scale": 0.6666666666666666,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante.",
-            "Candidato próximo da borda do quadro; pode ser recortado."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis.",
-            "Testar posição mais central no campo de visão e sem obstruções."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 48.38117489986649,
-            "contrast": 0.7754385937703909,
-            "sharpness": 8524.032265193031,
-            "reference_sharpness": 5931.910878005961,
-            "reference_contrast": 0.8105282179399438,
-            "height_pixels": 42.00000000000001
-          },
+          "quality": null,
           "ground_truth_iou": 0.0,
           "evaluation": {
+            "present": true,
             "tp": 0,
             "fp": 0,
             "fn": 1,
@@ -3203,7 +3089,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 206.84357400023146,
+      "processing_ms": 280.17522000027384,
       "signs": [
         {
           "name": "Recepção",
@@ -3219,23 +3105,15 @@
           ],
           "scale": 0.5,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 55.31622023809524,
-            "contrast": 0.7770034816132283,
-            "sharpness": 12682.765625,
-            "reference_sharpness": 11504.488865858842,
-            "reference_contrast": 0.7808219142428223,
-            "height_pixels": 32.0
-          },
+          "quality": null,
           "ground_truth_iou": 0.0,
           "evaluation": {
+            "present": true,
             "tp": 0,
             "fp": 0,
             "fn": 1,
@@ -3257,25 +3135,15 @@
           ],
           "scale": 0.8,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante.",
-            "Menor variação pelo Laplaciano que a referência redimensionada; compatível com desfoque ou perda de detalhes."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis.",
-            "Melhorar foco, reduzir movimento e posicionar a placa onde tenha maior tamanho aparente."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 152.20267716535434,
-            "contrast": 0.6442390255460795,
-            "sharpness": 10.359072006944013,
-            "reference_sharpness": 5746.419885696571,
-            "reference_contrast": 0.7777777743209877,
-            "height_pixels": 50.0
-          },
+          "quality": null,
           "ground_truth_iou": 0.0,
           "evaluation": {
+            "present": true,
             "tp": 0,
             "fp": 0,
             "fn": 1,
@@ -3297,25 +3165,15 @@
           ],
           "scale": 0.8,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante.",
-            "Candidato próximo da borda do quadro; pode ser recortado."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis.",
-            "Testar posição mais central no campo de visão e sem obstruções."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 48.23434782608695,
-            "contrast": 0.7754385937703909,
-            "sharpness": 7718.0150723797515,
-            "reference_sharpness": 5009.5389350766645,
-            "reference_contrast": 0.7797453822309796,
-            "height_pixels": 50.0
-          },
+          "quality": null,
           "ground_truth_iou": 0.0,
           "evaluation": {
+            "present": true,
             "tp": 0,
             "fp": 0,
             "fn": 1,
@@ -3337,25 +3195,15 @@
           ],
           "scale": 0.6666666666666666,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante.",
-            "Candidato próximo da borda do quadro; pode ser recortado."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis.",
-            "Testar posição mais central no campo de visão e sem obstruções."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 48.38072986203827,
-            "contrast": 0.7754385937703909,
-            "sharpness": 8524.024254512124,
-            "reference_sharpness": 5931.910878005961,
-            "reference_contrast": 0.8105282179399438,
-            "height_pixels": 42.00000000000001
-          },
+          "quality": null,
           "ground_truth_iou": 0.0,
           "evaluation": {
+            "present": true,
             "tp": 0,
             "fp": 0,
             "fn": 1,
@@ -3403,7 +3251,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 201.6026060000513,
+      "processing_ms": 236.9191289999435,
       "signs": [
         {
           "name": "Recepção",
@@ -3419,22 +3267,14 @@
           ],
           "scale": 0.5,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 61.617559523809526,
-            "contrast": 0.8475336284863962,
-            "sharpness": 18757.860665872795,
-            "reference_sharpness": 11504.488865858842,
-            "reference_contrast": 0.7808219142428223,
-            "height_pixels": 32.0
-          },
+          "quality": null,
           "evaluation": {
+            "present": false,
             "tp": 0,
             "fp": 0,
             "fn": 0,
@@ -3467,6 +3307,7 @@
           },
           "ground_truth_iou": 0.9684423140490245,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -3499,6 +3340,7 @@
           },
           "ground_truth_iou": 0.978124403293779,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -3531,6 +3373,7 @@
           },
           "ground_truth_iou": 0.9718127424690403,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -3577,7 +3420,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 213.012771999729,
+      "processing_ms": 234.19068899966078,
       "signs": [
         {
           "name": "Recepção",
@@ -3593,22 +3436,14 @@
           ],
           "scale": 0.5,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 61.617559523809526,
-            "contrast": 0.8475336284863962,
-            "sharpness": 18757.860665872795,
-            "reference_sharpness": 11504.488865858842,
-            "reference_contrast": 0.7808219142428223,
-            "height_pixels": 32.0
-          },
+          "quality": null,
           "evaluation": {
+            "present": false,
             "tp": 0,
             "fp": 0,
             "fn": 0,
@@ -3641,6 +3476,7 @@
           },
           "ground_truth_iou": 0.9684423140490245,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -3673,6 +3509,7 @@
           },
           "ground_truth_iou": 0.978124403293779,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -3705,6 +3542,7 @@
           },
           "ground_truth_iou": 0.9718127424690403,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -3751,7 +3589,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 208.5153180000816,
+      "processing_ms": 272.1989580004447,
       "signs": [
         {
           "name": "Recepção",
@@ -3767,22 +3605,14 @@
           ],
           "scale": 0.5,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 61.617559523809526,
-            "contrast": 0.8475336284863962,
-            "sharpness": 18757.860665872795,
-            "reference_sharpness": 11504.488865858842,
-            "reference_contrast": 0.7808219142428223,
-            "height_pixels": 32.0
-          },
+          "quality": null,
           "evaluation": {
+            "present": false,
             "tp": 0,
             "fp": 0,
             "fn": 0,
@@ -3815,6 +3645,7 @@
           },
           "ground_truth_iou": 0.9684423140490245,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -3847,6 +3678,7 @@
           },
           "ground_truth_iou": 0.978124403293779,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -3879,6 +3711,7 @@
           },
           "ground_truth_iou": 0.9718127424690403,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -3925,7 +3758,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 230.05145399974936,
+      "processing_ms": 226.82197500034817,
       "signs": [
         {
           "name": "Recepção",
@@ -3941,22 +3774,14 @@
           ],
           "scale": 0.5,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 61.617559523809526,
-            "contrast": 0.8475336284863962,
-            "sharpness": 18757.860665872795,
-            "reference_sharpness": 11504.488865858842,
-            "reference_contrast": 0.7808219142428223,
-            "height_pixels": 32.0
-          },
+          "quality": null,
           "evaluation": {
+            "present": false,
             "tp": 0,
             "fp": 0,
             "fn": 0,
@@ -3989,6 +3814,7 @@
           },
           "ground_truth_iou": 0.9684423140490245,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -4021,6 +3847,7 @@
           },
           "ground_truth_iou": 0.978124403293779,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -4053,6 +3880,7 @@
           },
           "ground_truth_iou": 0.9718127424690403,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -4099,7 +3927,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 218.0238770001779,
+      "processing_ms": 217.48833499987086,
       "signs": [
         {
           "name": "Recepção",
@@ -4115,22 +3943,14 @@
           ],
           "scale": 0.5,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 61.617559523809526,
-            "contrast": 0.8475336284863962,
-            "sharpness": 18757.860665872795,
-            "reference_sharpness": 11504.488865858842,
-            "reference_contrast": 0.7808219142428223,
-            "height_pixels": 32.0
-          },
+          "quality": null,
           "evaluation": {
+            "present": false,
             "tp": 0,
             "fp": 0,
             "fn": 0,
@@ -4163,6 +3983,7 @@
           },
           "ground_truth_iou": 0.9684423140490245,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -4195,6 +4016,7 @@
           },
           "ground_truth_iou": 0.978124403293779,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -4227,6 +4049,7 @@
           },
           "ground_truth_iou": 0.9718127424690403,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -4273,7 +4096,7 @@
       "version": "template_multiscale_v1",
       "width": 800,
       "height": 600,
-      "processing_ms": 220.8747099998618,
+      "processing_ms": 219.28652499991586,
       "signs": [
         {
           "name": "Recepção",
@@ -4289,22 +4112,14 @@
           ],
           "scale": 0.5,
           "reasons": [
-            "Similaridade abaixo do limite; não identifica a causa isoladamente.",
-            "Mais de uma posição tem correlação semelhante."
+            "Similaridade abaixo do limite; não identifica a causa isoladamente."
           ],
           "suggestions": [
-            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento.",
-            "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis."
+            "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
           ],
-          "quality": {
-            "mean": 61.617559523809526,
-            "contrast": 0.8475336284863962,
-            "sharpness": 18757.860665872795,
-            "reference_sharpness": 11504.488865858842,
-            "reference_contrast": 0.7808219142428223,
-            "height_pixels": 32.0
-          },
+          "quality": null,
           "evaluation": {
+            "present": false,
             "tp": 0,
             "fp": 0,
             "fn": 0,
@@ -4337,6 +4152,7 @@
           },
           "ground_truth_iou": 0.9684423140490245,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -4369,6 +4185,7 @@
           },
           "ground_truth_iou": 0.978124403293779,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,
@@ -4401,6 +4218,7 @@
           },
           "ground_truth_iou": 0.9718127424690403,
           "evaluation": {
+            "present": true,
             "tp": 1,
             "fp": 0,
             "fn": 0,

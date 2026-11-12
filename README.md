@@ -52,7 +52,7 @@ com picos alternativos e conflitos entre identidades. Sem treinamento de modelos
 O PDI mostra recortes, cinza, Laplaciano, histograma e contraste.
 
 Captura solicitada: até 1920 × 1080 / 30 FPS, negociados com o navegador.
-Análise: largura até 800 px, até 2 amostras/s, sem fila. Tempo detectado soma
+Vídeo próprio/webcam: largura até 800 px, até 2 amostras/s, sem fila; o instante vem do quadro decodificado. O exemplo usa outra aquisição: 24 quadros fixos do MP4, decodificados na API e processados novamente. Sua duração de processamento não é tempo real e não depende do relógio do navegador. Tempo detectado soma
 intervalos entre detecções consecutivas da mesma placa, na mesma fonte, com
 `0 < Δt ≤ 1,5 s`. Falhas e ambiguidades interrompem a contagem; uma amostra isolada
 soma zero. Não se comprova presença contínua entre amostras.
@@ -135,3 +135,9 @@ A validação automatizada usa vídeo sintético e webcam simulada. Não comprov
 performance em captura real nem substitui apresentação e arguição individuais.
 [Fontes](docs/referencias.md) · [Fluxo de branches](docs/fluxo-desenvolvimento.md).
 A integração é na develop; main depende da autorização final do usuário.
+
+## Conferência do relatório do exemplo
+
+[Verificação e valores esperados](docs/verificacao-exemplo-sintetico.md). Ausência
+conhecida é separada de falha com placa presente. Indícios geométricos de nitidez,
+contraste e borda não são atribuídos à placa quando o candidato foi rejeitado.

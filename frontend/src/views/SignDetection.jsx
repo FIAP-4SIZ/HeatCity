@@ -1,3 +1,4 @@
+import { mediaTimeForCapture } from '../video-frame.js';
 import AnalysisReport from '../components/AnalysisReport.jsx';
 import PlateCrops from '../components/PlateCrops.jsx';
 import ReferenceEditor from './ReferenceEditor.jsx';
@@ -50,7 +51,7 @@ export default function SignDetection({ referenceId }) {
     stream = useRef(null),
     epoch = useRef(0),
     objectUrl = useRef(null),
-    clock = useRef(0),
+    demoStep = useRef(0),
     inFlight = useRef(false),
     autoStarted = useRef(null);
   const scenario = scenarios.find((s) => s.id === selected);
@@ -95,6 +96,7 @@ export default function SignDetection({ referenceId }) {
     if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
     objectUrl.current = null;
     setReady(false);
+    demoStep.current = 0;
     setSource(null);
     clearResults();
     setPhase('prepare');
@@ -146,7 +148,6 @@ export default function SignDetection({ referenceId }) {
       }
       setSource({ ...next, autoStart: true });
       setPhase('analyze');
-      clock.current = performance.now();
     } catch (e) {
       setError(e.message || 'Não foi possível abrir a câmera ou o vídeo.');
     } finally {
@@ -164,36 +165,60 @@ export default function SignDetection({ referenceId }) {
       video.current.load();
     }
   }, [source]);
-  async function analyzeFrame(token) {
+  async function analyzeFrame(token, advance = true) {
     if (!scenario || !video.current || inFlight.current) return;
     const player = video.current;
-    if (player.readyState < 2 || !player.videoWidth) return;
-    const time =
-      source.kind === 'camera' ? (performance.now() - clock.current) / 1000 : player.currentTime;
-    const canvas = document.createElement('canvas');
-    const scale = Math.min(1, 800 / player.videoWidth);
-    canvas.width = Math.round(player.videoWidth * scale);
-    canvas.height = Math.round(player.videoHeight * scale);
-    if (Math.min(canvas.width, canvas.height) < 200)
-      throw new Error(
-        'O vídeo precisa ter pelo menos 200 pixels por lado após redução para 800 px de largura.',
-      );
-    canvas.getContext('2d').drawImage(player, 0, 0, canvas.width, canvas.height);
-    const image = canvas.toDataURL('image/jpeg', 0.92);
-    const known = source.metadata?.segments.find((s) => time >= s.start && time < s.end);
+    if (source.kind !== 'demo' && (player.readyState < 2 || !player.videoWidth)) return;
     inFlight.current = true;
     try {
-      const result = await post(`/references/${scenario.id}/detect-plates`, {
+      let result,
         image,
-        annotations: known?.annotations || [],
-      });
+        time,
+        sample = {};
+      if (source.kind === 'demo') {
+        const indices = source.metadata.sample_frame_indices;
+        if (advance && demoStep.current >= indices.length) {
+          finish();
+          return;
+        }
+        const index = advance
+          ? indices[demoStep.current]
+          : (snapshot?.record.frame_index ?? indices[0]);
+        const data = await post(`/references/${scenario.id}/detect-demo-frame`, {
+          frame_index: index,
+        });
+        result = data.result;
+        image = data.preview;
+        time = data.time;
+        sample = {
+          frame_index: data.frame_index,
+          condition: data.condition,
+          captureMode: 'decoded_file_grid',
+        };
+      } else {
+        time = await mediaTimeForCapture(player);
+        if (epoch.current !== token) return;
+        const canvas = document.createElement('canvas');
+        const scale = Math.min(1, 800 / player.videoWidth);
+        canvas.width = Math.round(player.videoWidth * scale);
+        canvas.height = Math.round(player.videoHeight * scale);
+        if (Math.min(canvas.width, canvas.height) < 200)
+          throw new Error(
+            'O vídeo precisa ter pelo menos 200 pixels por lado após redução para 800 px de largura.',
+          );
+        canvas.getContext('2d').drawImage(player, 0, 0, canvas.width, canvas.height);
+        image = canvas.toDataURL('image/jpeg', 0.92);
+        result = await post(`/references/${scenario.id}/detect-plates`, { image, annotations: [] });
+        sample = { captureMode: 'live_decoded_frame' };
+      }
       if (epoch.current !== token) return;
       const record = {
         ...result,
+        ...sample,
         source: source.id,
         time,
         reference: scenario.id,
-        annotationSource: known ? 'synthetic_geometry' : null,
+        annotationSource: source.kind === 'demo' ? 'synthetic_geometry' : null,
       };
       setRecords((previous) =>
         [
@@ -201,15 +226,21 @@ export default function SignDetection({ referenceId }) {
           record,
         ].slice(-300),
       );
-      setSnapshot({ image, width: canvas.width, height: canvas.height, record });
+      setSnapshot({ image, width: result.width, height: result.height, record });
       setAnnotations({});
       setStatus(
-        `Quadro em ${number(time, 2)} s · processamento ${number(result.processing_ms, 0)} ms`,
+        `Quadro em ${number(time, 2)} s do arquivo · processamento ${number(result.processing_ms, 0)} ms`,
       );
+      if (source.kind === 'demo') {
+        player.currentTime = time;
+        if (advance) demoStep.current++;
+        if (demoStep.current >= source.metadata.sample_frame_indices.length) finish();
+      }
     } finally {
       inFlight.current = false;
     }
   }
+
   useEffect(() => {
     if (!running) return;
     const token = epoch.current;
@@ -220,11 +251,16 @@ export default function SignDetection({ referenceId }) {
       try {
         await analyzeFrame(token);
       } catch (e) {
-        setError(e.message);
-        setRunning(false);
+        if (epoch.current === token) {
+          setError(e.message);
+          stop();
+        }
       }
       if (!cancelled && epoch.current === token)
-        timer = setTimeout(tick, Math.max(0, 500 - (performance.now() - begin)));
+        timer = setTimeout(
+          tick,
+          source.kind === 'demo' ? 0 : Math.max(0, 500 - (performance.now() - begin)),
+        );
     }
     tick();
     return () => {
@@ -243,7 +279,7 @@ export default function SignDetection({ referenceId }) {
     setError('');
     setDrawing(false);
     try {
-      await video.current.play();
+      if (source.kind !== 'demo') await video.current.play();
       setRunning(true);
     } catch (e) {
       setError(e.message);
@@ -254,7 +290,7 @@ export default function SignDetection({ referenceId }) {
     setDrawing(false);
     setError('');
     try {
-      await analyzeFrame(epoch.current);
+      await analyzeFrame(epoch.current, false);
     } catch (e) {
       setError(e.message);
     }
@@ -594,11 +630,11 @@ export default function SignDetection({ referenceId }) {
             <p>{source.label}</p>
             <video
               ref={video}
-              controls
+              controls={source.kind !== 'demo'}
               muted
               playsInline
               onPause={() => {
-                if (running) setRunning(false);
+                if (running && source.kind !== 'demo') setRunning(false);
               }}
               onLoadedData={() => {
                 setReady(true);
@@ -609,13 +645,14 @@ export default function SignDetection({ referenceId }) {
                 }
               }}
               onEnded={() => {
+                if (source.kind === 'demo') return;
                 setRunning(false);
                 setPhase('report');
                 window.scrollTo(0, 0);
                 setStatus('Vídeo concluído. Exporte os resultados ou confira um quadro.');
               }}
               onSeeking={() => {
-                if (running) stop();
+                if (running && source.kind !== 'demo') stop();
               }}
               onError={() => {
                 setError('Formato não suportado pelo navegador. Use MP4/H.264 ou WebM.');
@@ -624,9 +661,11 @@ export default function SignDetection({ referenceId }) {
             />
             {source.kind === 'demo' && (
               <p className="small">
-                Demonstração sintética: imagem hospitalar gerada por IA, deslocamento, desfoque e
-                remoção de uma placa. Posições conhecidas permitem medir o acerto neste exemplo. Não
-                é uma captura real nem estudo com pessoas.
+                Demonstração sintética analisada em 24 quadros fixos do arquivo, sempre nas mesmas
+                posições de tempo. O processamento pode levar mais ou menos tempo que o vídeo; não é
+                uma medição de tempo real. Há deslocamento, desfoque e remoção de uma placa.
+                Posições conhecidas permitem medir o acerto neste exemplo. Não é uma captura real
+                nem estudo com pessoas.
               </p>
             )}
             {source.kind === 'camera' && (
