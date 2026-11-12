@@ -34,11 +34,11 @@ O desfoque é conhecido porque o aplicamos no vídeo. Em uma captura real, simil
 SLIDE 11 — Demonstração e próxima evidência
 Vou abrir o exemplo, aguardar o relatório e mostrar as exportações. Para outro ambiente, cadastramos uma foto e usamos um vídeo das mesmas placas. A próxima evidência é testar uma captura real anotada.
 
-SLIDE 12 — Fontes e reprodução
+SLIDE 12 — Fontes e referências
 Usamos OpenCV e conteúdos das aulas de PDI e template matching. Código, fontes, vídeo e notebook estão no material. O exemplo funciona de forma reproduzível; ainda faltam avaliação em campo e benefício demonstrado aos cidadãos.
 
 PLANO B
-Se a demonstração não abrir, mostrar slides.pdf e o relatório incluído no pacote. Informar que são resultados gravados do exemplo sintético.
+Se a demonstração não abrir, mostrar slides.pptx e o relatório incluído no pacote. Informar que são resultados gravados do exemplo sintético.
 
 EXPLICAÇÃO DO PROGRAMA E DOS TERMOS
 

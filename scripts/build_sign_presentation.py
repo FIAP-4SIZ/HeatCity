@@ -7,12 +7,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-import reportlab
-from reportlab.lib.colors import HexColor
-from reportlab.lib.utils import simpleSplit
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfgen import canvas
+from presentation_pptx import build_presentation
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs/apresentacao"
@@ -34,15 +29,20 @@ SOURCES = [
         "Aula — Histograma e equalização",
         "https://arnaldojr.github.io/cognitivecomputing/aulas/PDI/lab03/atividade3.html",
     ),
+    (
+        "Aula — Crop e ROI",
+        "https://arnaldojr.github.io/cognitivecomputing/aulas/PDI/lab02/atividade2.html",
+    ),
+    (
+        "Aula — Filtros de convolução",
+        "https://arnaldojr.github.io/cognitivecomputing/aulas/PDI/lab04/Filtros_de_Convolu%C3%A7%C3%A3o.html",
+    ),
     ("ONU — ODS 3", "https://sdgs.un.org/goals/goal3"),
     ("ONU — ODS 11", "https://sdgs.un.org/goals/goal11"),
 ]
 
 
 def main():
-    fonts = Path(reportlab.__file__).parent / "fonts"
-    pdfmetrics.registerFont(TTFont("HeatCitySans", str(fonts / "Vera.ttf")))
-    pdfmetrics.registerFont(TTFont("HeatCitySans-Bold", str(fonts / "VeraBd.ttf")))
     data = json.loads(
         (REPORTS / "deteccao-placas-benchmark.json").read_text(encoding="utf-8")
     )
@@ -262,12 +262,9 @@ def main():
             ],
         ),
         (
-            "Fontes e reprodução",
+            "Fontes e referências",
             [
-                "OpenCV: Template Matching e Laplacian Operator. Aulas: histograma, filtros de convolução e template matching. Links no material anexo.",
-                "Requisitos: Cognitive Computing-GS2-2026.pdf. Tema CitizenTech fornecido pela equipe; metas ODS 3.8 e 11.7 na documentação da ONU.",
-                "Código: github.com/FIAP-4SIZ/HeatCity, branch develop. Benchmark, vídeo e notebook executado estão versionados.",
-                "Reprodução: scripts/build_sign_video_demo.py e scripts/build_sign_presentation.py. Fontes completas: referencias.md; fala e conceitos: ROTEIRO.txt.",
+                "Documentação OpenCV, laboratórios de PDI e objetivos de desenvolvimento sustentável da ONU."
             ],
         ),
     ]
@@ -378,113 +375,17 @@ As sugestões de posição são possibilidades para testar, não garantias de um
         for i, (slide, talk) in enumerate(zip(slides, talks), 1)
     )
     speech += (
-        "\n\nPLANO B\nSe a demonstração não abrir, mostrar slides.pdf e o relatório incluído no pacote. Informar que são resultados gravados do exemplo sintético.\n\n"
+        "\n\nPLANO B\nSe a demonstração não abrir, mostrar slides.pptx e o relatório incluído no pacote. Informar que são resultados gravados do exemplo sintético.\n\n"
         + explanation
     )
     # BOM makes accents reliable in Windows Notepad as well as UTF-8 editors.
     (OUT / "ROTEIRO.txt").write_text(speech, encoding="utf-8-sig")
-    style = """*{box-sizing:border-box}body{margin:0;background:#102820;color:#173b31;font:22px/1.45 system-ui,sans-serif}.slide{background:#f5f7f3;margin:32px auto;padding:50px 65px;max-width:1200px;min-height:675px;position:relative}h1{font-size:44px;line-height:1.12;letter-spacing:-1px;margin:0 0 30px}li{margin:15px 0}img{display:block;max-height:295px;max-width:90%;margin:20px auto}small{position:absolute;bottom:20px;right:35px;font-size:13px}.visual{font-size:18px}.visual li{margin:8px 0}nav{text-align:center;color:white;font-size:16px;padding:15px}nav a{color:#aff2ca}@page{size:landscape;margin:0}@media print{body{background:white}.slide{width:100vw;height:100vh;max-width:none;min-height:0;margin:0;break-after:page;padding:35px 55px}h1{font-size:36px}body{font-size:18px}nav{display:none}img{max-height:240px}}"""
-    blocks = []
-    pdf = canvas.Canvas(str(OUT / "slides.pdf"), pagesize=(960, 540))
-    pdf.setTitle("HeatCity — localização e acompanhamento de placas em vídeo")
-    pdf.setAuthor("Equipe HeatCity")
-    for i, (title, lines, *visual) in enumerate(slides, 1):
-        links = (
-            '<p style="font-size:15px">'
-            + " · ".join(
-                f'<a href="{url}">{html.escape(label)}</a>' for label, url in SOURCES
-            )
-            + "</p>"
-            if i == len(slides)
-            else ""
-        )
-        blocks.append(
-            f'<section id="s{i}" class="slide {"visual" if visual else ""}"><h1>{html.escape(title)}</h1><ul>'
-            + "".join(f"<li>{html.escape(line)}</li>" for line in lines)
-            + "</ul>"
-            + (
-                f'<img src="{visual[0]}" alt="Evidência visual do experimento">'
-                if visual
-                else ""
-            )
-            + links
-            + f"<small>HeatCity · {i}/{len(slides)} · exemplo sintético</small></section>"
-        )
-        pdf.setFillColor(HexColor("#f5f7f3"))
-        pdf.rect(0, 0, 960, 540, fill=1, stroke=0)
-        pdf.setFillColor(HexColor("#173b31"))
-        pdf.setFont("HeatCitySans-Bold", 27)
-        pdf.drawString(45, 492, title.replace("—", "-"))
-        y = 450
-        for line in lines:
-            pdf.setFont("HeatCitySans", 16)
-            for part in simpleSplit(
-                line.replace("≥", ">=")
-                .replace("≤", "<=")
-                .replace("Δ", "delta ")
-                .replace("→", "->"),
-                "HeatCitySans",
-                16,
-                860,
-            ):
-                pdf.drawString(50, y, part)
-                y -= 24
-            y -= 12
-        if visual and visual[0].endswith(".jpg"):
-            pdf.drawImage(
-                str(OUT / visual[0]),
-                330,
-                18,
-                width=300,
-                height=225,
-                preserveAspectRatio=True,
-                anchor="c",
-            )
-        if visual and visual[0].endswith(".png"):
-            pdf.drawImage(
-                str(OUT / visual[0]),
-                65,
-                30,
-                width=830,
-                height=193,
-                preserveAspectRatio=True,
-            )
-        if visual and visual[0].endswith(".svg"):
-            for k, (name, tp, fn, recall) in enumerate(condition_rows):
-                row_y = 125 - k * 25
-                pdf.setFillColor(HexColor("#173b31"))
-                pdf.setFont("HeatCitySans", 12)
-                pdf.drawString(50, row_y, name)
-                pdf.drawString(730, row_y, f"Recall {percent(recall)}")
-                pdf.setFillColor(HexColor("#28775c"))
-                pdf.rect(270, row_y - 2, recall * 420, 13, fill=1, stroke=0)
-        if i == len(slides):
-            pdf.setFillColor(HexColor("#173b31"))
-            pdf.setFont("HeatCitySans", 12)
-            for k, (label, url) in enumerate(SOURCES):
-                x, link_y = 50 + (k % 2) * 440, 130 - (k // 2) * 28
-                pdf.drawString(x, link_y, label.replace("—", "-"))
-                pdf.linkURL(url, (x, link_y - 3, x + 400, link_y + 14))
-        pdf.setFillColor(HexColor("#173b31"))
-        pdf.setFont("HeatCitySans", 10)
-        pdf.drawRightString(
-            925, 15, f"HeatCity | {i}/{len(slides)} | exemplo sintetico"
-        )
-        pdf.showPage()
-    pdf.save()
-    (OUT / "slides.html").write_text(
-        '<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HeatCity — placas em vídeo</title><style>'
-        + style
-        + '</style><nav>HeatCity · Localização e acompanhamento de placas em vídeo · <a href="../../frontend/public/detection-demo.mp4">Vídeo sintético</a> · <a href="../reports/HeatCity-deteccao-placas-exemplo.pdf">Relatório detalhado</a> · <a href="ROTEIRO.txt">Roteiro de fala TXT</a> · <a href="referencias.md">Fontes completas</a></nav>'
-        + "".join(blocks)
-        + '<script>let i=1;const n=document.querySelectorAll(".slide").length;addEventListener("keydown",e=>{if(e.key==="ArrowRight"||e.key==="PageDown")i=Math.min(n,i+1);else if(e.key==="ArrowLeft"||e.key==="PageUp")i=Math.max(1,i-1);else return;document.getElementById("s"+i).scrollIntoView();e.preventDefault()})</script></html>',
-        encoding="utf-8",
-    )
+    build_presentation(OUT, slides, talks, s, condition_rows, SOURCES)
     (OUT / "ROTEIRO.md").write_text(
         """# HeatCity — localização e acompanhamento de placas em vídeo
 
 A pergunta é: **onde a placa cadastrada aparece e por quanto tempo é detectada?**
-Esta é a apresentação do detector de placas em vídeo.
+Esta é a apresentação editável do detector de placas em vídeo. Abra `slides.pptx` no PowerPoint e preencha os três campos de nome e RM da capa. `slides.html` é uma prévia com o mesmo conteúdo. Não é gerado PDF de slides.
 
 **Fala curta por slide e explicação dos termos:** [ROTEIRO.txt](ROTEIRO.txt).
 O relatório enviado pelo usuário reproduziu os resultados esperados: 24 quadros,
@@ -502,7 +403,7 @@ Conferência aprovada para este exemplo controlado, sem generalização para ví
 
 ## Plano B offline
 
-Abrir `slides.html` ou `slides.pdf`, `deteccao-quadro.jpg`, o MP4 versionado e `../reports/HeatCity-deteccao-placas-exemplo.pdf`. Não representar o plano B como webcam ao vivo. A webcam depende de permissão e iluminação; o exemplo MP4 é determinístico.
+Abrir `slides.html` ou `slides.pptx`, `deteccao-quadro.jpg`, o MP4 versionado e `../reports/HeatCity-deteccao-placas-exemplo.pdf`. Não representar o plano B como webcam ao vivo. A webcam depende de permissão e iluminação; o exemplo MP4 é determinístico.
 
 ## Reprodução
 
@@ -512,6 +413,8 @@ Da raiz (Windows: usar `.venv\\Scripts\\python.exe` no lugar de `.venv/bin/pytho
 PYTHONPATH=backend .venv/bin/python scripts/build_sign_video_demo.py
 .venv/bin/python scripts/build_sign_presentation.py
 ```
+
+Para regenerar os slides, instale antes: `.venv/bin/python -m pip install -r scripts/requirements-presentation.txt` (ajuste o caminho do Python no Windows).
 
 No PowerShell: `$env:PYTHONPATH="backend"` antes de executar os dois scripts. ffmpeg é necessário somente para regenerar o MP4, já incluído no checkout. JSON de medições e hash do vídeo em `docs/reports/deteccao-placas-benchmark.json`. Tempo de processamento varia com o computador.
 
@@ -528,7 +431,7 @@ No PowerShell: `$env:PYTHONPATH="backend"` antes de executar os dois scripts. ff
 
 1. Narrativa: título, pergunta, demonstração e conclusão descrevem placas em vídeo, com catálogo de referências e sem treinamento.
 2. Evidência: números e gráficos vêm do mesmo JSON gerado pelo detector sobre MP4 decodificado; falhas e origem sintética são explicitadas.
-3. Entrega: links, slides HTML/PDF, roteiro, MP4, relatório, scripts e notebook executado integram a entrega; a interface é verificada separadamente em navegador.
+3. Entrega: links, slides PPTX/HTML, roteiro, MP4, relatório, scripts e notebook executado integram a entrega; a interface é verificada separadamente em navegador.
 """,
         encoding="utf-8",
     )
@@ -536,7 +439,7 @@ No PowerShell: `$env:PYTHONPATH="backend"` antes de executar os dois scripts. ff
     with zipfile.ZipFile(package, "w", zipfile.ZIP_DEFLATED) as z:
         paths = [
             OUT / "slides.html",
-            OUT / "slides.pdf",
+            OUT / "slides.pptx",
             OUT / "ROTEIRO.md",
             OUT / "ROTEIRO.txt",
             OUT / "Abrir-apresentacao.cmd",
@@ -549,6 +452,8 @@ No PowerShell: `$env:PYTHONPATH="backend"` antes de executar os dois scripts. ff
             ROOT / "frontend/public/detection-demo.mp4",
             ROOT / "frontend/public/detection-demo.json",
             Path(__file__).resolve(),
+            ROOT / "scripts/presentation_pptx.py",
+            ROOT / "scripts/requirements-presentation.txt",
             ROOT / "scripts/build_sign_video_demo.py",
             ROOT / "notebooks/analise-deteccao-placas.ipynb",
             ROOT / "notebooks/requirements.txt",

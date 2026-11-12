@@ -1,7 +1,7 @@
 # HeatCity — localização e acompanhamento de placas em vídeo
 
 A pergunta é: **onde a placa cadastrada aparece e por quanto tempo é detectada?**
-Esta é a apresentação do detector de placas em vídeo.
+Esta é a apresentação editável do detector de placas em vídeo. Abra `slides.pptx` no PowerPoint e preencha os três campos de nome e RM da capa. `slides.html` é uma prévia com o mesmo conteúdo. Não é gerado PDF de slides.
 
 **Fala curta por slide e explicação dos termos:** [ROTEIRO.txt](ROTEIRO.txt).
 O relatório enviado pelo usuário reproduziu os resultados esperados: 24 quadros,
@@ -19,7 +19,7 @@ Conferência aprovada para este exemplo controlado, sem generalização para ví
 
 ## Plano B offline
 
-Abrir `slides.html` ou `slides.pdf`, `deteccao-quadro.jpg`, o MP4 versionado e `../reports/HeatCity-deteccao-placas-exemplo.pdf`. Não representar o plano B como webcam ao vivo. A webcam depende de permissão e iluminação; o exemplo MP4 é determinístico.
+Abrir `slides.html` ou `slides.pptx`, `deteccao-quadro.jpg`, o MP4 versionado e `../reports/HeatCity-deteccao-placas-exemplo.pdf`. Não representar o plano B como webcam ao vivo. A webcam depende de permissão e iluminação; o exemplo MP4 é determinístico.
 
 ## Reprodução
 
@@ -29,6 +29,8 @@ Da raiz (Windows: usar `.venv\Scripts\python.exe` no lugar de `.venv/bin/python`
 PYTHONPATH=backend .venv/bin/python scripts/build_sign_video_demo.py
 .venv/bin/python scripts/build_sign_presentation.py
 ```
+
+Para regenerar os slides, instale antes: `.venv/bin/python -m pip install -r scripts/requirements-presentation.txt` (ajuste o caminho do Python no Windows).
 
 No PowerShell: `$env:PYTHONPATH="backend"` antes de executar os dois scripts. ffmpeg é necessário somente para regenerar o MP4, já incluído no checkout. JSON de medições e hash do vídeo em `docs/reports/deteccao-placas-benchmark.json`. Tempo de processamento varia com o computador.
 
@@ -45,4 +47,4 @@ No PowerShell: `$env:PYTHONPATH="backend"` antes de executar os dois scripts. ff
 
 1. Narrativa: título, pergunta, demonstração e conclusão descrevem placas em vídeo, com catálogo de referências e sem treinamento.
 2. Evidência: números e gráficos vêm do mesmo JSON gerado pelo detector sobre MP4 decodificado; falhas e origem sintética são explicitadas.
-3. Entrega: links, slides HTML/PDF, roteiro, MP4, relatório, scripts e notebook executado integram a entrega; a interface é verificada separadamente em navegador.
+3. Entrega: links, slides PPTX/HTML, roteiro, MP4, relatório, scripts e notebook executado integram a entrega; a interface é verificada separadamente em navegador.
