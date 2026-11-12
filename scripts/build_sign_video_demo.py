@@ -22,7 +22,9 @@ REPORTS = ROOT / "docs/reports"
 
 
 def main():
-    manifest = json.loads((FIXTURES / "hospital-reference.json").read_text())
+    manifest = json.loads(
+        (FIXTURES / "hospital-reference.json").read_text(encoding="utf-8")
+    )
     scene = manifest["reference"]
     raw = (FIXTURES / scene["image"]).read_bytes()
     reference = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_COLOR)
@@ -134,7 +136,7 @@ def main():
         "segments": segments,
     }
     (PUBLIC / "detection-demo.json").write_text(
-        json.dumps(metadata, ensure_ascii=False, indent=2) + "\n"
+        json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     REPORTS.mkdir(exist_ok=True)
     benchmark = {
@@ -150,7 +152,7 @@ def main():
         "frames": results,
     }
     (REPORTS / "deteccao-placas-benchmark.json").write_text(
-        json.dumps(benchmark, ensure_ascii=False, indent=2) + "\n"
+        json.dumps(benchmark, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     (REPORTS / "HeatCity-deteccao-placas-exemplo.pdf").write_bytes(
         report_pdf(results, title="HeatCity — experimento sintético reproduzível")

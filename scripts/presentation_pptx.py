@@ -1,6 +1,5 @@
-"""Apresentação editável e prévia HTML com as mesmas posições e conteúdo."""
+"""Apresentação PowerPoint editável do HeatCity."""
 
-import html
 from urllib.parse import unquote
 
 from pptx import Presentation
@@ -24,7 +23,6 @@ def build_presentation(out, slides, talks, summary, conditions, sources):
     deck.slide_width, deck.slide_height = Inches(13.333), Inches(7.5)
     deck.core_properties.title = "HeatCity — placas em vídeo"
     deck.core_properties.author = "Equipe HeatCity"
-    pages = []
     pct = lambda v: f"{v:.1%}".replace(".", ",")
 
     for index, (title, lines, *_) in enumerate(slides, 1):
@@ -33,11 +31,8 @@ def build_presentation(out, slides, talks, summary, conditions, sources):
         bg = NAVY if dark else PAPER
         slide.background.fill.solid()
         slide.background.fill.fore_color.rgb = RGBColor.from_string(bg)
-        elements = []
 
-        def rectangle(
-            x, y, w, h, color, rounded=True, *, slide=slide, elements=elements
-        ):
+        def rectangle(x, y, w, h, color, rounded=True, *, slide=slide):
             shape = slide.shapes.add_shape(
                 MSO_SHAPE.ROUNDED_RECTANGLE if rounded else MSO_SHAPE.RECTANGLE,
                 Inches(x),
@@ -50,9 +45,6 @@ def build_presentation(out, slides, talks, summary, conditions, sources):
             shape.line.fill.background()
             if rounded:
                 shape.adjustments[0] = 0.12
-            elements.append(
-                f'<div class="shape" style="left:{x * 96}px;top:{y * 96}px;width:{w * 96}px;height:{h * 96}px;background:#{color};border-radius:{12 if rounded else 0}px"></div>'
-            )
 
         def text(
             value,
@@ -66,7 +58,6 @@ def build_presentation(out, slides, talks, summary, conditions, sources):
             url=None,
             *,
             slide=slide,
-            elements=elements,
         ):
             shape = slide.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
             tf = shape.text_frame
@@ -85,16 +76,8 @@ def build_presentation(out, slides, talks, summary, conditions, sources):
                 run.font.color.rgb = RGBColor.from_string(color)
                 if url:
                     run.hyperlink.address = url
-            content = html.escape(str(value))
-            if url:
-                content = (
-                    f'<a href="{html.escape(url)}" style="color:inherit">{content}</a>'
-                )
-            elements.append(
-                f'<div class="text" style="left:{x * 96}px;top:{y * 96}px;width:{w * 96}px;height:{h * 96}px;font-size:{size * 96 / 72}px;color:#{color};font-weight:{700 if bold else 400}">{content}</div>'
-            )
 
-        def picture(name, x, y, w, h, *, slide=slide, elements=elements):
+        def picture(name, x, y, w, h, *, slide=slide):
             from PIL import Image
 
             with Image.open(out / name) as im:
@@ -106,9 +89,6 @@ def build_presentation(out, slides, talks, summary, conditions, sources):
                 Inches(y + (h - ih) / 2),
                 width=Inches(iw),
                 height=Inches(ih),
-            )
-            elements.append(
-                f'<img src="{name}" style="left:{x * 96}px;top:{y * 96}px;width:{w * 96}px;height:{h * 96}px;object-fit:contain">'
             )
 
         def card(heading, body, x, y, w=3.8, h=2.9, number=None):
@@ -171,19 +151,19 @@ def build_presentation(out, slides, talks, summary, conditions, sources):
                 17,
                 "CAD6E8",
             )
-            for n in range(3):
-                x = 0.8 + n * 4.0
-                rectangle(x, 4.65, 3.75, 1.55, "213754")
-                text(f"INTEGRANTE {n + 1}", x + 0.25, 4.88, 3.25, 0.3, 12, MINT, True)
+            for n in range(4):
+                y = 4.15 + n * 0.59
+                rectangle(0.8, y, 11.75, 0.52, "213754")
                 text(
-                    "Nome: __________________\nRM: ____________________",
-                    x + 0.25,
-                    5.35,
-                    3.25,
-                    0.65,
-                    16,
+                    "Nome completo: __________________________________________",
+                    1.05,
+                    y + 0.1,
+                    9.0,
+                    0.35,
+                    18,
                     WHITE,
                 )
+                text("RM: ______", 10.45, y + 0.1, 1.8, 0.35, 18, MINT)
         elif index == 2:
             text(
                 "Chegar ao hospital. Escolher o corredor. Encontrar a Recepção.",
@@ -492,16 +472,5 @@ def build_presentation(out, slides, talks, summary, conditions, sources):
                 )
 
         slide.notes_slide.notes_text_frame.text = talks[index - 1]
-        pages.append(
-            f'<section id="s{index}" style="background:#{bg}">'
-            + "".join(elements)
-            + "</section>"
-        )
 
     deck.save(out / "slides.pptx")
-    (out / "slides.html").write_text(
-        '<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>HeatCity — apresentação</title><style>body{margin:0;background:#0b1527;font-family:Arial,sans-serif}section{position:relative;width:1280px;height:720px;margin:32px auto;overflow:hidden;box-shadow:0 12px 40px #0005}section>*{position:absolute;box-sizing:border-box}.text{white-space:pre-wrap;overflow:hidden;line-height:1.2}nav{padding:20px;color:#fff;text-align:center}nav a{color:#39dbc0} @media print{section{margin:0;break-after:page}}</style><nav>HeatCity • prévia da apresentação editável • <a href="slides.pptx">Abrir PPTX</a></nav>'
-        + "".join(pages)
-        + '<script>let i=1;addEventListener("keydown",e=>{if(e.key==="ArrowRight")i=Math.min(12,i+1);else if(e.key==="ArrowLeft")i=Math.max(1,i-1);else return;document.getElementById("s"+i).scrollIntoView()})</script></html>',
-        encoding="utf-8",
-    )
