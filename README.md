@@ -1,6 +1,6 @@
 # HeatCity — placas em vídeo
 
-**Entrega e apresentação:** [guia único para o professor](docs/ENTREGA-PROFESSOR.md)
+**Entrega e apresentação:** [guia único para o professor](https://github.com/FIAP-4SIZ/HeatCity/blob/develop/docs/ENTREGA-PROFESSOR.md)
 — arquivos exigidos, sequência da demonstração, resultados e pendências.
 
 **Onde a placa aparece e por quanto tempo é detectada?**
@@ -11,7 +11,7 @@ propostos: pacientes, acompanhantes e visitantes que precisam localizar serviço
 
 O estado atual é um **MVP técnico funcional com evidência sintética**. Necessidade
 de campo e benefício concreto para cidadãos ainda não estão demonstrados.
-Veja a [conferência dos requisitos](docs/verificacao-requisitos.md), que diferencia
+Veja a [conferência dos requisitos](https://github.com/FIAP-4SIZ/HeatCity/blob/develop/docs/verificacao-requisitos.md), que diferencia
 as exigências do PDF da disciplina do contexto opcional CitizenTech. Os arquivos
 solicitados estão presentes; a evidência sintética é uma limitação declarada,
 não um requisito adicional de pesquisa de campo.
@@ -98,11 +98,15 @@ Chrome e Edge aceitam câmera em localhost. No Windows, use `.venv\Scripts\pytho
 
 ## Evidência e apresentação
 
-[Apresentação editável PPTX](docs/apresentacao/slides.pptx) ·
-[Roteiro de fala e conceitos (MD)](docs/apresentacao/ROTEIRO.md) · [Pacote offline](docs/HeatCity-pacote-apresentacao.zip) ·
-[Relatório](docs/reports/HeatCity-deteccao-placas-exemplo.pdf) ·
-[Medições](docs/reports/deteccao-placas-benchmark.json) ·
-[Exemplo](docs/exemplo-hospital.md).
+Os materiais desta seção ficam na `develop`. Para reproduzir a análise ou
+regenerar apresentações e medições, execute primeiro `git switch develop`.
+A `main` contém a aplicação sem a pasta `docs/`, conforme solicitado.
+
+[Apresentação editável PPTX](https://github.com/FIAP-4SIZ/HeatCity/blob/develop/docs/apresentacao/slides.pptx) ·
+[Roteiro de fala e conceitos (MD)](https://github.com/FIAP-4SIZ/HeatCity/blob/develop/docs/apresentacao/ROTEIRO.md) · [Pacote offline](https://github.com/FIAP-4SIZ/HeatCity/blob/develop/docs/HeatCity-pacote-apresentacao.zip) ·
+[Relatório](https://github.com/FIAP-4SIZ/HeatCity/blob/develop/docs/reports/HeatCity-deteccao-placas-exemplo.pdf) ·
+[Medições](https://github.com/FIAP-4SIZ/HeatCity/blob/develop/docs/reports/deteccao-placas-benchmark.json) ·
+[Exemplo](https://github.com/FIAP-4SIZ/HeatCity/blob/develop/docs/exemplo-hospital.md).
 
 Regenerar vídeo/medições (requer ffmpeg somente para recriar o MP4 já incluído):
 
@@ -139,11 +143,11 @@ CHROMIUM_PATH=/usr/bin/chromium npm --prefix frontend run test:e2e
 
 A validação automatizada usa vídeo sintético e webcam simulada. Não comprova
 performance em captura real nem substitui apresentação e arguição individuais.
-[Fontes](docs/referencias.md) · [Fluxo de branches](docs/fluxo-desenvolvimento.md).
+[Fontes](https://github.com/FIAP-4SIZ/HeatCity/blob/develop/docs/referencias.md) · [Fluxo de branches](https://github.com/FIAP-4SIZ/HeatCity/blob/develop/docs/fluxo-desenvolvimento.md).
 A aplicação está na main. A develop mantém os materiais em docs/ e é a base para novas tarefas.
 
 ## Conferência do relatório do exemplo
 
-[Verificação e valores esperados](docs/verificacao-exemplo-sintetico.md). Ausência
+[Verificação e valores esperados](https://github.com/FIAP-4SIZ/HeatCity/blob/develop/docs/verificacao-exemplo-sintetico.md). Ausência
 conhecida é separada de falha com placa presente. Indícios geométricos de nitidez,
 contraste e borda não são atribuídos à placa quando o candidato foi rejeitado.

@@ -16,4 +16,4 @@
 - Não crie tags, releases ou deploys automaticamente.
 - Preserve a estrutura da aplicação.
 
-Consulte [o fluxo de desenvolvimento](docs/fluxo-desenvolvimento.md).
+Consulte [o fluxo de desenvolvimento](https://github.com/FIAP-4SIZ/HeatCity/blob/develop/docs/fluxo-desenvolvimento.md).

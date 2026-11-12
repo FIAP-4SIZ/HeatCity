@@ -23,7 +23,8 @@ jobs:
       - run: ruff format --check backend scripts
       - run: python -m unittest discover -s tests -v
         working-directory: backend
-      - name: Execute the reproducible analysis notebook
+      - name: Execute the reproducible analysis notebook (develop documentation)
+        if: github.ref != 'refs/heads/main' && github.base_ref != 'main'
         run: |
           python -m venv .analysis-venv
           .analysis-venv/bin/python -m pip install -r notebooks/requirements.txt
