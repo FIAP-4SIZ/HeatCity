@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
-    "test": "node src/sign-tracking.test.js",
+    "test": "node src/sign-tracking.test.js && node src/video-frame.test.js",
     "test:e2e": "node scripts/sign-detection-smoke.mjs && node scripts/catalog-smoke.mjs",
     "format": "prettier --write src scripts vite.config.js index.html package.json",
     "format:check": "prettier --check src scripts vite.config.js index.html package.json"

@@ -104,12 +104,18 @@ def detect(frame, reference, plates, annotations=None):
             suggestions.append(
                 "Testar câmera mais frontal, referência compatível e placa maior no enquadramento."
             )
-        if best and gap is not None and gap < GAP_MIN:
+        if best and 0.55 <= score < SCORE_MIN:
+            reasons.append(
+                "Similaridade intermediária: evidência insuficiente para confirmar a placa."
+            )
+            suggestions.append("Conferir nitidez, perspectiva e compatibilidade da referência.")
+        if best and score >= 0.55 and gap is not None and gap < GAP_MIN:
             reasons.append("Mais de uma posição tem correlação semelhante.")
             suggestions.append(
                 "Verificar placas visualmente parecidas e usar títulos/pictogramas mais distinguíveis."
             )
-        if best:
+        quality_reasons, quality_suggestions = [], []
+        if best and status == "detected":
             x, y, bw, bh = best["box"]
             roi = aoi_crop(gray, dict(x=x, y=y, width=bw, height=bh))
             q = _quality(roi)
@@ -121,25 +127,25 @@ def detect(frame, reference, plates, annotations=None):
                 "height_pixels": bh * h,
             }
             if base["sharpness"] > 10 and q["sharpness"] < base["sharpness"] * 0.5:
-                reasons.append(
+                quality_reasons.append(
                     "Menor variação pelo Laplaciano que a referência redimensionada; compatível com desfoque ou perda de detalhes."
                 )
-                suggestions.append(
+                quality_suggestions.append(
                     "Melhorar foco, reduzir movimento e posicionar a placa onde tenha maior tamanho aparente."
                 )
             if base["contrast"] > 0.05 and q["contrast"] < base["contrast"] * 0.65:
-                reasons.append("Menor contraste local que a referência.")
-                suggestions.append(
+                quality_reasons.append("Menor contraste local que a referência.")
+                quality_suggestions.append(
                     "Evitar sombras/reflexos e aumentar a separação visual entre texto e fundo."
                 )
             if bh * h < 28:
-                reasons.append("Altura aparente menor que 28 pixels nesta captura.")
-                suggestions.append(
+                quality_reasons.append("Altura aparente menor que 28 pixels nesta captura.")
+                quality_suggestions.append(
                     "Aumentar a placa ou aproximá-la do percurso observado pela câmera."
                 )
             if min(x, y, 1 - x - bw, 1 - y - bh) < 0.01:
-                reasons.append("Candidato próximo da borda do quadro; pode ser recortado.")
-                suggestions.append(
+                quality_reasons.append("Candidato próximo da borda do quadro; pode ser recortado.")
+                quality_suggestions.append(
                     "Testar posição mais central no campo de visão e sem obstruções."
                 )
         results.append(
@@ -154,6 +160,8 @@ def detect(frame, reference, plates, annotations=None):
                 reasons=reasons,
                 suggestions=suggestions,
                 quality=quality,
+                quality_reasons=quality_reasons,
+                quality_suggestions=quality_suggestions,
             )
         )
     # Different identities cannot be confidently assigned to the same rectangle.
@@ -180,6 +188,14 @@ def detect(frame, reference, plates, annotations=None):
                     weaker["reasons"].append(
                         "Outro template tem correspondência mais forte na mesma região."
                     )
+    for result in results:
+        quality_reasons = result.pop("quality_reasons")
+        quality_suggestions = result.pop("quality_suggestions")
+        if result["status"] == "detected":
+            result["reasons"].extend(quality_reasons)
+            result["suggestions"].extend(quality_suggestions)
+        else:
+            result["quality"] = None
     metrics = dict(tp=0, fp=0, fn=0, tn=0, abstentions=0, annotations=0, ious=[])
     for annotation in annotations or []:
         before = metrics.copy()
@@ -203,7 +219,8 @@ def detect(frame, reference, plates, annotations=None):
         if result["status"] in ("ambiguous", "conflict"):
             metrics["abstentions"] += 1
         result["evaluation"] = {
-            k: metrics[k] - before[k] for k in ("tp", "fp", "fn", "tn", "abstentions")
+            "present": annotation["present"],
+            **{k: metrics[k] - before[k] for k in ("tp", "fp", "fn", "tn", "abstentions")},
         }
     elapsed = (perf_counter() - start) * 1000
     return dict(
@@ -224,11 +241,26 @@ def detect(frame, reference, plates, annotations=None):
     )
 
 
+def known_presence(result):
+    """Read explicit reference presence, retaining compatibility with existing exports."""
+    evaluation = result.get("evaluation")
+    if evaluation is None:
+        return None
+    if "present" in evaluation:
+        return evaluation["present"]
+    if evaluation.get("tp", 0) + evaluation.get("fn", 0):
+        return True
+    if evaluation.get("tn", 0) + evaluation.get("fp", 0):
+        return False
+    return None
+
+
 def summarize(frames):
     totals = {k: 0 for k in ("tp", "fp", "fn", "tn", "abstentions", "annotations")}
     times = []
     ious = []
     counts = {}
+    conditions = {}
     details = {}
     previous = None
     for frame in frames:
@@ -238,6 +270,14 @@ def summarize(frames):
         m = frame.get("metrics") or {}
         for k in totals:
             totals[k] += int(m.get(k, 0))
+        if frame.get("condition"):
+            condition = conditions.setdefault(
+                frame["condition"],
+                dict(condition=frame["condition"], frames=0, tp=0, fp=0, fn=0, tn=0),
+            )
+            condition["frames"] += 1
+            for key in ("tp", "fp", "fn", "tn"):
+                condition[key] += int(m.get(key, 0))
         ious.extend(
             float(v) for v in m.get("ious", []) if isinstance(v, (int, float)) and 0 <= v <= 1
         )
@@ -263,14 +303,19 @@ def summarize(frames):
                     fn=0,
                     tn=0,
                     annotations=0,
+                    known_present_frames=0,
+                    known_absent_frames=0,
                 ),
             )
             d["frames"] += 1
             d["scores"].append(float(result["score"]))
             if result.get("gap") is not None:
                 d["gaps"].append(float(result["gap"]))
+            presence = known_presence(result)
+            d["known_present_frames"] += int(presence is True)
+            d["known_absent_frames"] += int(presence is False)
             for key in ("reasons", "suggestions"):
-                for value in set(result.get(key, [])):
+                for value in set(result.get(key, [])) if presence is not False else []:
                     d[key][value] = d[key].get(value, 0) + 1
             if result.get("evaluation") is not None:
                 d["annotations"] += 1
@@ -315,6 +360,7 @@ def summarize(frames):
         mean_iou=float(np.mean(ious)) if ious else None,
         mean_processing_ms=float(np.mean(times)) if times else None,
         counts=counts,
+        conditions=list(conditions.values()),
         details=list(details.values()),
     )
 
@@ -378,9 +424,18 @@ def report_pdf(frames, title="HeatCity — detecção de placas em vídeo"):
         )
     )
     story.append(table)
+    if s["conditions"]:
+        text("Resultados por trecho do arquivo", "Heading2")
+        for condition in s["conditions"]:
+            text(
+                f"{condition['condition']}: {condition['frames']} quadros; TP={condition['tp']}, FP={condition['fp']}, FN={condition['fn']}, TN={condition['tn']}."
+            )
+        text(
+            "O exemplo é decodificado em uma grade fixa de 24 quadros do MP4. Predições são recalculadas, não copiadas do benchmark. Os instantes são os do arquivo, independentemente do tempo de processamento. Vídeos próprios e webcam continuam amostrados ao vivo. O desfoque é uma transformação conhecida do experimento; falhar nesse trecho não comprova um problema de instalação da placa."
+        )
     text("Análise final por placa: dificuldade, acerto e posicionamento", "Heading2")
     text(
-        "Dificuldade operacional é descrita pela proporção de detecções, ambiguidades, falhas e margens de correlação; não é uma escala de dificuldade humana. Não localizada não significa comprovadamente ausente."
+        "Dificuldade operacional é descrita pela proporção de detecções, ambiguidades, falhas e margens de correlação; não é uma escala de dificuldade humana. Não localizada não significa comprovadamente ausente. Ausências conhecidas são separadas de falhas com placa presente. Nitidez, contraste e borda só geram alertas sobre candidatos aceitos; candidatos rejeitados não confirmam a região real da placa."
     )
     for d in s["details"]:
         text(d["name"], "Heading3")
@@ -391,14 +446,19 @@ def report_pdf(frames, title="HeatCity — detecção de placas em vídeo"):
             f"Tempo detectado estimado {d['detected_seconds']:.2f} s; {d['events']} trechos; primeira detecção em {fmt(d['first_seen'])} s da fonte. Intervalos entre quadros consecutivos detectados são somados somente na mesma fonte e até 1,5 s, sem preencher falhas. Quadro isolado soma zero. Não prova continuidade entre amostras."
         )
         text(
-            f"Acerto por placa: {d['annotations']} anotações; precisão {fmt(d['precision'])}; recall {fmt(d['recall'])}; TP={d['tp']}, FP={d['fp']}, FN={d['fn']}, TN={d['tn']}."
+            f"Placa presente em {d['known_present_frames']} quadros anotados; ausente em {d['known_absent_frames']}. Ausências corretas (TN): {d['tn']}; falhas com placa presente (FN): {d['fn']}. Ausência confirmada não é usada como indício de dificuldade. Acerto por placa: {d['annotations']} anotações; precisão {fmt(d['precision'])}; recall {fmt(d['recall'])}; TP={d['tp']}, FP={d['fp']}, FN={d['fn']}, TN={d['tn']}."
         )
+        if d["known_absent_frames"] == d["frames"]:
+            text(
+                "A placa estava ausente em todos os quadros anotados. Não é possível avaliar dificuldade ou sugerir outro local para ela a partir dessas ausências."
+            )
+            continue
         if not d["reasons"]:
             text(
                 "Nenhum alerta heurístico de captura apareceu. Isso não comprova boa legibilidade ou ausência de erros."
             )
         for reason, count in sorted(d["reasons"].items(), key=lambda item: -item[1]):
-            text(f"Indício em {count}/{d['frames']} quadros: {reason}")
+            text(f"Indício em {count} quadros, excluindo ausências confirmadas: {reason}")
         for suggestion, count in sorted(d["suggestions"].items(), key=lambda item: -item[1]):
             text(f"Hipótese a testar ({count} quadros): {suggestion}")
         text(

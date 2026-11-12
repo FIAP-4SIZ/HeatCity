@@ -47,7 +47,7 @@ root = next(p for p in [Path.cwd(), *Path.cwd().parents] if (p / 'backend/heatci
 benchmark = json.loads((root / 'docs/reports/deteccao-placas-benchmark.json').read_text())
 truth = json.loads((root / 'frontend/public/detection-demo.json').read_text())
 video_sha = hashlib.sha256((root / 'frontend/public/detection-demo.mp4').read_bytes()).hexdigest()
-assert video_sha == benchmark['video_sha256'], 'O vídeo diverge das medições.'
+assert video_sha == benchmark['video_sha256'] == truth['video_sha256'], 'O vídeo diverge das medições.'
 print('SHA-256 do vídeo conferido:', video_sha)
 print('Quadros:', len(benchmark['frames']))
 print('Runtime do detector:', benchmark['runtime'])"""),
