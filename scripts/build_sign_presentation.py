@@ -56,11 +56,11 @@ def main():
                 2,
             )
         cv2.imwrite(str(OUT / "deteccao-quadro.jpg"), picture)
-    original = cv2.imread(str(ROOT / "backend/heatcity/fixtures/hospital-a.jpg"))
+    original = cv2.imread(str(ROOT / "backend/heatcity/fixtures/hospital.jpg"))
     fixture = json.loads(
-        (ROOT / "backend/heatcity/fixtures/hospital-study.json").read_text()
+        (ROOT / "backend/heatcity/fixtures/hospital-reference.json").read_text()
     )
-    plate = fixture["scenarios"][0]["plates"][0]
+    plate = fixture["reference"]["plates"][0]
     ih, iw = original.shape[:2]
     crop = original[
         int(plate["y"] * ih) : int((plate["y"] + plate["height"]) * ih),
@@ -135,15 +135,15 @@ def main():
             "Problema: encontrar a Recepção",
             [
                 "Na entrada de um hospital, a placa pode ficar pequena no enquadramento, desfocada, obstruída ou semelhante às demais.",
-                "Investigar a visibilidade da sinalização apoia hipóteses para espaços coletivos mais acessíveis, relacionadas à Global Solution.",
-                "A câmera localiza a placa. Compreensão e orientação humana exigem estudo específico.",
+                "CitizenTech: beneficiar pacientes, acompanhantes e visitantes por meio de escolhas melhores sobre a sinalização. A necessidade no território e o benefício ainda precisam de evidência.",
+                "ODS 3, meta 3.8: apoio indireto ao acesso a serviços de saúde; ODS 11, meta 11.7: espaços coletivos acessíveis. A contribuição pretendida ainda não é impacto comprovado.",
             ],
         ),
         (
             "Escopo: referências conhecidas",
             [
                 "Entrada: vídeo de arquivo ou webcam. Saída: posição da placa, estado da detecção e tempo estimado por identidade.",
-                "Cada projeto reúne imagens de referência com recortes nomeados das placas.",
+                "Cidadãos indicam dificuldades; responsáveis pelo espaço capturam o percurso; manutenção testa mudanças. Esse ecossistema é proposto, não validado com participantes.",
                 "Placas são cadastradas por imagem e recorte. Não há OCR, detecção de placas desconhecidas nem treinamento de um modelo.",
                 "A avaliação exige posições verdadeiras anotadas. Sem elas, não há precisão mensurada.",
             ],
@@ -161,9 +161,9 @@ def main():
         (
             "Cenário, recortes e posição",
             [
-                "A imagem A fornece os quatro recortes da demonstração; B fica como material alternativo e não é usada no vídeo.",
+                "Uma foto do hospital fornece os quatro recortes usados para localizar as placas no vídeo.",
                 "As AOIs delimitam Recepção, Pronto Socorro, Ambulatório e Triagem. Os retângulos encontrados são coordenadas normalizadas no quadro.",
-                "A/B originais também mudam pessoas, setas e outras placas: não isolam o efeito da posição da Recepção.",
+                "A fotografia foi gerada por IA e o vídeo aplica transformações controladas; não representa observação de usuários.",
             ],
             "deteccao-quadro.jpg",
         ),
@@ -216,9 +216,9 @@ def main():
         (
             "Demonstração e próxima evidência",
             [
-                "1. Iniciar-HeatCity.cmd → Escolher as placas: os quatro recortes do hospital já estão prontos.",
-                "2. Abrir vídeo demonstrativo → Iniciar análise → observar caixas e tempos.",
-                "3. Ao terminar, o relatório abre automaticamente. Exportar JSON, CSV e PDF; voltar ao vídeo para conferir quadros, se necessário.",
+                "1. Iniciar-HeatCity.cmd → Ver exemplo funcionando.",
+                "2. A análise inicia automaticamente e abre o relatório ao terminar.",
+                "3. Para outro ambiente: Começar com meu vídeo → cadastrar foto e placas → selecionar vídeo e analisar.",
                 "4. Próxima etapa: vídeo real das placas cadastradas; anotar posições/ausências e medir precisão, recall, IoU e falhas.",
                 "Conclusão: MVP funcional para localizar referências em quadros; acompanhamento amostrado e generalização ainda limitada.",
             ],
@@ -320,7 +320,7 @@ Esta é a apresentação do detector de placas em vídeo.
 2. Slides 4–6: mostrar imagem, AOIs, cinza, correlação por escalas e tempo acumulado com interrupções. O processamento usa referências conhecidas e critérios fixos, sem treinamento.
 3. Slides 7–9: mostrar números efetivamente calculados, gráfico e falhas. São quadros sintéticos correlacionados, sem resultados humanos. Score de correlação não é precisão.
 4. Slide 10: distinguir indícios medidos de causas e sugestões de local ainda não confirmadas.
-5. Slide 11: abrir a aplicação pela raiz, usar os quatro recortes prontos, abrir o vídeo demonstrativo e iniciar análise. Observar perda de detecção sob desfoque e ausência da Recepção no final. Ao terminar, ver o relatório e baixar PDF/JSON/CSV. Para conferir outro quadro, voltar ao vídeo.
+5. Slide 11: abrir a aplicação pela raiz, clicar em Ver exemplo funcionando; a análise inicia automaticamente. Observar perda de detecção sob desfoque e ausência da Recepção no final. Ao terminar, ver o relatório e baixar PDF/JSON/CSV. Para conferir outro quadro, voltar ao vídeo.
 6. Slide 12: apresentar links de documentação, scripts e limites.
 
 ## Plano B offline
@@ -344,14 +344,14 @@ No PowerShell: `$env:PYTHONPATH="backend"` antes de executar os dois scripts. ff
 - Visão computacional: localização de referências nos quadros de vídeo/webcam por template matching; conteúdo alinhado ao laboratório de aula.
 - Evidência reproduzível: vídeo, geometria conhecida, medições por quadro, gráfico, PDF e código versionados.
 - Análise crítica: dúvida, falhas, tempo estimado e sugestões de posição por placa, sem inferência de atenção/leitura.
-- Ainda faltam: medições confiáveis em vídeo real e comparação controlada de posicionamentos. As imagens A/B originais mudam múltiplos elementos e não isolam uma variável.
+- Ainda faltam: medições em captura real e evidências de benefício para cidadãos. O PDF da disciplina não exige relato ou entrevista formal na apresentação. Não há ganho de orientação humana comprovado.
 - O projeto fornece scripts reproduzíveis e resultados sintéticos identificados; não apresenta resultados humanos.
 
 ## Conferência tripla desta apresentação
 
 1. Narrativa: título, pergunta, demonstração e conclusão descrevem placas em vídeo, com catálogo de referências e sem treinamento.
 2. Evidência: números e gráficos vêm do mesmo JSON gerado pelo detector sobre MP4 decodificado; falhas e origem sintética são explicitadas.
-3. Entrega: links, slides HTML/PDF, roteiro, MP4, relatório e scripts integram o pacote; a interface é verificada separadamente em navegador.
+3. Entrega: links, slides HTML/PDF, roteiro, MP4, relatório, scripts e notebook executado integram a entrega; a interface é verificada separadamente em navegador.
 """)
     package = ROOT / "docs/HeatCity-pacote-apresentacao.zip"
     with zipfile.ZipFile(package, "w", zipfile.ZIP_DEFLATED) as z:
@@ -370,6 +370,10 @@ No PowerShell: `$env:PYTHONPATH="backend"` antes de executar os dois scripts. ff
             ROOT / "frontend/public/detection-demo.json",
             Path(__file__).resolve(),
             ROOT / "scripts/build_sign_video_demo.py",
+            ROOT / "notebooks/analise-deteccao-placas.ipynb",
+            ROOT / "notebooks/requirements.txt",
+            ROOT / "scripts/build_analysis_notebook.py",
+            ROOT / "docs/verificacao-requisitos.md",
         ]
         for path in paths:
             z.write(path, path.relative_to(ROOT))

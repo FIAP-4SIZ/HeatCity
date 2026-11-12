@@ -331,6 +331,16 @@ def report_pdf(frames, title="HeatCity — detecção de placas em vídeo"):
     text(
         "Problema: investigar a localização automática de placas cadastradas em imagens de ambientes coletivos. Detectar uma placa na câmera não comprova que uma pessoa a viu ou leu."
     )
+    text("CitizenTech: necessidade, beneficiários e impacto", "Heading2")
+    text(
+        "Beneficiários propostos: pacientes, acompanhantes e visitantes que precisam se orientar até serviços como a Recepção. Responsáveis pelo espaço e pela sinalização operam o sistema para levantar hipóteses de visibilidade e testar alterações. A necessidade é ilustrativa neste ensaio: não foram apresentadas observações de território ou relatos de usuários."
+    )
+    text(
+        "A câmera fornece dados e o processamento local automatiza indicadores para apoiar escolhas. ODS 3, meta 3.8: contribuição indireta pretendida ao acesso à orientação em serviços de saúde. ODS 11, meta 11.7: intenção de espaços coletivos acessíveis. O benchmark não demonstra cumprimento de metas nem ganho de acessibilidade. Fontes: https://sdgs.un.org/goals/goal3 e https://sdgs.un.org/goals/goal11 ."
+    )
+    text(
+        "Impacto a verificar: tempo para localizar a placa, enganos e pedidos de ajuda antes/depois de uma alteração, com participação e consentimento dos usuários. O modelo de uso proposto é uma ferramenta local de apoio à manutenção; viabilidade de serviço, adoção e sustentabilidade financeira não foram medidas. O relatório diferencia resultado técnico de benefício cidadão."
+    )
     text("Método", "Heading2")
     text(
         "OpenCV: conversão para cinza, template matching TM_CCOEFF_NORMED em sete escalas fixas, comparação com picos espaciais alternativos e conflitos entre identidades. Sem treino de modelos. Entrada de vídeo amostrada; não se afirma rastreamento contínuo ou identificação sem referência. Correlação mínima 0,72, margem espacial 0,06 e conflito de identidade 0,08 são heurísticos publicados, não probabilidades."

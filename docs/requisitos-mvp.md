@@ -1,23 +1,20 @@
-# Requisitos do MVP de placas em vídeo
+# Objetivo e requisitos do MVP
 
-Pergunta: onde a placa cadastrada aparece e por quanto tempo é detectada?
+**Pergunta técnica:** onde a placa cadastrada aparece e por quanto tempo é detectada?
 
-- Catálogo local de projetos, imagens e recortes identificados por nomes únicos.
-- Vídeo ou webcam, análise amostrada sem fila e posições normalizadas por quadro.
-- Estados de detecção, ambiguidade, conflito e não localização explícitos.
-- Primeira detecção, trechos e tempo estimado com interrupções e sem preencher falhas.
-- Precisão, recall e IoU somente quando houver referência verdadeira anotada.
-- PDI visual: cinza, Laplaciano, histograma e descritores do recorte.
-- Consolidado por placa com dificuldade, indícios de dúvida e sugestões a testar.
-- Exportação JSON/CSV/PDF e apresentação reproduzível com fontes e limitações.
-- Nenhum treinamento de modelo. Uso local, sem autenticação, sem áudio e sem persistência de vídeo.
+**Proposta CitizenTech:** apoiar responsáveis por espaços coletivos na revisão da
+sinalização, com benefício esperado para pessoas que precisam localizar serviços.
+A evidência atual é sintética; benefício cidadão e necessidade de campo ainda
+precisam de demonstração.
 
-O exemplo hospitalar é de IA; o MP4 sintético apresenta nitidez, deslocamento,
-desfoque e remoção da Recepção. Não representa participantes humanos nem uma
-captura real. A comparação A/B original muda múltiplos elementos e não isola o
-local da placa como causa. Ainda é necessária medição com vídeo real anotado.
+O aplicativo entrega: foto com recortes nomeados; vídeo ou webcam; localização
+clássica multiescala; estados de incerteza; tempo estimado sem preencher falhas;
+conferência manual; precisão/recall/IoU quando há referência conhecida; PDI visual;
+relatório por placa, indícios e sugestões a testar; exportação JSON/CSV/PDF.
 
-Aderência acadêmica: problema de sinalização em ambientes coletivos, relação com
-a Global Solution, PDI/visão computacional, scripts reproduzíveis, gráficos,
-relatório, demonstração funcional e discussão crítica. Não se afirma que a
-localização pela câmera mede leitura ou compreensão humana.
+Não há treinamento de modelo, persistência de vídeo ou dependência de inferência
+externa. O exemplo e a foto já estão no checkout. Uso local, sem autenticação.
+
+A [conferência do enunciado](verificacao-requisitos.md) distingue os requisitos
+expressos no PDF da disciplina, a proposta geral CitizenTech e as evidências que
+continuam pendentes. Relato formal não é item explícito da apresentação no PDF.

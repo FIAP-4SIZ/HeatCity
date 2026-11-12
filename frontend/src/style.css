@@ -463,32 +463,7 @@ details[open] summary {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 22px;
 }
-.project-card {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  min-height: 260px;
-}
-.project-card .text-link {
-  margin-top: auto;
-}
-.project-card p {
-  font-size: 13px;
-}
-.card-icon {
-  font-size: 25px;
-  color: var(--accent);
-  margin-bottom: 20px;
-}
-.project-form {
-  display: grid;
-  gap: 20px;
-  margin-bottom: 25px;
-  max-width: 700px;
-}
-.project-form .primary {
-  justify-self: start;
-}
+
 .reference-card {
   padding: 0;
   overflow: hidden;
@@ -717,13 +692,7 @@ details[open] summary {
 .detector-box.conflict span {
   background: #715400;
 }
-.detector-path {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
+
 .detector-empty {
   min-height: 240px;
   background: var(--bg);
@@ -915,11 +884,7 @@ th {
   background: #172438;
   border-radius: 5px;
 }
-.plate-crops figcaption {
-  margin-top: 8px;
-  font-size: 13px;
-  font-weight: 650;
-}
+
 .detector-controls details {
   margin: 0 0 28px;
 }
@@ -951,9 +916,7 @@ th {
   font-size: 16px;
   font-weight: 700;
 }
-.alternative-references {
-  margin-top: 24px;
-}
+
 @media (max-width: 650px) {
   .analysis-steps {
     gap: 8px;
@@ -999,5 +962,49 @@ th {
     float: none;
     display: block;
     margin-left: 20px;
+  }
+}
+.start-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 30px;
+}
+.start-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 260px;
+}
+.start-card p {
+  max-width: 500px;
+}
+.start-card button {
+  margin-top: auto;
+}
+.video-upload {
+  position: relative;
+  cursor: pointer;
+  max-width: 320px;
+}
+.video-upload input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+}
+.webcam-option {
+  margin-top: 22px;
+}
+.detector-controls > label {
+  margin: 18px 0;
+}
+@media (max-width: 700px) {
+  .start-options {
+    grid-template-columns: 1fr;
+  }
+  .start-card {
+    min-height: 210px;
   }
 }

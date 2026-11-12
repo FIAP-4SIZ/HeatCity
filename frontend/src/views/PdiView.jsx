@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { api, number } from '../api.js';
 import Scene from '../components/Scene.jsx';
 
-export default function PdiView({ project }) {
-  const [scenarioId, setScenarioId] = useState(project.references[0]?.id || '');
+export default function PdiView({ project, referenceId }) {
+  const [scenarioId, setScenarioId] = useState(
+    project.references.find((r) => r.id === referenceId)?.id || project.references[0]?.id || '',
+  );
   const [data, setData] = useState(null),
     [error, setError] = useState('');
   const [selected, setSelected] = useState(0),

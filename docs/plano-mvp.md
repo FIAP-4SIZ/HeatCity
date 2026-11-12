@@ -1,12 +1,13 @@
-# Estado do MVP
+# Estado atual
 
-Implementado: catálogo, recortes, localização clássica multiescala, vídeo/webcam,
-acompanhamento amostrado, anotação de referência, métricas de acerto, PDI visual,
-análise final, exportações e apresentação com experimento sintético reproduzível.
+MVP técnico funcional: fotos, recortes, vídeo/webcam, detecção amostrada, anotação,
+PDI, relatórios, métricas e exemplo sintético reproduzível.
 
-Próxima evidência: gravar percurso real, cadastrar uma imagem nítida compatível,
-anotar posições e ausências em quadros representativos e calcular as métricas.
-Depois, comparar duas posições da mesma placa com trajeto, câmera e iluminação
-controlados. Documentar falhas de perspectiva, desfoque, oclusão e escala.
+A próxima ação no aplicativo é explícita: **Ver exemplo funcionando**, ou
+**Começar com meu vídeo → cadastrar foto → selecionar vídeo e analisar**.
 
-Entrega final na main depende da autorização explícita do usuário.
+Prioridades para fundamentar CitizenTech: observar a necessidade real, medir
+uma captura real e testar se mudanças ajudam pessoas. A evidência sintética não
+substitui essas etapas. Entregáveis e pendências em `verificacao-requisitos.md`.
+
+A main permanece reservada à entrega final autorizada pelo usuário.

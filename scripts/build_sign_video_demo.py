@@ -22,8 +22,8 @@ REPORTS = ROOT / "docs/reports"
 
 
 def main():
-    manifest = json.loads((FIXTURES / "hospital-study.json").read_text())
-    scene = manifest["scenarios"][0]
+    manifest = json.loads((FIXTURES / "hospital-reference.json").read_text())
+    scene = manifest["reference"]
     raw = (FIXTURES / scene["image"]).read_bytes()
     reference = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_COLOR)
     picture = cv2.resize(reference, (400, 448))

@@ -1,13 +1,12 @@
 """Projetos e imagens de referência para localização de placas em vídeo."""
 
-import json
 from datetime import datetime, timezone
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
 
 from . import storage
-from .schemas import HospitalInput, ProjectInput, ReferenceInput
+from .schemas import ProjectInput, ReferenceInput
 from .services.vision import decode_scene, image_metrics, pdi_preview
 
 router = APIRouter()
@@ -82,27 +81,3 @@ def delete_reference(reference_id: str):
     require("reference_images", reference_id)
     with storage.database() as db:
         db.execute("DELETE FROM reference_images WHERE id=?", (reference_id,))
-
-
-def create_hospital_project(body: HospitalInput, project_id):
-    value = dict(
-        id=project_id,
-        title="Orientação na entrada de um hospital",
-        objective="Localizar e acompanhar as placas cadastradas em vídeo. Imagens de IA fornecidas pelo usuário; a comparação A/B altera múltiplos elementos e não isola o efeito da posição.",
-        created_at=now(),
-    )
-    scenes = [reference_value(project_id, scene) for scene in body.scenarios]
-    if (scenes[0]["width"], scenes[0]["height"]) != (scenes[1]["width"], scenes[1]["height"]):
-        raise ValueError("As imagens da base devem ter a mesma resolução.")
-    with storage.database() as db:
-        inserted = db.execute(
-            "INSERT OR IGNORE INTO projects(id,payload) VALUES(?,?)",
-            (project_id, json.dumps(value)),
-        )
-        if inserted.rowcount:
-            for scene in scenes:
-                db.execute(
-                    "INSERT INTO reference_images(id,project_id,payload) VALUES(?,?,?)",
-                    (scene["id"], project_id, json.dumps(scene)),
-                )
-    return project(project_id)

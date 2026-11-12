@@ -7,3 +7,5 @@ dist/
 data/
 
 .heatcity-tools/
+
+.analysis-venv/

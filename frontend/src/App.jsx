@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from './api.js';
+import { loadReferences } from './references.js';
 import SignDetection from './views/SignDetection.jsx';
 import ReferenceLibrary from './views/ReferenceLibrary.jsx';
 import PdiView from './views/PdiView.jsx';
@@ -20,7 +21,10 @@ function Method() {
       <div className="page-title">
         <p className="eyebrow">MÉTODO E LIMITES</p>
         <h1>Da imagem à evidência.</h1>
-        <p>Como o HeatCity localiza referências de placas e interpreta as dificuldades.</p>
+        <p>
+          Uma câmera ajuda a revisar a visibilidade de placas para apoiar a orientação em espaços
+          coletivos, no tema CitizenTech.
+        </p>
       </div>
       <div className="method-grid">
         {[
@@ -105,18 +109,18 @@ function Method() {
     </section>
   );
 }
-function PdiWorkspace() {
+function PdiWorkspace({ referenceId }) {
   const [projects, setProjects] = useState([]),
     [selected, setSelected] = useState(''),
     [project, setProject] = useState(null),
     [error, setError] = useState('');
   useEffect(() => {
     let active = true;
-    api('/projects')
-      .then((values) => {
+    Promise.all([api('/projects'), loadReferences()])
+      .then(([values, photos]) => {
         if (active) {
           setProjects(values);
-          setSelected(values[0]?.id || '');
+          setSelected(photos.find((r) => r.id === referenceId)?.projectId || values[0]?.id || '');
         }
       })
       .catch((e) => active && setError(e.message));
@@ -158,7 +162,7 @@ function PdiWorkspace() {
         </select>
       </label>
       {project ? (
-        <PdiView key={project.id} project={project} />
+        <PdiView key={project.id} project={project} referenceId={referenceId} />
       ) : (
         !selected && (
           <div className="empty panel">
@@ -189,10 +193,8 @@ export default function App() {
   }, [theme]);
   const section = ['references', 'pdi', 'method'].includes(path[0]) ? path[0] : 'analysis';
   const items = [
-    ['analysis', 'Análise de vídeo', '▷'],
-    ['references', 'Referências de placas', '▣'],
-    ['pdi', 'PDI visual', '◫'],
-    ['method', 'Método e limites', '↗'],
+    ['analysis', 'Analisar vídeo', '▷'],
+    ['references', 'Minhas fotos', '▣'],
   ];
   return (
     <div className="app-shell">
@@ -233,16 +235,18 @@ export default function App() {
         {section === 'analysis' ? (
           <SignDetection key={path[1] || 'analysis'} referenceId={path[1]} />
         ) : section === 'references' ? (
-          <ReferenceLibrary projectId={path[1]} />
+          <ReferenceLibrary />
         ) : section === 'pdi' ? (
-          <PdiWorkspace />
+          <PdiWorkspace referenceId={path[1]} />
         ) : (
           <Method />
         )}
       </main>
       <footer className="app-footer">
         <span>HeatCity · Localização e acompanhamento de placas em vídeo.</span>
-        <span>Global Solution · FIAP · MVP acadêmico</span>
+        <span>
+          <a href="#/pdi">PDI visual</a> · <a href="#/method">Como funciona</a> · CitizenTech · FIAP
+        </span>
       </footer>
     </div>
   );

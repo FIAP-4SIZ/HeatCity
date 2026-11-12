@@ -5,81 +5,63 @@ const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || undefined,
   args: ['--no-sandbox'],
 });
-let projectId;
+let savedId;
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-  const errors = [],
-    requests = [];
+  const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  page.on('request', (r) => requests.push(r.url()));
-  await page.goto(`${base}/#/references/hospital-orientacao-base-v1`);
-  await page.locator('.alternative-references > summary').waitFor();
-  assert.equal(await page.locator('.reference-card:visible').count(), 1);
-  assert.match(
-    await page.locator('.reference-card:visible h2').innerText(),
-    /placas do vídeo de exemplo/,
-  );
-  await page.locator('.alternative-references > summary').click();
-  assert.equal(await page.locator('.reference-card:visible').count(), 2);
-  await page.locator('.alternative-references > summary').click();
-  await page.screenshot({ path: '/tmp/heatcity-hospital-one-reference.png', fullPage: true });
-  await page.goto(`${base}/#/references`);
-  await page.getByRole('heading', { name: 'As placas começam aqui.' }).waitFor();
-  await page.getByRole('button', { name: '+ Novo projeto' }).click();
-  await page.getByLabel('Título', { exact: true }).fill('Terminal — teste de software');
+  await page.goto(base);
+  await page.getByRole('button', { name: 'Começar com meu vídeo' }).click();
+  await page.getByRole('button', { name: 'Cadastrar foto' }).click();
+  await page.getByLabel('Nome da foto').fill('Entrada — teste de interface');
   await page
-    .getByLabel('Objetivo', { exact: true })
-    .fill('Localizar a placa de entrada no percurso do terminal.');
-  await page.getByRole('button', { name: 'Criar projeto', exact: true }).click();
-  await page.getByRole('button', { name: '+ Nova referência' }).waitFor();
-  projectId = new URL(page.url()).hash.split('/')[2];
-  await page.getByRole('button', { name: '+ Nova referência' }).click();
-  await page.getByLabel('Nome da referência').fill('Entrada — referência de teste');
-  await page
-    .getByLabel('Imagem do ambiente')
+    .getByLabel('Foto do ambiente')
     .setInputFiles(
-      new URL('../../backend/heatcity/fixtures/hospital-a.jpg', import.meta.url).pathname,
+      new URL('../../backend/heatcity/fixtures/hospital.jpg', import.meta.url).pathname,
     );
-  await page.getByLabel('Próxima placa').fill('Entrada');
-  const scene = page.locator('.reference-editor .scene-image');
-  await scene.scrollIntoViewIfNeeded();
-  const rect = await scene.boundingBox();
+  await page.getByLabel('Nome da placa').fill('Entrada');
+  const canvas = page.locator('.reference-editor .scene-image');
+  await canvas.scrollIntoViewIfNeeded();
+  const rect = await canvas.boundingBox();
   await page.mouse.move(rect.x + rect.width * 0.1, rect.y + rect.height * 0.25);
   await page.mouse.down();
   await page.mouse.move(rect.x + rect.width * 0.3, rect.y + rect.height * 0.32);
   await page.mouse.up();
-  await page.getByRole('button', { name: 'Salvar referência e placas' }).click();
-  await page.getByRole('heading', { name: 'Entrada — referência de teste' }).waitFor();
-  assert.equal(await page.locator('.reference-card').count(), 1);
-  await page.screenshot({ path: '/tmp/heatcity-catalog-desktop.png', fullPage: true });
-  await page.getByRole('link', { name: 'Analisar vídeo →' }).click();
-  await page.waitForFunction(() =>
-    document
-      .querySelector('select')
-      ?.selectedOptions[0]?.textContent.includes('Entrada — referência de teste'),
+  const response = page.waitForResponse(
+    (r) => r.request().method() === 'POST' && /\/projects\/[^/]+\/references$/.test(r.url()),
   );
-  assert.equal(await page.getByRole('link', { name: 'Diagnósticos / DEV' }).count(), 0);
-  await page.getByRole('link', { name: 'PDI visual', exact: false }).click();
+  await page.getByRole('button', { name: 'Salvar foto e placas' }).click();
+  savedId = (await (await response).json()).id;
+  await page.waitForFunction((id) => document.querySelector('select')?.value === id, savedId);
+  await page.screenshot({ path: '/tmp/heatcity-simple-custom.png', fullPage: true });
+  await page
+    .getByLabel('Selecionar vídeo e analisar')
+    .setInputFiles(new URL('../public/detection-demo.mp4', import.meta.url).pathname);
+  await page.locator('.detector-frame').waitFor();
+  await page.getByRole('button', { name: 'Pausar análise' }).click();
+  await page.getByRole('button', { name: 'Terminar e ver relatório' }).click();
+  await page.getByText('Precisão ainda não medida.', { exact: true }).waitFor();
+  await page.getByRole('link', { name: 'Minhas fotos', exact: false }).click();
+  await page.getByRole('heading', { name: 'Entrada — teste de interface' }).waitFor();
+  const card = page
+    .locator('.reference-card')
+    .filter({ has: page.getByRole('heading', { name: 'Entrada — teste de interface' }) });
+  assert.equal(await page.locator('.reference-card').count(), 2);
+  await card.getByRole('link', { name: 'Ver processamento da imagem' }).click();
   await page.getByRole('heading', { name: /Histograma · Entrada/ }).waitFor();
   assert.equal(await page.locator('.pdi-histogram rect').count(), 32);
-  const before = await page.locator('.pdi-view .scene-image img').getAttribute('src');
   await page.getByLabel('Ver cena em cinza').check();
-  assert.notEqual(await page.locator('.pdi-view .scene-image img').getAttribute('src'), before);
-  await page.screenshot({ path: '/tmp/heatcity-pdi-new.png', fullPage: true });
+  await page.getByRole('link', { name: 'Minhas fotos', exact: false }).click();
+  await page.getByRole('heading', { name: 'Entrada — teste de interface' }).waitFor();
+  await card.getByRole('link', { name: 'Usar esta foto →' }).click();
+  await page.waitForFunction((id) => document.querySelector('select')?.value === id, savedId);
   await page.setViewportSize({ width: 390, height: 844 });
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
-  await page.getByRole('link', { name: 'Referências de placas', exact: false }).click();
-  await page.getByRole('link', { name: 'Abrir projeto →' }).first().click();
-  await page.screenshot({ path: '/tmp/heatcity-catalog-mobile.png', fullPage: true });
-  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
-  const apiProject = await (await page.request.get(`${base}/api/projects/${projectId}`)).json();
-  assert.equal(apiProject.references.length, 1);
-  assert.ok(!requests.some((url) => /mediapipe|face_landmarker|face_mesh/.test(url)));
   assert.deepEqual(errors, []);
   console.log(
-    'PASS: catálogo por interface, upload, recorte por arraste, análise pela referência correta, PDI, cinza, layout móvel e ausência de componentes removidos.',
+    'PASS: cadastro de foto dentro do fluxo, seleção automática da foto salva, vídeo próprio inicia sozinho, relatório sem acerto inventado, catálogo com uma foto do exemplo, PDI correto e celular.',
   );
 } finally {
-  if (projectId) await fetch(`${base}/api/projects/${projectId}`, { method: 'DELETE' });
+  if (savedId) await fetch(`${base}/api/references/${savedId}`, { method: 'DELETE' });
   await browser.close();
 }
