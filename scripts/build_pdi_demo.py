@@ -58,7 +58,7 @@ def build():
     )
     picture(annotated, 480, 288)
     text(
-        "Fluxo: imagem BGR → cinza → recorte de AOI → histograma/percentis e Laplaciano → descritores. Nenhuma câmera, calibração ou sessão ocular é necessária."
+        "Fluxo: imagem BGR → cinza → recorte de AOI → histograma/percentis e Laplaciano → descritores. Os descritores são calculados diretamente na imagem de referência."
     )
     text(
         "Métricas descrevem pixels; não comprovam leitura, atenção ou acessibilidade. Arquivo gerado por scripts/build_pdi_demo.py com a mesma função pdi_preview da API."

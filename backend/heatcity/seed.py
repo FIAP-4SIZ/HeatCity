@@ -1,4 +1,4 @@
-"""Instala a base versionada como estudo normal, sem tocar em sessões existentes."""
+"""Instala as imagens e os recortes originais no catálogo de referências."""
 
 import base64
 import hashlib
@@ -6,8 +6,8 @@ import json
 from pathlib import Path
 
 from . import storage
-from .schemas import HospitalExampleInput
-from .workflow import create_hospital_study
+from .catalog import create_hospital_project
+from .schemas import HospitalInput
 
 HOSPITAL_ID = "hospital-orientacao-base-v1"
 HOSPITAL_FILE = Path(__file__).parent / "fixtures" / "hospital-study.json"
@@ -17,7 +17,7 @@ def seed_hospital(path=None):
     path = Path(path) if path else HOSPITAL_FILE
     if not path.is_file():
         return None  # No placeholder or substitute image when original assets are absent.
-    existing = storage.read("studies", HOSPITAL_ID)
+    existing = storage.read("projects", HOSPITAL_ID)
     if existing:
         return existing
     fixture = json.loads(path.read_text(encoding="utf-8"))
@@ -36,5 +36,5 @@ def seed_hospital(path=None):
             Path(filename).suffix.lower()
         ]
         scene["image"] = f"data:image/{mime};base64," + base64.b64encode(raw).decode()
-    body = HospitalExampleInput.model_validate({"scenarios": scenarios})
-    return create_hospital_study(body, study_id=HOSPITAL_ID)
+    body = HospitalInput.model_validate({"scenarios": scenarios})
+    return create_hospital_project(body, project_id=HOSPITAL_ID)

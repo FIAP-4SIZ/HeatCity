@@ -1,10 +1,22 @@
 [
-  {"id":"FIAP-GS","author":"FIAP","title":"Global Solution — Citizen Tech","url":"https://experience.fiap.com.br/global-solution-citizen-tech","purpose":"Endereço institucional indicado na proposta do usuário; contextualiza o desafio. O conteúdo e a edição atual não foram confirmados neste ambiente."},
-  {"id":"AULA","author":"Arnaldo Jr","title":"Cognitive Computing — PDI, laboratório 17: MediaPipe","url":"https://arnaldojr.github.io/cognitivecomputing/aulas/PDI/lab17/mediapipe.html","purpose":"Material de aula indicado pelo usuário como base para a detecção com MediaPipe."},
-  {"id":"MP","author":"Google AI Edge","title":"MediaPipe Face Landmarker — Web / JavaScript","url":"https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker/web_js","purpose":"API de detecção facial no navegador. Landmarks não são uma coordenada de olhar pronta; o projeto acrescenta sua interpolação geométrica."},
-  {"id":"CV-GRAY","author":"OpenCV","title":"Color Space Conversions — cvtColor, COLOR_BGR2GRAY","url":"https://docs.opencv.org/4.x/d8/d01/group__imgproc__color__conversions.html","purpose":"Conversão BGR para cinza utilizada no processamento das cenas."},
-  {"id":"CV-LAP","author":"OpenCV","title":"Laplace Operator","url":"https://docs.opencv.org/4.x/d5/db5/tutorial_laplace_operator.html","purpose":"Operador Laplaciano; o HeatCity calcula a variância do resultado, sem limiar universal de nitidez."},
-  {"id":"CV-HIST","author":"OpenCV","title":"Histograms — 1: Find, Plot, Analyze !!!","url":"https://docs.opencv.org/4.x/d1/db7/tutorial_py_histogram_begins.html","purpose":"Referência conceitual de histograma. A contagem implementada usa numpy.bincount, não cv2.calcHist."},
-  {"id":"NP","author":"NumPy","title":"numpy.percentile","url":"https://numpy.org/doc/stable/reference/generated/numpy.percentile.html","purpose":"Percentis P1 e P99 usados no contraste local descritivo."},
-  {"id":"ODS11","author":"Nações Unidas — UN DESA","title":"Goal 11: Sustainable cities and communities","url":"https://sdgs.un.org/goals/goal11","purpose":"Relação proposta com espaços urbanos inclusivos e acessíveis. Não comprova cumprimento de metas ou impacto pelo protótipo."}
+  {
+    "title": "OpenCV — Template Matching",
+    "url": "https://docs.opencv.org/4.x/d4/dc6/tutorial_py_template_matching.html",
+    "usage": "Correlação normalizada e busca por referência."
+  },
+  {
+    "title": "OpenCV — Laplacian Operator",
+    "url": "https://docs.opencv.org/4.x/d5/db5/tutorial_laplace_operator.html",
+    "usage": "Descritor de variação espacial, sem inferência de legibilidade."
+  },
+  {
+    "title": "Aula — Template matching",
+    "url": "https://arnaldojr.github.io/cognitivecomputing/aulas/PDI/lab12/Template_matching.html",
+    "usage": "Relação com o laboratório da disciplina."
+  },
+  {
+    "title": "MDN — getUserMedia",
+    "url": "https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia",
+    "usage": "Permissão de câmera e negociação de recursos."
+  }
 ]

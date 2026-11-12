@@ -132,23 +132,3 @@ def demo_scene():
         + base64.b64encode(cv2.imencode(".png", image)[1]).decode(),
         "plates": plates,
     }
-
-
-def heatmap(image, points, blur_fraction=0.025):
-    height, width = image.shape[:2]
-    scale = min(1, 1200 / width)
-    image = cv2.resize(image, (int(width * scale), int(height * scale)))
-    height, width = image.shape[:2]
-    density = np.zeros((height, width), np.float32)
-    for point in points:
-        if point["valid"]:
-            density[
-                min(height - 1, int(point["y"] * height)), min(width - 1, int(point["x"] * width))
-            ] += 1
-    if density.max() > 0:
-        density = cv2.GaussianBlur(density, (0, 0), max(5, width * blur_fraction))
-        normalized = density / density.max()
-        colors = cv2.applyColorMap((normalized * 255).astype(np.uint8), cv2.COLORMAP_TURBO)
-        alpha = (normalized * 0.7)[..., None]
-        image = (image * (1 - alpha) + colors * alpha).astype(np.uint8)
-    return cv2.imencode(".png", image)[1].tobytes()

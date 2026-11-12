@@ -53,7 +53,9 @@ export default function Scene({
     >
       <img
         src={scenario.image}
-        alt={edit ? 'Cena para delimitar as placas' : 'Cenário do estudo'}
+        alt={
+          edit ? 'Cena para delimitar as placas' : 'Imagem de referência com recortes das placas'
+        }
         draggable="false"
       />
       {showAreas &&

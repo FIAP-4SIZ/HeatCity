@@ -14,8 +14,7 @@ já cumpre esse papel.
 4. Fazer push e abrir PR com **base develop**, descrevendo comportamento e validação.
 5. Integrar após os checks passarem. Se houver conflito, resolvê-lo e repetir os
    checks afetados. Não reescrever o histórico compartilhado.
-6. Começar a próxima tarefa a partir da `develop` atualizada. As branches antigas
-   permanecem preservadas; não é necessário apagar ou reescrever entregas anteriores.
+6. Começar a próxima tarefa a partir da `develop` atualizada. Branches de tarefa podem ser removidas após integração e autorização de limpeza. O histórico integrado permanece preservado.
 
 Não é necessário usar merge queue com um único fluxo de trabalho. Se futuramente
 houver contribuições simultâneas, essa configuração pode ser avaliada separadamente.
