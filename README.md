@@ -1,5 +1,8 @@
 # HeatCity — placas em vídeo
 
+**Entrega e apresentação:** [guia único para o professor](docs/ENTREGA-PROFESSOR.md)
+— arquivos exigidos, sequência da demonstração, resultados e pendências.
+
 **Onde a placa aparece e por quanto tempo é detectada?**
 
 CitizenTech: uma câmera e a análise local ajudam responsáveis por espaços
