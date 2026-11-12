@@ -89,6 +89,14 @@ de sair da prévia com ESC. Recarregar a página apaga o histórico temporário.
 Vídeos e imagens faciais não são enviados nem persistidos. Sem referência de onde
 a pessoa olhou, o tracking livre não permite calcular precisão real.
 
+## Demonstração por placas e mapa exploratório
+
+Em **Diagnósticos / DEV → Prática por placa**, selecione um cenário já cadastrado.
+A prévia exibe AOIs, placa pontualmente estimada e ambiguidade da margem. Após a
+prática, gere um mapa apenas das estimativas oculares. Erro bruto, ponto verde,
+oscilação e checagens centrais são registrados separadamente; não há treino ou
+correção pelo mouse. [Roteiro de 90 segundos](docs/roteiro-curto-mapa-placas.md).
+
 ## Prática na seção DEV e regra dos cantos
 
 Em **Diagnósticos / DEV**, a prévia pode ser aberta antes da calibração (somente

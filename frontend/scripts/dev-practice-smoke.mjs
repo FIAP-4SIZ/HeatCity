@@ -15,6 +15,16 @@ await installTestCamera(page);
 try {
   await page.goto(`${base}/#/diagnostics`);
   const before = await (await page.request.get(`${base}/api/studies`)).json();
+  await page
+    .getByLabel('Estudo para prática', { exact: true })
+    .selectOption('hospital-orientacao-base-v1');
+  await page.waitForFunction(() => document.querySelectorAll('select')[1]?.options.length > 1);
+  const sceneId = await page
+    .getByLabel('Cenário para prática', { exact: true })
+    .locator('option')
+    .nth(1)
+    .getAttribute('value');
+  await page.getByLabel('Cenário para prática', { exact: true }).selectOption(sceneId);
   let source;
   if (process.env.HEATCITY_DIAGNOSTIC_FILE) {
     const data = JSON.parse(await readFile(process.env.HEATCITY_DIAGNOSTIC_FILE, 'utf8'));
@@ -53,29 +63,42 @@ try {
   await page.route('**/mediapipe/face_landmarker.task', (r) =>
     r.fulfill({ status: 404, body: '' }),
   );
-  await page.evaluate((pair) => {
-    window.FaceMesh = class {
-      setOptions() {}
-      onResults(fn) {
-        this.fn = fn;
-      }
-      close() {}
-      async send() {
-        const face = Array.from({ length: 478 }, () => ({ x: 0.5, y: 0.5 }));
-        for (const [a, b, u, l, i] of [
-          [33, 133, 159, 145, 468],
-          [362, 263, 386, 374, 473],
-        ]) {
-          face[a] = { x: 0.2, y: 0.5 };
-          face[b] = { x: 0.4, y: 0.5 };
-          face[u] = { x: 0.3, y: 0.47 };
-          face[l] = { x: 0.3, y: 0.53 };
-          face[i] = { x: 0.2 + 0.2 * pair[0], y: 0.5 + 0.2 * pair[1] };
+  await page.evaluate(
+    ({ pair, mode }) => {
+      window.FaceMesh = class {
+        setOptions() {}
+        onResults(fn) {
+          this.fn = fn;
         }
-        this.fn({ multiFaceLandmarks: [face] });
-      }
-    };
-  }, center);
+        close() {}
+        async send() {
+          const face = Array.from({ length: 478 }, () => ({ x: 0.5, y: 0.5 }));
+          for (const [a, b, u, l, i] of [
+            [33, 133, 159, 145, 468],
+            [362, 263, 386, 374, 473],
+          ]) {
+            face[a] = { x: 0.2, y: 0.5 };
+            face[b] = { x: 0.4, y: 0.5 };
+            face[u] = { x: 0.3, y: 0.47 };
+            face[l] = { x: 0.3, y: 0.53 };
+            face[i] = {
+              x: 0.2 + 0.2 * pair[0],
+              y:
+                0.5 +
+                0.2 *
+                  pair[1] *
+                  (mode === 'pixel_v2'
+                    ? document.querySelector('video').videoWidth /
+                      document.querySelector('video').videoHeight
+                    : 1),
+            };
+          }
+          this.fn({ multiFaceLandmarks: [face] });
+        }
+      };
+    },
+    { pair: center, mode: source.eye_geometry || 'legacy_v1' },
+  );
   await page.getByRole('checkbox', { name: /Concordo com o uso da câmera/ }).check();
   await page.getByRole('button', { name: 'Ativar câmera', exact: true }).click();
   await page
@@ -101,6 +124,7 @@ try {
     .waitFor();
   await page.getByRole('button', { name: 'Mostrar tracking experimental', exact: true }).click();
   await page.locator('.gaze').waitFor({ timeout: 15000 });
+  assert.equal(await page.locator('.dev-scene-aoi').count(), 4);
   const bounds = await page.getByLabel('Campo visual branco', { exact: true }).boundingBox();
   await page.mouse.move(bounds.x + bounds.width * 0.5, bounds.y + bounds.height * 0.5);
   await page.getByLabel('Referência indicada pelo mouse').waitFor();
@@ -113,9 +137,18 @@ try {
     initial,
     'Mouse does not move the gaze estimate',
   );
+  await page.getByRole('button', { name: 'Checar centro por 2 s' }).click();
+  await page.waitForTimeout(2800);
+  await page.getByRole('button', { name: 'Liberar mouse', exact: true }).click();
   await page.screenshot({ path: '/tmp/heatcity-dev-mouse-practice.png' });
   await page.getByRole('button', { name: 'Sair da prévia', exact: true }).click();
   await page.waitForFunction(() => !document.fullscreenElement);
+  await page
+    .getByRole('button', { name: 'Gerar mapa exploratório desta prática', exact: true })
+    .click();
+  await page
+    .getByRole('img', { name: 'Mapa exploratório das estimativas da prática DEV' })
+    .waitFor();
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Baixar diagnóstico completo da página' }).click();
   const file = await download;
@@ -126,7 +159,18 @@ try {
     ),
   );
   assert.ok(data.page_diagnostic.mouse_practice.samples > 0);
-  assert.equal(data.page_diagnostic.calibrations.at(-1).eye_geometry, 'legacy_v1');
+  assert.ok(data.page_diagnostic.mouse_practice.shown_samples > 0);
+  assert.equal(data.page_diagnostic.mouse_practice.center_checks.length, 1);
+  assert.ok(data.page_diagnostic.practice_scene.points.length > 0);
+  assert.ok(
+    data.page_diagnostic.practice_scene.points.every(
+      (p) => Math.abs(p.x - 0.5) < 0.01 && Math.abs(p.y - 0.5) < 0.01,
+    ),
+  );
+  assert.equal(
+    data.page_diagnostic.calibrations.at(-1).eye_geometry,
+    source.eye_geometry || 'legacy_v1',
+  );
   assert.equal(
     (
       await page.request.post(`${base}/api/tracking/preview`, {

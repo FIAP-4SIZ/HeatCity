@@ -1,4 +1,5 @@
 import { openCapture, framePump } from '../capture-quality.js';
+import { PracticeMetrics, mouseAnchor, sceneEstimate } from '../practice-metrics.js';
 import { MotionCapture } from '../motion-capture.js';
 import { ReferenceCapture } from '../reference-capture.js';
 import { analyzeSignals } from '../signal-analysis.js';
@@ -48,6 +49,7 @@ export default function CalibrationLab({
   onDiagnostic,
   registerSnapshot,
   registerPreviewLoader,
+  devScenario,
 }) {
   const localArchive = useRef(new CalibrationArchive());
   const archive = attemptArchive || localArchive.current;
@@ -72,6 +74,10 @@ export default function CalibrationLab({
   const [mouseReference, setMouseReference] = useState(null),
     [practiceStats, setPracticeStats] = useState(null);
   const [signalAnalysis, setSignalAnalysis] = useState(null);
+  const [sceneLayout, setSceneLayout] = useState(null),
+    [sceneStatus, setSceneStatus] = useState(null),
+    [practiceMap, setPracticeMap] = useState(null),
+    [mapError, setMapError] = useState('');
   const [consent, setConsent] = useState(false),
     [progress, setProgress] = useState(0);
   const [dev, setDev] = useState({
@@ -84,6 +90,7 @@ export default function CalibrationLab({
     mouseReference: false,
   });
   state.current.dev = dev;
+  state.current.devScenario = devScenario;
   state.current.phase = phase;
   const collecting = phase === 'collecting' || phase === 'countdown';
   function archiveAttempt(report) {
@@ -94,6 +101,21 @@ export default function CalibrationLab({
         telemetry: state.current.pump?.stats.snapshot(),
       });
   }
+  useEffect(() => {
+    state.current.scenePoints = [];
+    state.current.sceneRect = null;
+    state.current.sceneId = devScenario?.id;
+    state.current.practice = null;
+    setPracticeStats(null);
+    setSceneStatus(null);
+    setPracticeMap(null);
+  }, [devScenario?.id]);
+  useEffect(
+    () => () => {
+      if (practiceMap) URL.revokeObjectURL(practiceMap);
+    },
+    [practiceMap],
+  );
   function invalidate(text) {
     const s = state.current;
     s.generation++;
@@ -156,7 +178,14 @@ export default function CalibrationLab({
         : null,
       detector: state.current.mesh?.engine || null,
       eye_geometry: state.current.eyeGeometry || 'pixel_v2',
-      mouse_practice: state.current.practice || null,
+      mouse_practice: state.current.practice?.snapshot() || null,
+      practice_scene: state.current.devScenario
+        ? {
+            id: state.current.devScenario.id,
+            name: state.current.devScenario.name,
+            points: state.current.scenePoints || [],
+          }
+        : null,
       eye_profile: state.current.profile?.baseline || null,
       developer_options: { ...state.current.dev },
       camera_capture: state.current.capture?.metadata,
@@ -312,18 +341,43 @@ export default function CalibrationLab({
           mouseSettled && accepted && point?.every(Number.isFinite)
             ? Math.hypot(point[0] - declaredMouse.target[0], point[1] - declaredMouse.target[1])
             : null;
-        if (declaredError !== null && now - (s.lastPractice || 0) >= 100) {
+        const shownError =
+          mouseSettled && s.smoothed
+            ? Math.hypot(
+                s.smoothed[0] - declaredMouse.target[0],
+                s.smoothed[1] - declaredMouse.target[1],
+              )
+            : null;
+        const scene = sceneEstimate(
+          s.smoothed,
+          s.devScenario,
+          s.sceneRect,
+          s.calibration?.error_margin?.axes,
+        );
+        if (s.tracking && s.devScenario && now - (s.lastScenePoint || 0) >= 100) {
+          s.lastScenePoint = now;
+          if (scene?.inside) {
+            s.scenePoints ||= [];
+            s.scenePoints.push({
+              time: (now - s.began) / 1000,
+              x: scene.x,
+              y: scene.y,
+              valid: true,
+            });
+            if (s.scenePoints.length > 5000) s.scenePoints.shift();
+          }
+          setSceneStatus(scene);
+        }
+        if (mouseSettled && now - (s.lastPractice || 0) >= 100) {
           s.lastPractice = now;
-          s.practice ||= {
-            samples: 0,
-            error_sum: 0,
-            mean_distance: null,
-            reference_type: 'mouse_declared',
-            use: 'diagnostic_only_no_training',
-          };
-          s.practice.samples++;
-          s.practice.error_sum += declaredError;
-          s.practice.mean_distance = s.practice.error_sum / s.practice.samples;
+          s.practice ||= new PracticeMetrics();
+          s.practice.observe({
+            time: now,
+            reference: declaredMouse.target,
+            raw: point?.every(Number.isFinite) ? point : null,
+            shown: s.smoothed,
+            scene,
+          });
         }
         s.log.add(
           {
@@ -340,13 +394,18 @@ export default function CalibrationLab({
               s.displayTarget ||
               null,
             reference_source: declaredMouse
-              ? 'mouse_declared'
+              ? declaredMouse.fixed
+                ? 'guided_center'
+                : 'mouse_declared'
               : s.collection || s.displayTarget
                 ? 'calibration_target'
                 : null,
             mouse_reference: declaredMouse?.target || null,
             mouse_stationary: mouseSettled,
             declared_reference_distance: declaredError,
+            raw_declared_distance: declaredError,
+            shown_declared_distance: shownError,
+            scene_estimate: scene,
             eye_geometry: s.eyeGeometry,
             reference_stationary: !!s.collection,
             reason: accepted
@@ -367,7 +426,7 @@ export default function CalibrationLab({
         if (now - s.lastStats > 250) {
           s.lastStats = now;
           s.processingRate = s.pump?.stats.snapshot().processed_fps || 0;
-          setPracticeStats(s.practice ? { ...s.practice } : null);
+          setPracticeStats(s.practice?.snapshot() || null);
           setMetrics({
             frames: s.frames,
             fps: s.processingRate,
@@ -785,16 +844,14 @@ export default function CalibrationLab({
   }
   function indicateMouse(event) {
     const s = state.current;
-    if (!diagnosticsOnly || !s.tracking || !s.dev.mouseReference) return;
+    if (!diagnosticsOnly || !s.tracking || !s.dev.mouseReference || s.mouse?.fixed) return;
     const rect = field.current.getBoundingClientRect();
     const point = [
       Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width)),
       Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height)),
     ];
     const now = performance.now();
-    const changed =
-      !s.mouse || Math.hypot(point[0] - s.mouse.target[0], point[1] - s.mouse.target[1]) > 0.003;
-    s.mouse = { target: point, since: changed ? now : s.mouse.since };
+    s.mouse = mouseAnchor(s.mouse, point, now);
     if (now - (s.lastMouseDraw || 0) > 40) {
       s.lastMouseDraw = now;
       setMouseReference(point);
@@ -815,6 +872,23 @@ export default function CalibrationLab({
       )
         throw new Error('A área da tela mudou. Refaça a varredura.');
       s.geometry = [field.current.clientWidth, field.current.clientHeight];
+      if (s.devScenario) {
+        const fw = field.current.clientWidth,
+          fh = field.current.clientHeight,
+          k = Math.min(fw / s.devScenario.width, fh / s.devScenario.height);
+        s.sceneRect = {
+          x: (fw - k * s.devScenario.width) / (2 * fw),
+          y: (fh - k * s.devScenario.height) / (2 * fh),
+          width: (k * s.devScenario.width) / fw,
+          height: (k * s.devScenario.height) / fh,
+        };
+      } else s.sceneRect = null;
+      setSceneLayout(s.sceneRect);
+      if (s.sceneId !== s.devScenario?.id) {
+        s.sceneId = s.devScenario?.id;
+        s.scenePoints = [];
+        setPracticeMap(null);
+      }
       s.tracking = true;
       s.smoothed = null;
       s.mouse = null;
@@ -961,6 +1035,9 @@ export default function CalibrationLab({
                 className="secondary"
                 onClick={() => {
                   state.current.practice = null;
+                  state.current.scenePoints = [];
+                  setPracticeMap(null);
+                  setSceneStatus(null);
                   setPracticeStats(null);
                   state.current.log.event('mouse_practice_reset');
                 }}
@@ -1030,6 +1107,33 @@ export default function CalibrationLab({
                 />
               ) : phase === 'tracking' ? (
                 <>
+                  {diagnosticsOnly && devScenario && sceneLayout && (
+                    <div
+                      className="dev-scene"
+                      style={{
+                        left: `${sceneLayout.x * 100}%`,
+                        top: `${sceneLayout.y * 100}%`,
+                        width: `${sceneLayout.width * 100}%`,
+                        height: `${sceneLayout.height * 100}%`,
+                      }}
+                    >
+                      <img src={devScenario.image} alt={devScenario.name} />
+                      {devScenario.plates.map((p) => (
+                        <div
+                          key={p.name}
+                          className="dev-scene-aoi"
+                          style={{
+                            left: `${p.x * 100}%`,
+                            top: `${p.y * 100}%`,
+                            width: `${p.width * 100}%`,
+                            height: `${p.height * 100}%`,
+                          }}
+                        >
+                          <span>{p.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {gaze && (
                     <div
                       className="gaze"
@@ -1061,15 +1165,61 @@ export default function CalibrationLab({
                   )}
                   {diagnosticsOnly && dev.mouseReference && (
                     <div className="mouse-practice-note">
+                      <div className="button-row">
+                        <button
+                          onClick={() => {
+                            const s = state.current,
+                              t = performance.now();
+                            s.mouse = {
+                              target: [0.5, 0.5],
+                              anchor: [0.5, 0.5],
+                              since: t,
+                              fixed: true,
+                            };
+                            setMouseReference([0.5, 0.5]);
+                            s.practice ||= new PracticeMetrics();
+                            s.practice.beginCenter(t);
+                          }}
+                        >
+                          Checar centro por 2 s
+                        </button>
+                        <button
+                          onClick={() => {
+                            state.current.mouse = null;
+                            setMouseReference(null);
+                            if (state.current.practice) state.current.practice.centerCapture = null;
+                          }}
+                        >
+                          Liberar mouse
+                        </button>
+                      </div>
                       <strong>Azul: mouse indicado · verde: olhar estimado</strong>
                       <p>
                         Acompanhe o cursor com os olhos e pare por pelo menos 0,6 s. É referência
                         autodeclarada, não medição do olhar real. Não altera nem treina a
                         calibração.
                       </p>
+                      {devScenario && (
+                        <p>
+                          Estimativa pontual: {sceneStatus?.plate || 'nenhuma placa'}. Margem
+                          compatível com: {sceneStatus?.candidates?.join(', ') || 'indisponível'}.{' '}
+                          {sceneStatus?.ambiguous
+                            ? 'Ambíguo; não confirma placa.'
+                            : 'Compatibilidade geométrica; não comprova atenção.'}
+                        </p>
+                      )}
+                      {!!practiceStats?.center_checks?.length && (
+                        <p>
+                          Checagens centrais: {practiceStats.center_checks.length}. Deslocamento da
+                          última leitura em relação à primeira:{' '}
+                          {practiceStats.center_checks.at(-1).drift_from_first?.toFixed(3) ??
+                            'indisponível'}
+                          . Não corrige a estimativa.
+                        </p>
+                      )}
                       <p>
                         {practiceStats?.samples
-                          ? `${practiceStats.samples} comparações · distância média à referência: ${practiceStats.mean_distance.toFixed(3)} (tela normalizada)`
+                          ? `${practiceStats.samples} comparações · ${practiceStats.missing_predictions} sem previsão · erro bruto: ${practiceStats.mean_distance.toFixed(3)} · ponto verde: ${practiceStats.shown_mean_distance?.toFixed(3) ?? '—'} · oscilação recente: ${practiceStats.jitter_recent?.toFixed(3) ?? '—'} (tela normalizada)`
                           : 'Sem comparações disponíveis. É necessária uma malha e previsões válidas.'}
                       </p>
                     </div>
@@ -1227,6 +1377,57 @@ export default function CalibrationLab({
           )}
         </section>
       </div>
+      {diagnosticsOnly && devScenario && !collecting && phase !== 'tracking' && (
+        <div className="panel">
+          <h3>Mapa exploratório da prática</h3>
+          <p>
+            Somente estimativas oculares válidas dentro da imagem. Coordenadas do mouse não são
+            usadas no mapa. Pontos fora da imagem não viram pontos na borda. Suavização visual: 8%
+            da largura da imagem; não é medida de precisão. Cores não comprovam atenção.
+          </p>
+          <button
+            className="secondary"
+            disabled={
+              !state.current.scenePoints?.length || state.current.sceneId !== devScenario.id
+            }
+            onClick={async () => {
+              setMapError('');
+              try {
+                const response = await fetch(
+                  `/api/scenarios/${devScenario.id}/diagnostic-heatmap?blur_fraction=0.08`,
+                  {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(
+                      state.current.scenePoints.map(({ x, y, valid }) => ({ x, y, valid })),
+                    ),
+                  },
+                );
+                if (!response.ok) throw new Error('Não foi possível gerar o mapa DEV.');
+                const blob = await response.blob();
+                setPracticeMap(URL.createObjectURL(blob));
+              } catch (e) {
+                setMapError(e.message);
+              }
+            }}
+          >
+            Gerar mapa exploratório desta prática
+          </button>
+          {mapError && <p role="alert">{mapError}</p>}
+          {practiceMap && (
+            <>
+              <img
+                className="exploratory-heatmap"
+                src={practiceMap}
+                alt="Mapa exploratório das estimativas da prática DEV"
+              />
+              <a download="heatcity-pratica-dev.png" href={practiceMap}>
+                Baixar mapa DEV PNG
+              </a>
+            </>
+          )}
+        </div>
+      )}
       {!collecting && phase !== 'tracking' && signalAnalysis && (
         <SignalReport analysis={signalAnalysis} />
       )}

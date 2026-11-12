@@ -68,3 +68,10 @@ e chegou a invalidar uma malha; esses procedimentos não foram adotados como cor
 A nova aquisição deve ser testada na máquina real. Não há garantia de aprovação na
 primeira tentativa, nem evidência de que o arquivo antigo passou pelos novos ajustes.
 A retirada do limite individual dos cantos não elimina as demais falhas desse arquivo.
+
+## Atualização: prática por placas
+
+A seção DEV permite selecionar um cenário cadastrado, visualizar as AOIs e gerar
+um mapa exploratório após sair da prévia. O indicador agora separa erro bruto e
+erro do ponto verde. Há checagens centrais de dois segundos e oscilação recente,
+sem ajustar a malha. Consulte [o roteiro curto](roteiro-curto-mapa-placas.md).

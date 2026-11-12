@@ -1448,3 +1448,27 @@ meter {
   color: #fff;
   padding: 10px 16px;
 }
+
+.dev-scene {
+  position: absolute;
+  pointer-events: none;
+}
+.dev-scene > img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.dev-scene-aoi {
+  position: absolute;
+  border: 2px solid #b96520;
+}
+.dev-scene-aoi span {
+  font-size: 11px;
+  background: #fff;
+  color: #713b12;
+}
+.mouse-practice-note button {
+  pointer-events: auto;
+  font-size: 12px;
+  padding: 6px 10px;
+}

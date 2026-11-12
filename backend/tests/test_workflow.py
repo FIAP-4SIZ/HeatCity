@@ -125,6 +125,17 @@ class WorkflowTests(unittest.TestCase):
                 self.assertEqual(len(scene["plates"]), 4)
             self.assertEqual(client.get(f"/studies/{HOSPITAL_ID}/results").json()["sessions"], [])
 
+    def test_dev_heatmap_does_not_create_sessions_and_rejects_invalid_coordinates(self):
+        url = f"/scenarios/{self.scene['id']}/diagnostic-heatmap"
+        response = self.client.post(url, json=[{"x": 0.5, "y": 0.5, "valid": True}])
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content[:8], b"\x89PNG\r\n\x1a\n")
+        self.assertEqual(
+            self.client.get(f"/studies/{self.study['id']}/results").json()["sessions"], []
+        )
+        self.assertEqual(self.client.post(url, json=[{"x": -0.1, "y": 0.5}]).status_code, 422)
+        self.assertEqual(self.client.post(url + "?blur_fraction=2", json=[]).status_code, 422)
+
     def session(self, code="P01", mode="gaze", calibration_id=None):
         if calibration_id is None:
             import time

@@ -92,6 +92,12 @@ class SessionInput(Contract):
     capture_settings: CameraSettings | None = None
 
 
+class HeatmapPoint(Contract):
+    x: float = Field(ge=0, le=1)
+    y: float = Field(ge=0, le=1)
+    valid: bool = True
+
+
 class Point(Contract):
     time: float = Field(ge=0, le=300)
     x: float = Field(ge=0, le=1)

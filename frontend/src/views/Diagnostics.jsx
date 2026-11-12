@@ -1,4 +1,5 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
+import { api } from '../api.js';
 import CalibrationLab from './CalibrationLab.jsx';
 import DiagnosticReport from '../components/DiagnosticReport.jsx';
 import { summarizeDiagnostic } from '../diagnostics.js';
@@ -13,6 +14,29 @@ export default function Diagnostics() {
   const [previewFile, setPreviewFile] = useState(null),
     [loadingPreview, setLoadingPreview] = useState(false);
   const previewLoader = useRef(null);
+  const [studies, setStudies] = useState([]),
+    [studyId, setStudyId] = useState(''),
+    [scenarios, setScenarios] = useState([]),
+    [sceneId, setSceneId] = useState('');
+  useEffect(() => {
+    api('/studies')
+      .then(setStudies)
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
+    let active = true;
+    setScenarios([]);
+    setSceneId('');
+    if (studyId)
+      api(`/studies/${studyId}`)
+        .then((s) => {
+          if (active) setScenarios(s.scenarios);
+        })
+        .catch((e) => setError(e.message));
+    return () => {
+      active = false;
+    };
+  }, [studyId]);
   const snapshot = useRef(() => ({}));
   function exportPage() {
     const page = snapshot.current();
@@ -96,8 +120,48 @@ export default function Diagnostics() {
           testar. Não contém imagens; sem alvos conhecidos, o tracking não comprova precisão.
         </p>
       </div>
+      <div className="panel">
+        <h2>Prática por placa (opcional)</h2>
+        <p>
+          Use uma cena cadastrada para ver em qual AOI a estimativa cai e gerar um mapa
+          exploratório. Não cria sessão oficial.
+        </p>
+        <div className="form-row">
+          <label>
+            Estudo para prática
+            <select
+              aria-label="Estudo para prática"
+              value={studyId}
+              onChange={(e) => setStudyId(e.target.value)}
+            >
+              <option value="">Sem cena</option>
+              {studies.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Cenário para prática
+            <select
+              aria-label="Cenário para prática"
+              value={sceneId}
+              onChange={(e) => setSceneId(e.target.value)}
+            >
+              <option value="">Selecione um cenário</option>
+              {scenarios.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </div>
       <CalibrationLab
         diagnosticsOnly
+        devScenario={scenarios.find((s) => s.id === sceneId) || null}
         registerPreviewLoader={(loader) => {
           previewLoader.current = loader;
         }}

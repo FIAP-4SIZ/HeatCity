@@ -6,10 +6,17 @@ import json
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Query, Response
 
 from . import storage
-from .schemas import FinishInput, HospitalExampleInput, ScenarioInput, SessionInput, StudyInput
+from .schemas import (
+    FinishInput,
+    HeatmapPoint,
+    HospitalExampleInput,
+    ScenarioInput,
+    SessionInput,
+    StudyInput,
+)
 from .services.evaluation import evaluate, summarize
 from .services.uncertainty import session_margin
 from .services.vision import decode_scene, demo_scene, heatmap, image_metrics, pdi_preview
@@ -151,6 +158,26 @@ def create_scenario(study_id: str, body: ScenarioInput):
 def scenario_pdi(scenario_id: str):
     scenario = require("scenarios", scenario_id)
     return pdi_preview(decode_scene(scenario["image"]), scenario["plates"])
+
+
+@router.post("/scenarios/{scenario_id}/diagnostic-heatmap")
+def diagnostic_heatmap(
+    scenario_id: str,
+    points: list[HeatmapPoint],
+    blur_fraction: float = Query(default=0.08, ge=0.01, le=0.2),
+):
+    if len(points) > 5000:
+        raise HTTPException(422, "Limite de 5.000 estimativas por mapa DEV.")
+    scenario = require("scenarios", scenario_id)
+    # Pure visualization. No session, approval, observations or metrics are persisted.
+    return Response(
+        heatmap(
+            decode_scene(scenario["image"]),
+            [p.model_dump() for p in points],
+            blur_fraction=blur_fraction,
+        ),
+        media_type="image/png",
+    )
 
 
 @router.post("/sessions", status_code=201)
