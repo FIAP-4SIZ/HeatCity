@@ -1,6 +1,20 @@
 # Conferência do relatório do exemplo
 
-## Relatório recebido
+## Resultado atual confirmado
+
+Após as correções, o novo relatório enviado pelo usuário reproduziu a grade de
+24/24 quadros e os valores esperados abaixo: 66 TP, 0 FP, 24 FN, 6 TN; precisão
+100% e recall 73,3%. Recepção teve 12 detecções, 6 falhas com placa presente e
+6 ausências corretas, com 5,5 s estimados. As demais tiveram 18 detecções,
+6 falhas e 8 s estimados cada. Não houve correspondências ambíguas.
+
+**Consistente e aprovado como demonstração sintética controlada.** As perdas no
+desfoque permanecem no resultado. Isso não aprova desempenho em vídeo real nem
+comprova impacto humano. O texto recebido permite conferir contagens e tempos;
+não contém as caixas para recalcular o IoU dessa execução. A apresentação usa o
+IoU do benchmark identificado como tal.
+
+## Relatório anterior e diagnóstico histórico
 
 O texto enviado informa 24 quadros, 96 anotações, 11 detecções da Recepção e 17 de cada uma das outras três placas. Isso corresponde a 62 TP, 0 FP e 28 FN sobre 90 presenças anotadas, além de 6 ausências. Logo, precisão 100% e recall 68,9% são matematicamente coerentes: `62/(62+0)` e `62/(62+28)`.
 

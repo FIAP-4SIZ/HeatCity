@@ -94,7 +94,8 @@ Chrome e Edge aceitam câmera em localhost. No Windows, use `.venv\Scripts\pytho
 ## Evidência e apresentação
 
 [Slides HTML](docs/apresentacao/slides.html) · [PDF](docs/apresentacao/slides.pdf) ·
-[Roteiro](docs/apresentacao/ROTEIRO.md) · [Pacote offline](docs/HeatCity-pacote-apresentacao.zip) ·
+[Fala por slide e conceitos (TXT)](docs/apresentacao/ROTEIRO.txt) ·
+[Guia de demonstração](docs/apresentacao/ROTEIRO.md) · [Pacote offline](docs/HeatCity-pacote-apresentacao.zip) ·
 [Relatório](docs/reports/HeatCity-deteccao-placas-exemplo.pdf) ·
 [Medições](docs/reports/deteccao-placas-benchmark.json) ·
 [Exemplo](docs/exemplo-hospital.md).

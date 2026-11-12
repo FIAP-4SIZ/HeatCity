@@ -3,6 +3,11 @@
 A pergunta é: **onde a placa cadastrada aparece e por quanto tempo é detectada?**
 Esta é a apresentação do detector de placas em vídeo.
 
+**Fala curta por slide e explicação dos termos:** [ROTEIRO.txt](ROTEIRO.txt).
+O relatório enviado pelo usuário reproduziu os resultados esperados: 24 quadros,
+66 TP, 0 FP, 24 FN e 6 TN; precisão 100%, recall 73,3%; Recepção 5,5 s e demais 8 s.
+Conferência aprovada para este exemplo controlado, sem generalização para vídeo real.
+
 ## Fala e demonstração (5–7 minutos)
 
 1. Slides 1–3: problema concreto na entrada do hospital, relação com espaços coletivos/Global Solution e motivo do recorte. Não afirmar que o detector mede atenção humana.

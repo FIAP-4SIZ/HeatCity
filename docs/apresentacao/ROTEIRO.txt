@@ -1,0 +1,55 @@
+﻿HEATCITY — ROTEIRO DE FALA
+Exemplo sintético conferido · apresentação de aproximadamente 5–7 minutos, incluindo demonstração.
+
+SLIDE 1 — HeatCity — placas em vídeo
+O HeatCity procura placas previamente cadastradas em vídeo ou webcam. Ele mostra onde aparecem, por quanto tempo são detectadas e quais dificuldades merecem investigação.
+
+SLIDE 2 — Problema: encontrar a Recepção
+Imagine chegar a um hospital e não encontrar a Recepção antes de escolher o corredor. Queremos apoiar a revisão dessa sinalização. A relação com CitizenTech é a orientação do cidadão; o benefício ainda precisa ser testado.
+
+SLIDE 3 — Escopo: referências conhecidas
+Cadastramos uma foto e delimitamos cada placa. O programa procura essas referências, sem reconhecer texto ou treinar um modelo. As anotações de posição são usadas depois, apenas para conferir o acerto.
+
+SLIDE 4 — PDI e visão computacional
+Aqui vemos o processamento digital de imagens: recorte, cinza, Laplaciano e histograma. A busca compara cada recorte em sete tamanhos. Similaridade e margens mínimas evitam aceitar qualquer região parecida.
+
+SLIDE 5 — Cenário, recortes e posição
+São quatro placas da mesma foto. Os retângulos mostram as posições encontradas no primeiro quadro. A imagem foi gerada por IA e o vídeo é sintético; não é uma gravação de um hospital real.
+
+SLIDE 6 — Por quanto tempo foi detectada?
+O tempo acumula apenas entre detecções consecutivas. Uma falha interrompe a contagem. Recepção teve 5,5 segundos e as demais, 8 segundos. É uma estimativa amostrada, não tempo de leitura.
+
+SLIDE 7 — Resultado conferido do exemplo
+O relatório reproduziu o esperado: 66 acertos, 0 falsos positivos, 24 perdas e 6 ausências corretas. Precisão foi 100,0%, mas recall foi 73,3%: o sistema deixou passar placas presentes.
+
+SLIDE 8 — Onde o detector acertou e falhou
+O gráfico separa os quatro trechos. Nitidez e deslocamento tiveram todas as placas recuperadas. O desfoque provocou as 24 perdas. No final, não encontrar a Recepção removida foi a resposta correta.
+
+SLIDE 9 — Análise final por placa
+Recepção apareceu em 12 dos 24 quadros; as outras, em 18. Isso inclui seis ausências reais da Recepção. Acerto exige identidade correta e sobreposição suficiente entre a caixa encontrada e a anotada.
+
+SLIDE 10 — Dúvidas e sugestões de local
+O desfoque é conhecido porque o aplicamos no vídeo. Em uma captura real, similaridade baixa não revela sozinha a causa. Posição frontal, tamanho e iluminação são melhorias a testar, não conclusões comprovadas.
+
+SLIDE 11 — Demonstração e próxima evidência
+Vou abrir o exemplo, aguardar o relatório e mostrar as exportações. Para outro ambiente, cadastramos uma foto e usamos um vídeo das mesmas placas. A próxima evidência é testar uma captura real anotada.
+
+SLIDE 12 — Fontes e reprodução
+Usamos OpenCV e conteúdos das aulas de PDI e template matching. Código, fontes, vídeo e notebook estão no material. O exemplo funciona de forma reproduzível; ainda faltam avaliação em campo e benefício demonstrado aos cidadãos.
+
+PLANO B
+Se a demonstração não abrir, mostrar slides.pdf e o relatório incluído no pacote. Informar que são resultados gravados do exemplo sintético.
+
+EXPLICAÇÃO DO PROGRAMA E DOS TERMOS
+
+O HeatCity usa visão computacional (extração de informações de imagens ou vídeos), com OpenCV (biblioteca de processamento de imagens), para localizar placas conhecidas. A equipe cadastra uma foto e marca AOIs (áreas de interesse que delimitam as placas). Cada recorte vira um template (imagem de referência usada na busca).
+
+O vídeo é dividido em frames (quadros individuais). O PDI (processamento digital de imagens) redimensiona os quadros e converte para escala de cinza (intensidade de 0 a 255). O template matching multiescala (comparação do recorte em diferentes tamanhos) usa correlação normalizada (medida de semelhança dos padrões de intensidade). O maior score (valor de similaridade) e a margem (diferença para outra hipótese) precisam superar limiares (limites fixos de aceitação). Score não é probabilidade nem precisão medida. Não há treinamento de modelo.
+
+O sistema registra bounding boxes (retângulos que localizam as placas) e faz acompanhamento temporal (associação das detecções da mesma placa ao longo dos quadros). Soma intervalos de até 1,5 segundo entre detecções consecutivas; falhas interrompem o trecho. Não usa fluxo óptico nem prevê posições entre amostras.
+
+O painel de PDI mostra histograma (distribuição das intensidades dos pixels), contraste local (separação entre intensidades claras e escuras) e Laplaciano (filtro que destaca variações espaciais). Ele usa convolução (aplicação de uma máscara sobre pixels vizinhos). A variância do Laplaciano (dispersão da resposta do filtro) ajuda a descrever perda de detalhes; não prova legibilidade. O contraste usa percentis (pontos de corte na distribuição das intensidades), e não apenas o histograma ilustrado.
+
+Com ground truth (posição e presença de referência conhecidas), calculamos IoU (área de interseção dividida pela união das caixas). Um acerto exige nome correto, detecção aceita e IoU de pelo menos 0,5. TP (detecção correta), FP (detecção incorreta), FN (placa presente não recuperada) e TN (ausência corretamente reconhecida) alimentam precisão (TP dividido por TP+FP) e recall (TP dividido por TP+FN). Uma localização incorreta aceita pode gerar FP e FN. Sem anotações, essas taxas não são medidas.
+
+O exemplo tem 24 quadros fixos e 96 anotações, não 96 pessoas. As respostas são recalculadas a partir do MP4, não copiadas de resultados prontos. As sugestões de posição orientam novas capturas comparáveis. O sistema não mede atenção, leitura ou acessibilidade humana; esses benefícios precisam de testes com pessoas.
