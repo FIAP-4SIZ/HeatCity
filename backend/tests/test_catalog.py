@@ -199,6 +199,25 @@ class CatalogTests(unittest.TestCase):
             422,
         )
 
+    def test_example_with_windows_default_text_encoding(self):
+        seed_hospital()
+        ref = self.client.get(f"/projects/{HOSPITAL_ID}").json()["references"][0]
+        original_open = Path.open
+
+        def windows_open(path, mode="r", buffering=-1, encoding=None, errors=None, newline=None):
+            # Python 3.12 on Windows can default to cp1252 instead of UTF-8.
+            if "b" not in mode and encoding in (None, "locale"):
+                encoding = "cp1252"
+            return original_open(path, mode, buffering, encoding, errors, newline)
+
+        with patch.object(Path, "open", windows_open):
+            response = self.client.post(
+                f"/references/{ref['id']}/detect-demo-frame", json={"frame_index": 0}
+            )
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["result"]["metrics"]["tp"], 4)
+        self.assertEqual(response.json()["result"]["signs"][0]["name"], "Recepção")
+
     def test_health_identifies_the_new_domain(self):
         self.assertEqual(self.client.get("/health").json()["version"], "2.0.0")
         paths = self.client.get("/openapi.json").json()["paths"]
