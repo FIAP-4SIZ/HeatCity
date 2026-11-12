@@ -1,10 +1,12 @@
-"""Persistência local transacional, schema v1. Sem frames de webcam."""
+"""Catálogo SQLite v2. Migra imagens/recortes; remove sessões do domínio anterior."""
 
 import json
 import os
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
+
+TABLES = ("projects", "reference_images")
 
 
 @contextmanager
@@ -14,17 +16,58 @@ def database():
     connection = sqlite3.connect(root / "heatcity.sqlite3", timeout=10)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys=ON")
-    version = connection.execute("PRAGMA user_version").fetchone()[0]
-    if version not in (0, 1):
-        connection.close()
-        raise RuntimeError("Versão do banco não suportada. Preserve o backup antes de migrar.")
-    connection.executescript("""
-      CREATE TABLE IF NOT EXISTS studies(id TEXT PRIMARY KEY, payload TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS scenarios(id TEXT PRIMARY KEY, study_id TEXT NOT NULL REFERENCES studies(id) ON DELETE CASCADE, payload TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY, scenario_id TEXT NOT NULL REFERENCES scenarios(id) ON DELETE CASCADE, payload TEXT NOT NULL);
-      PRAGMA user_version=1;
-    """)
     try:
+        version = connection.execute("PRAGMA user_version").fetchone()[0]
+        if version not in (0, 1, 2):
+            raise RuntimeError("Versão do banco não suportada.")
+        if version in (0, 1):
+            connection.execute("BEGIN IMMEDIATE")
+            if version == 1:
+                connection.execute("DROP TABLE IF EXISTS sessions")
+                connection.execute("ALTER TABLE studies RENAME TO projects")
+                connection.execute("ALTER TABLE scenarios RENAME TO reference_images")
+                connection.execute(
+                    "ALTER TABLE reference_images RENAME COLUMN study_id TO project_id"
+                )
+                for row in connection.execute("SELECT id,payload FROM projects").fetchall():
+                    old = json.loads(row["payload"])
+                    value = {
+                        k: old[k] for k in ("id", "title", "objective", "created_at") if k in old
+                    }
+                    connection.execute(
+                        "UPDATE projects SET payload=? WHERE id=?", (json.dumps(value), row["id"])
+                    )
+                for row in connection.execute(
+                    "SELECT id,project_id,payload FROM reference_images"
+                ).fetchall():
+                    old = json.loads(row["payload"])
+                    value = {
+                        k: old[k]
+                        for k in (
+                            "id",
+                            "name",
+                            "created_at",
+                            "image",
+                            "width",
+                            "height",
+                            "plates",
+                            "image_metrics",
+                        )
+                        if k in old
+                    }
+                    value["project_id"] = row["project_id"]
+                    connection.execute(
+                        "UPDATE reference_images SET payload=? WHERE id=?",
+                        (json.dumps(value), row["id"]),
+                    )
+            else:
+                connection.execute(
+                    "CREATE TABLE projects(id TEXT PRIMARY KEY, payload TEXT NOT NULL)"
+                )
+                connection.execute(
+                    "CREATE TABLE reference_images(id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE, payload TEXT NOT NULL)"
+                )
+            connection.execute("PRAGMA user_version=2")
         yield connection
         connection.commit()
     except Exception:
@@ -35,48 +78,33 @@ def database():
 
 
 def read(table, identifier):
-    assert table in ("studies", "scenarios", "sessions")
+    assert table in TABLES
     with database() as db:
         row = db.execute(f"SELECT payload FROM {table} WHERE id=?", (identifier,)).fetchone()
         return json.loads(row["payload"]) if row else None
 
 
 def list_rows(table, parent=None):
-    assert table in ("studies", "scenarios", "sessions")
-    column = {"scenarios": "study_id", "sessions": "scenario_id"}.get(table)
+    assert table in TABLES
     with database() as db:
-        query = f"SELECT payload FROM {table}"
+        condition = " WHERE project_id=?" if parent and table == "reference_images" else ""
         rows = db.execute(
-            query + (f" WHERE {column}=?" if parent and column else "") + " ORDER BY rowid DESC",
-            (parent,) if parent and column else (),
+            f"SELECT payload FROM {table}{condition} ORDER BY rowid DESC",
+            (parent,) if condition else (),
         ).fetchall()
         return [json.loads(row["payload"]) for row in rows]
 
 
 def insert(table, payload, parent=None):
-    assert table in ("studies", "scenarios", "sessions")
-    column = {"scenarios": "study_id", "sessions": "scenario_id"}.get(table)
+    assert table in TABLES
     with database() as db:
-        if column:
+        if table == "reference_images":
             db.execute(
-                f"INSERT INTO {table}(id,{column},payload) VALUES(?,?,?)",
+                "INSERT INTO reference_images(id,project_id,payload) VALUES(?,?,?)",
                 (payload["id"], parent, json.dumps(payload)),
             )
         else:
             db.execute(
-                f"INSERT INTO {table}(id,payload) VALUES(?,?)", (payload["id"], json.dumps(payload))
+                "INSERT INTO projects(id,payload) VALUES(?,?)", (payload["id"], json.dumps(payload))
             )
     return payload
-
-
-def finish_session(identifier, payload):
-    with database() as db:
-        current = db.execute("SELECT payload FROM sessions WHERE id=?", (identifier,)).fetchone()
-        if not current or json.loads(current["payload"])["status"] != "running":
-            raise ValueError("Sessão já encerrada ou removida.")
-        updated = db.execute(
-            "UPDATE sessions SET payload=? WHERE id=? AND payload=?",
-            (json.dumps(payload), identifier, current["payload"]),
-        )
-        if updated.rowcount != 1:
-            raise ValueError("A sessão foi alterada por outra operação.")

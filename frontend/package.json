@@ -1,21 +1,17 @@
 {
   "name": "heatcity-web",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
-    "test": "node src/gaze.test.js && node src/signal-analysis.test.js && node src/calibration-archive.test.js && node src/practice-metrics.test.js && node src/sign-tracking.test.js",
-    "postinstall": "node scripts/copy-model.mjs",
-    "test:e2e": "node scripts/mvp-smoke.mjs",
+    "test": "node src/sign-tracking.test.js",
+    "test:e2e": "node scripts/sign-detection-smoke.mjs && node scripts/catalog-smoke.mjs",
     "format": "prettier --write src scripts vite.config.js index.html package.json",
-    "format:check": "prettier --check src scripts vite.config.js index.html package.json",
-    "model:install": "node scripts/install-face-landmarker.mjs"
+    "format:check": "prettier --check src scripts vite.config.js index.html package.json"
   },
   "dependencies": {
-    "@mediapipe/face_mesh": "0.4.1633559619",
-    "@mediapipe/tasks-vision": "1.2.2",
     "react": "19.2.0",
     "react-dom": "19.2.0"
   },

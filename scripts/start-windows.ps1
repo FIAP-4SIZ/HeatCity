@@ -134,14 +134,6 @@ try {
         Write-Host 'Instalando dependencias web...'
         Run-Checked 'npm.cmd' @('ci','--no-audit','--no-fund')
         Set-Content $stamp $hash
-    } else {
-        # Recria os assets locais caso tenham sido removidos.
-        Run-Checked 'node' @('scripts/copy-model.mjs')
-    }
-    if (-not (Test-Path 'public/mediapipe/face_landmarker.task')) {
-        Write-Host 'Baixando modelo oficial Face Landmarker para processamento local...'
-        try { Run-Checked 'node' @('scripts/install-face-landmarker.mjs') }
-        catch { Write-Warning 'Modelo novo indisponivel. Continuando com Face Mesh anterior; confira o detector na tela da camera.' }
     }
     Set-Location $root
     # Janelas separadas preservam logs. Aspas simples protegem caminhos com espacos.
@@ -154,7 +146,7 @@ try {
     Wait-Service 'http://127.0.0.1:8000/health' 'api'
     Wait-Service 'http://127.0.0.1:5173' 'web'
     Start-Process 'http://127.0.0.1:5173'
-    Write-Host 'HeatCity aberto no navegador padrao. Autorize a camera e inicie a calibracao em tela cheia.' -ForegroundColor Green
+    Write-Host 'HeatCity aberto no navegador padrao. Abra um video ou autorize a camera para localizar as placas cadastradas.' -ForegroundColor Green
     Read-Host 'Mantenha esta janela aberta. Pressione ENTER para encerrar os dois servicos'
 } catch {
     Write-Host "ERRO: $($_.Exception.Message)" -ForegroundColor Red

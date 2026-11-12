@@ -23,7 +23,7 @@ async function imageHash(image) {
     .map((x) => x.toString(16).padStart(2, '0'))
     .join('');
 }
-export default function SignDetection() {
+export default function SignDetection({ referenceId }) {
   const [scenarios, setScenarios] = useState([]),
     [selected, setSelected] = useState('');
   const [source, setSource] = useState(null),
@@ -51,18 +51,20 @@ export default function SignDetection() {
   const last = records.at(-1);
   useEffect(() => {
     let active = true;
-    api('/studies')
-      .then(async (studies) => {
-        const full = await Promise.all(studies.map((s) => api(`/studies/${s.id}`)));
+    api('/projects')
+      .then(async (projects) => {
+        const full = await Promise.all(projects.map((s) => api(`/projects/${s.id}`)));
         const all = full.flatMap((s) =>
-          s.scenarios.map((c) => ({ ...c, studyTitle: s.title, studyId: s.id })),
+          s.references.map((c) => ({ ...c, projectTitle: s.title, projectId: s.id })),
         );
         if (active) {
           setScenarios(all);
           const initial =
+            all.find((s) => s.id === referenceId) ||
             all.find(
-              (s) => s.studyId === 'hospital-orientacao-base-v1' && s.name.includes(' A '),
-            ) || all[0];
+              (s) => s.projectId === 'hospital-orientacao-base-v1' && s.name.includes(' A '),
+            ) ||
+            all[0];
           setSelected(initial?.id || '');
           setPlateName(initial?.plates[0]?.name || '');
         }
@@ -175,7 +177,7 @@ export default function SignDetection() {
     const known = source.metadata?.segments.find((s) => time >= s.start && time < s.end);
     inFlight.current = true;
     try {
-      const result = await post(`/scenarios/${scenario.id}/detect-plates`, {
+      const result = await post(`/references/${scenario.id}/detect-plates`, {
         image,
         annotations: known?.annotations || [],
       });
@@ -255,7 +257,7 @@ export default function SignDetection() {
     setBusy(true);
     setError('');
     try {
-      const result = await post(`/scenarios/${scenario.id}/detect-plates`, {
+      const result = await post(`/references/${scenario.id}/detect-plates`, {
         image: snapshot.image,
         annotations: Object.values(annotations),
       });
@@ -302,11 +304,11 @@ export default function SignDetection() {
         <p>Onde a placa cadastrada aparece e por quanto tempo é detectada?</p>
       </div>
       <div className="notice">
-        <strong>Um novo foco para o HeatCity.</strong>
+        <strong>Da referência ao resultado.</strong>
         <p>
           Cadastre a imagem e o recorte de cada placa. O OpenCV procura essas referências nos
-          quadros do vídeo por correlação em múltiplas escalas. Não exige participante nem
-          calibração ocular.
+          quadros do vídeo por correlação em múltiplas escalas. Use uma imagem conhecida para
+          localizar as placas em cada quadro.
         </p>
       </div>
       {error && (
@@ -328,7 +330,7 @@ export default function SignDetection() {
           >
             {scenarios.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.studyTitle} · {s.name}
+                {s.projectTitle} · {s.name}
               </option>
             ))}
           </select>
@@ -374,7 +376,7 @@ export default function SignDetection() {
         </p>
         <a
           className="text-link"
-          href={scenario ? `#/studies/${scenario.studyId}/scenarios` : '#/studies'}
+          href={scenario ? `#/references/${scenario.projectId}` : '#/references'}
         >
           Cadastrar ou consultar imagens e recortes de placas →
         </a>
@@ -580,7 +582,7 @@ export default function SignDetection() {
           com intervalo máximo de {MAX_GAP_SECONDS} s. Intervalos maiores, falhas e ambiguidades
           interrompem o trecho. O primeiro quadro isolado soma 0 s. A amostragem não comprova
           presença contínua entre quadros. Centros acumulados mostram a trajetória da placa na
-          imagem; não são mapa de olhar.
+          imagem.
         </p>
       </article>
       {frame && (

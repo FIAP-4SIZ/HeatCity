@@ -64,10 +64,6 @@ try {
     await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
     'Sem overflow horizontal na página móvel',
   );
-  const result = await (
-    await page.request.get(`${base}/api/studies/hospital-orientacao-base-v1/results`)
-  ).json();
-  assert.equal(result.sessions.length, 0);
   await page.getByRole('button', { name: 'Fechar fonte' }).click();
   await page
     .getByLabel('Abrir meu vídeo')
@@ -111,7 +107,7 @@ try {
   );
   assert.deepEqual(errors, []);
   console.log(
-    `PASS: vídeo sintético, ${data.frames.length} quadros, métricas anotadas, tempos, falhas, análise final, PDF/JSON, anotação manual e layout móvel; sem sessões humanas.`,
+    `PASS: vídeo sintético, ${data.frames.length} quadros, métricas anotadas, tempos, falhas, análise final, PDF/JSON, anotação manual e layout móvel; sem dados pessoais.`,
   );
 } finally {
   await browser.close();

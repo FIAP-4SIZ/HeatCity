@@ -1,4 +1,4 @@
-"""Empacota os dois arquivos originais sem editar pixels, para carga como estudo normal."""
+"""Empacota os dois arquivos originais sem editar pixels, para carga no catálogo de referências."""
 
 import argparse
 import base64
@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
-from heatcity.schemas import HospitalExampleInput
+from heatcity.schemas import HospitalInput
 from heatcity.services.vision import decode_scene
 from PIL import Image
 
@@ -66,7 +66,7 @@ def prepare(paths):
                 ],
             }
         )
-    return HospitalExampleInput(scenarios=tuple(scenes)).model_dump()
+    return HospitalInput(scenarios=tuple(scenes)).model_dump()
 
 
 if __name__ == "__main__":

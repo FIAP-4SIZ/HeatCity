@@ -1,12 +1,12 @@
 # HeatCity — localização e acompanhamento de placas em vídeo
 
 A pergunta é: **onde a placa cadastrada aparece e por quanto tempo é detectada?**
-Esta é a apresentação vigente. Os arquivos `historico-ocular-*` documentam a proposta anterior e não são evidências do detector.
+Esta é a apresentação do detector de placas em vídeo.
 
 ## Fala e demonstração (5–7 minutos)
 
 1. Slides 1–3: problema concreto na entrada do hospital, relação com espaços coletivos/Global Solution e motivo do recorte. Não afirmar que o detector mede atenção humana.
-2. Slides 4–6: mostrar imagem, AOIs, cinza, correlação por escalas e tempo acumulado com interrupções. Não há treinamento, calibração ocular ou identificação de participantes.
+2. Slides 4–6: mostrar imagem, AOIs, cinza, correlação por escalas e tempo acumulado com interrupções. O processamento usa referências conhecidas e critérios fixos, sem treinamento.
 3. Slides 7–9: mostrar números efetivamente calculados, gráfico e falhas. São quadros sintéticos correlacionados, sem resultados humanos. Score de correlação não é precisão.
 4. Slide 10: distinguir indícios medidos de causas e sugestões de local ainda não confirmadas.
 5. Slide 11: abrir a aplicação pela raiz, selecionar Cenário A, abrir vídeo demonstrativo e iniciar análise. Observar perda de detecção sob desfoque e ausência da Recepção no final. Pausar, marcar uma posição real se desejar e baixar PDF/JSON/CSV.
@@ -34,10 +34,10 @@ No PowerShell: `$env:PYTHONPATH="backend"` antes de executar os dois scripts. ff
 - Evidência reproduzível: vídeo, geometria conhecida, medições por quadro, gráfico, PDF e código versionados.
 - Análise crítica: dúvida, falhas, tempo estimado e sugestões de posição por placa, sem inferência de atenção/leitura.
 - Ainda faltam: medições confiáveis em vídeo real e comparação controlada de posicionamentos. As imagens A/B originais mudam múltiplos elementos e não isolam uma variável.
-- O notebook e os relatórios oculares anteriores são históricos; não substituem o experimento atual nem comprovam resultado humano.
+- O projeto fornece scripts reproduzíveis e resultados sintéticos identificados; não apresenta resultados humanos.
 
 ## Conferência tripla desta apresentação
 
-1. Narrativa: título, pergunta, demonstração e conclusão descrevem placas em vídeo, sem calibragem ocular como requisito.
+1. Narrativa: título, pergunta, demonstração e conclusão descrevem placas em vídeo, com catálogo de referências e sem treinamento.
 2. Evidência: números e gráficos vêm do mesmo JSON gerado pelo detector sobre MP4 decodificado; falhas e origem sintética são explicitadas.
 3. Entrega: links, slides HTML/PDF, roteiro, MP4, relatório e scripts integram o pacote; a interface é verificada separadamente em navegador.

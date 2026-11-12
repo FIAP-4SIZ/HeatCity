@@ -1,25 +1,14 @@
 import React, { useState } from 'react';
-import { api, post } from '../api.js';
+import { post } from '../api.js';
 import Scene from '../components/Scene.jsx';
 
-export default function ScenarioEditor({ study, onSaved, onCancel }) {
+export default function ReferenceEditor({ project, onSaved, onCancel }) {
   const [scene, setScene] = useState(null),
-    [name, setName] = useState('Cenário A'),
+    [name, setName] = useState('Entrada principal'),
     [label, setLabel] = useState(''),
     [plates, setPlates] = useState([]),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false);
-  async function example() {
-    try {
-      const data = await api('/scene-example');
-      setScene({ ...data, width: 1000, height: 600 });
-      setPlates(data.plates);
-      setName(data.name);
-      setError('');
-    } catch (e) {
-      setError(e.message);
-    }
-  }
   async function upload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -63,7 +52,7 @@ export default function ScenarioEditor({ study, onSaved, onCancel }) {
     setBusy(true);
     setError('');
     try {
-      await post(`/studies/${study.id}/scenarios`, { name, image: scene.image, plates });
+      await post(`/projects/${project.id}/references`, { name, image: scene.image, plates });
       onSaved();
     } catch (e) {
       setError(e.message);
@@ -72,10 +61,10 @@ export default function ScenarioEditor({ study, onSaved, onCancel }) {
     }
   }
   return (
-    <section className="panel scenario-editor">
+    <section className="panel reference-editor">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">CONSTRUIR CENÁRIO</p>
+          <p className="eyebrow">IMAGEM E RECORTES</p>
           <h2>Onde estão as placas?</h2>
         </div>
         <button className="secondary" onClick={onCancel}>
@@ -83,21 +72,18 @@ export default function ScenarioEditor({ study, onSaved, onCancel }) {
         </button>
       </div>
       <p className="muted">
-        Use uma imagem do ambiente, nomeie cada placa e arraste para delimitar sua área. Cenários
-        salvos são imutáveis para preservar os resultados.
+        Use uma imagem do ambiente, nomeie cada placa e arraste para delimitar sua área. As
+        referências salvas são imutáveis; crie outra imagem para comparar alterações.
       </p>
       <div className="form-row">
         <label>
-          Nome do cenário
+          Nome da referência
           <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
         </label>
         <label>
           Imagem do ambiente
           <input type="file" accept="image/png,image/jpeg,image/webp" onChange={upload} />
         </label>
-        <button className="secondary" onClick={example}>
-          Usar cena didática
-        </button>
       </div>
       {scene && (
         <>
@@ -139,7 +125,7 @@ export default function ScenarioEditor({ study, onSaved, onCancel }) {
             disabled={busy || !plates.length || !name.trim()}
             onClick={save}
           >
-            {busy ? 'Salvando…' : 'Salvar cenário e áreas'}
+            {busy ? 'Salvando…' : 'Salvar referência e placas'}
           </button>
         </>
       )}

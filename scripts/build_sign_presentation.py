@@ -2,7 +2,6 @@
 
 import html
 import json
-import shutil
 import textwrap
 import zipfile
 from pathlib import Path
@@ -141,12 +140,12 @@ def main():
             ],
         ),
         (
-            "Mudança de rumo e escopo",
+            "Escopo: referências conhecidas",
             [
-                "O experimento ocular anterior apresentou instabilidade e não sustenta localização confiável do olhar.",
-                "O MVP atual analisa vídeo ou webcam, sem participante e sem calibração ocular.",
+                "Entrada: vídeo de arquivo ou webcam. Saída: posição da placa, estado da detecção e tempo estimado por identidade.",
+                "Cada projeto reúne imagens de referência com recortes nomeados das placas.",
                 "Placas são cadastradas por imagem e recorte. Não há OCR, detecção de placas desconhecidas nem treinamento de um modelo.",
-                "Histórico ocular preservado em seção separada; nenhum resultado ocular é usado como resultado do detector.",
+                "A avaliação exige posições verdadeiras anotadas. Sem elas, não há precisão mensurada.",
             ],
         ),
         (
@@ -162,7 +161,7 @@ def main():
         (
             "Cenário, recortes e posição",
             [
-                "A imagem original do hospital enviada pelo usuário é preservada como estudo normal.",
+                "A imagem original do hospital enviada pelo usuário é preservada como referência normal no catálogo.",
                 "As AOIs delimitam Recepção, Pronto Socorro, Ambulatório e Triagem. Os retângulos encontrados são coordenadas normalizadas no quadro.",
                 "A/B originais também mudam pessoas, setas e outras placas: não isolam o efeito da posição da Recepção.",
             ],
@@ -174,7 +173,7 @@ def main():
                 "Somar Δt apenas quando a mesma placa é detectada em dois quadros consecutivos da mesma fonte, com 0 < Δt ≤ 1,5 s.",
                 "Falha, ambiguidade ou intervalo maior interrompe o trecho. Um quadro isolado representa 0 s.",
                 "Tempo do arquivo vem da mídia, não da duração de processamento. Não se prova presença contínua entre amostras.",
-                "Centros acumulados mostram a trajetória na imagem; não são mapa de calor do olhar.",
+                "Centros acumulados mostram a trajetória na imagem; representam as posições das placas detectadas.",
             ],
         ),
         (
@@ -217,7 +216,7 @@ def main():
         (
             "Demonstração e próxima evidência",
             [
-                "1. Iniciar-HeatCity.cmd → Placas em vídeo → referência Cenário A.",
+                "1. Iniciar-HeatCity.cmd → Análise de vídeo → referência Cenário A.",
                 "2. Abrir vídeo demonstrativo → Iniciar análise → observar caixas e tempos.",
                 "3. Pausar → conferir anotação → exportar JSON, CSV e PDF com a análise final.",
                 "4. Próxima etapa: vídeo real das placas cadastradas; anotar posições/ausências e medir precisão, recall, IoU e falhas.",
@@ -234,11 +233,6 @@ def main():
             ],
         ),
     ]
-    for name in ["slides.html", "slides.pdf", "ROTEIRO.md"]:
-        source = OUT / name
-        archive = OUT / ("historico-ocular-" + name)
-        if source.exists() and not archive.exists():
-            shutil.copyfile(source, archive)
     style = """*{box-sizing:border-box}body{margin:0;background:#102820;color:#173b31;font:22px/1.45 system-ui,sans-serif}.slide{background:#f5f7f3;margin:32px auto;padding:50px 65px;max-width:1200px;min-height:675px;position:relative}h1{font-size:44px;line-height:1.12;letter-spacing:-1px;margin:0 0 30px}li{margin:15px 0}img{display:block;max-height:295px;max-width:90%;margin:20px auto}small{position:absolute;bottom:20px;right:35px;font-size:13px}.visual{font-size:18px}.visual li{margin:8px 0}nav{text-align:center;color:white;font-size:16px;padding:15px}nav a{color:#aff2ca}@page{size:landscape;margin:0}@media print{body{background:white}.slide{width:100vw;height:100vh;max-width:none;min-height:0;margin:0;break-after:page;padding:35px 55px}h1{font-size:36px}body{font-size:18px}nav{display:none}img{max-height:240px}}"""
     blocks = []
     pdf = canvas.Canvas(str(OUT / "slides.pdf"), pagesize=(960, 540))
@@ -318,12 +312,12 @@ def main():
     ).write_text("""# HeatCity — localização e acompanhamento de placas em vídeo
 
 A pergunta é: **onde a placa cadastrada aparece e por quanto tempo é detectada?**
-Esta é a apresentação vigente. Os arquivos `historico-ocular-*` documentam a proposta anterior e não são evidências do detector.
+Esta é a apresentação do detector de placas em vídeo.
 
 ## Fala e demonstração (5–7 minutos)
 
 1. Slides 1–3: problema concreto na entrada do hospital, relação com espaços coletivos/Global Solution e motivo do recorte. Não afirmar que o detector mede atenção humana.
-2. Slides 4–6: mostrar imagem, AOIs, cinza, correlação por escalas e tempo acumulado com interrupções. Não há treinamento, calibração ocular ou identificação de participantes.
+2. Slides 4–6: mostrar imagem, AOIs, cinza, correlação por escalas e tempo acumulado com interrupções. O processamento usa referências conhecidas e critérios fixos, sem treinamento.
 3. Slides 7–9: mostrar números efetivamente calculados, gráfico e falhas. São quadros sintéticos correlacionados, sem resultados humanos. Score de correlação não é precisão.
 4. Slide 10: distinguir indícios medidos de causas e sugestões de local ainda não confirmadas.
 5. Slide 11: abrir a aplicação pela raiz, selecionar Cenário A, abrir vídeo demonstrativo e iniciar análise. Observar perda de detecção sob desfoque e ausência da Recepção no final. Pausar, marcar uma posição real se desejar e baixar PDF/JSON/CSV.
@@ -351,11 +345,11 @@ No PowerShell: `$env:PYTHONPATH="backend"` antes de executar os dois scripts. ff
 - Evidência reproduzível: vídeo, geometria conhecida, medições por quadro, gráfico, PDF e código versionados.
 - Análise crítica: dúvida, falhas, tempo estimado e sugestões de posição por placa, sem inferência de atenção/leitura.
 - Ainda faltam: medições confiáveis em vídeo real e comparação controlada de posicionamentos. As imagens A/B originais mudam múltiplos elementos e não isolam uma variável.
-- O notebook e os relatórios oculares anteriores são históricos; não substituem o experimento atual nem comprovam resultado humano.
+- O projeto fornece scripts reproduzíveis e resultados sintéticos identificados; não apresenta resultados humanos.
 
 ## Conferência tripla desta apresentação
 
-1. Narrativa: título, pergunta, demonstração e conclusão descrevem placas em vídeo, sem calibragem ocular como requisito.
+1. Narrativa: título, pergunta, demonstração e conclusão descrevem placas em vídeo, com catálogo de referências e sem treinamento.
 2. Evidência: números e gráficos vêm do mesmo JSON gerado pelo detector sobre MP4 decodificado; falhas e origem sintética são explicitadas.
 3. Entrega: links, slides HTML/PDF, roteiro, MP4, relatório e scripts integram o pacote; a interface é verificada separadamente em navegador.
 """)

@@ -2,20 +2,20 @@ import React, { useEffect, useState } from 'react';
 import { api, number } from '../api.js';
 import Scene from '../components/Scene.jsx';
 
-export default function PdiView({ study }) {
-  const [scenarioId, setScenarioId] = useState(study.scenarios[0]?.id || '');
+export default function PdiView({ project }) {
+  const [scenarioId, setScenarioId] = useState(project.references[0]?.id || '');
   const [data, setData] = useState(null),
     [error, setError] = useState('');
   const [selected, setSelected] = useState(0),
     [gray, setGray] = useState(false);
-  const scenario = study.scenarios.find((s) => s.id === scenarioId);
+  const scenario = project.references.find((s) => s.id === scenarioId);
   useEffect(() => {
     let active = true;
     setData(null);
     setError('');
     setSelected(0);
     if (scenarioId)
-      api(`/scenarios/${scenarioId}/pdi`)
+      api(`/references/${scenarioId}/pdi`)
         .then((value) => {
           if (active) setData(value);
         })
@@ -29,8 +29,8 @@ export default function PdiView({ study }) {
   if (!scenario)
     return (
       <div className="empty panel">
-        <h2>Adicione um cenário para explorar o PDI.</h2>
-        <p>Em Cenários e placas, envie uma imagem ou use a cena didática e salve suas AOIs.</p>
+        <h2>Adicione uma referência para explorar o PDI.</h2>
+        <p>Em Referências, envie uma imagem e delimite os recortes das placas.</p>
       </div>
     );
   const region = data?.regions[selected];
@@ -46,13 +46,13 @@ export default function PdiView({ study }) {
         <div>
           <p className="eyebrow">PDI · DO PIXEL AO INDICADOR</p>
           <h2>O que existe dentro de cada placa?</h2>
-          <p>Explore descritores calculados sobre a imagem, sem câmera ou calibração.</p>
+          <p>Explore descritores calculados sobre a imagem, diretamente na imagem cadastrada.</p>
         </div>
       </div>
       <label>
-        Cenário
+        Imagem de referência
         <select value={scenarioId} onChange={(e) => setScenarioId(e.target.value)}>
-          {study.scenarios.map((s) => (
+          {project.references.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
             </option>

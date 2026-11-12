@@ -6,10 +6,10 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Response
 from pydantic import Field, model_validator
 
+from .catalog import require
 from .schemas import Contract, Plate
 from .services.sign_detection import detect, report_pdf
 from .services.vision import decode_scene
-from .workflow import require
 
 router = APIRouter()
 
@@ -37,9 +37,9 @@ class FrameInput(Contract):
     annotations: list[Annotation] = Field(default_factory=list, max_length=30)
 
 
-@router.post("/scenarios/{scenario_id}/detect-plates")
-def frame_detection(scenario_id: str, body: FrameInput):
-    scenario = require("scenarios", scenario_id)
+@router.post("/references/{reference_id}/detect-plates")
+def frame_detection(reference_id: str, body: FrameInput):
+    scenario = require("reference_images", reference_id)
     names = [a.name for a in body.annotations]
     if len(set(names)) != len(names) or not set(names) <= set(
         p["name"] for p in scenario["plates"]
