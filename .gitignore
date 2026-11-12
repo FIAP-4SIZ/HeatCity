@@ -1,11 +1,68 @@
+# Python: ambientes locais e bytecode
 .venv/
+.analysis-venv/
+venv/
+env/
 __pycache__/
 *.py[cod]
-.env
+
+# Ferramentas e caches de desenvolvimento
+.heatcity-tools/
+.cache/
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+*.egg-info/
+
+# Node/Vite: dependencias e builds; lockfiles continuam versionados
 node_modules/
 dist/
+.vite/
+
+# Configuracoes locais e segredos; modelos de configuracao podem ser versionados
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+
+# Dados locais da aplicacao e arquivos auxiliares do SQLite
 data/
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
 
-.heatcity-tools/
+# Logs, cobertura e resultados temporarios dos testes
+*.log
+.coverage
+.coverage.*
+htmlcov/
+coverage/
+test-results/
+playwright-report/
+blob-report/
 
-.analysis-venv/
+# Arquivos temporarios de editores e do sistema operacional
+.idea/
+.vscode/
+*.code-workspace
+*.swp
+*.swo
+*~
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Fixtures, notebooks executados, imagens, videos, relatorios e lockfiles
+# sao evidencias do projeto: nao ignorar essas extensoes globalmente.
+
+# Exclusivo da main: a documentacao e a apresentacao ficam na develop.
+/docs/
