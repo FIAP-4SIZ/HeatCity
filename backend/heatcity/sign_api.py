@@ -69,7 +69,7 @@ def demo_frame(reference_id: str, body: DemoFrameInput):
     """Decode the actual bundled MP4; never return precomputed predictions."""
     scenario = require("reference_images", reference_id)
     root = Path(__file__).resolve().parents[2] / "frontend/public"
-    metadata = json.loads((root / "detection-demo.json").read_text())
+    metadata = json.loads((root / "detection-demo.json").read_text(encoding="utf-8"))
     digest = hashlib.sha256(base64.b64decode(scenario["image"].split(",", 1)[1])).hexdigest()
     if digest != metadata["reference_sha256"] or scenario["plates"] != metadata["plates"]:
         raise HTTPException(422, "A referência não corresponde ao vídeo de exemplo.")
