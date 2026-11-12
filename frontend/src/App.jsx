@@ -189,9 +189,9 @@ export default function App() {
   }, [theme]);
   const section = ['references', 'pdi', 'method'].includes(path[0]) ? path[0] : 'analysis';
   const items = [
-    ['analysis', 'Análise de vídeo', '01'],
-    ['references', 'Referências de placas', '02'],
-    ['pdi', 'PDI visual', '03'],
+    ['analysis', 'Análise de vídeo', '▷'],
+    ['references', 'Referências de placas', '▣'],
+    ['pdi', 'PDI visual', '◫'],
     ['method', 'Método e limites', '↗'],
   ];
   return (

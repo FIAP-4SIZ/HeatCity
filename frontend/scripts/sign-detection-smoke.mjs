@@ -6,108 +6,111 @@ const browser = await chromium.launch({
   args: ['--no-sandbox', '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'],
 });
 try {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1080 } });
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
+  const ready = () =>
+    page.waitForFunction(
+      () =>
+        ![...document.querySelectorAll('button')].find((b) => b.textContent === 'Iniciar análise')
+          ?.disabled,
+    );
+  const restart = () =>
+    page.getByRole('button', { name: 'Começar outra análise (limpa o resultado atual)' }).click();
+  async function download(name) {
+    const wait = page.waitForEvent('download');
+    await page.getByRole('button', { name, exact: true }).click();
+    const item = await wait;
+    const stream = await item.createReadStream();
+    const chunks = [];
+    for await (const part of stream) chunks.push(part);
+    return Buffer.concat(chunks);
+  }
   await page.goto(base);
-  await page.getByRole('heading', { name: /Localização e acompanhamento/ }).waitFor();
-  await page
-    .getByLabel('Referência cadastrada')
-    .locator('option')
-    .first()
-    .waitFor({ state: 'attached' });
+  await page.getByRole('heading', { name: 'Onde a placa aparece?' }).waitFor();
+  await page.locator('.plate-crops figure').first().waitFor();
+  assert.equal(await page.locator('.plate-crops figure').count(), 4);
+  assert.equal(await page.locator('.analysis-report').count(), 0);
+  assert.equal(await page.locator('.detector-controls details').getAttribute('open'), null);
+  await page.screenshot({ path: '/tmp/heatcity-guided-prepare.png', fullPage: true });
   await page.getByRole('button', { name: 'Abrir vídeo demonstrativo' }).click();
-  await page.getByRole('button', { name: 'Iniciar análise', exact: true }).waitFor();
-  await page.waitForFunction(
-    () =>
-      ![...document.querySelectorAll('button')].find((b) => b.textContent === 'Iniciar análise')
-        .disabled,
+  await ready();
+  assert.match(
+    await page.locator('.analysis-steps [aria-current]').innerText(),
+    /Analisar o vídeo/,
   );
   await page.getByRole('button', { name: 'Iniciar análise', exact: true }).click();
-  await page.getByRole('heading', { name: 'Análise final: dificuldade e melhorias' }).waitFor();
-  await page.waitForFunction(() =>
-    document.querySelector('.detector-final')?.textContent.includes('anotações'),
-  );
-  await page.waitForFunction(() => document.querySelector('video').ended, { timeout: 30000 });
-  assert.ok((await page.locator('.detector-box').count()) > 0);
-  assert.match(await page.locator('.detector-final').innerText(), /Precisão por placa 1/);
-  assert.equal(await page.getByText(/Sem referência geométrica automática/).count(), 0);
-  const download = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Baixar diagnóstico JSON' }).click();
-  const file = await download;
-  const stream = await file.createReadStream();
-  const chunks = [];
-  for await (const c of stream) chunks.push(c);
-  const data = JSON.parse(Buffer.concat(chunks).toString());
+  await page.locator('.detector-box').first().waitFor();
+  assert.equal(await page.locator('.analysis-report').count(), 0);
+  await page
+    .getByRole('heading', { name: 'Relatório da análise', exact: true })
+    .waitFor({ timeout: 30000 });
+  assert.match(await page.locator('.analysis-steps [aria-current]').innerText(), /Ver o relatório/);
+  assert.equal(await page.locator('.detector-workspace').isVisible(), false);
+  await page.getByText('Acerto medido em um exemplo sintético.', { exact: true }).waitFor();
+  assert.equal(await page.locator('.report-plate[open]').count(), 1);
+  assert.equal(await page.locator('.report-plate').count(), 4);
+  const data = JSON.parse((await download('Baixar diagnóstico JSON')).toString());
   assert.ok(data.frames.length >= 8);
   assert.ok(data.summary.annotations > 0);
   assert.ok(data.summary.signs.some((s) => s.detectedSeconds > 0));
   assert.ok(data.frames.some((f) => f.signs.some((s) => s.status === 'not_found')));
   assert.ok(data.frames.every((f) => !f.image));
-  assert.equal(data.source.kind, 'demo');
-  const pdfWait = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Baixar relatório PDF' }).click();
-  const pdf = await pdfWait;
-  const pdfStream = await pdf.createReadStream();
-  const bytes = [];
-  for await (const b of pdfStream) bytes.push(b);
-  assert.equal(Buffer.concat(bytes).subarray(0, 5).toString(), '%PDF-');
+  assert.equal((await download('Baixar relatório PDF')).subarray(0, 5).toString(), '%PDF-');
+  assert.match((await download('Baixar CSV')).toString(), /tempo_s/);
+  await page.screenshot({ path: '/tmp/heatcity-guided-report.png', fullPage: true });
+  await page.getByRole('button', { name: /Tema escuro/ }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+  await page.screenshot({ path: '/tmp/heatcity-guided-mobile.png', fullPage: true });
+  await page.getByRole('button', { name: 'Voltar ao vídeo' }).click();
   await page.getByRole('button', { name: 'Marcar placa ausente' }).click();
   await page.getByRole('button', { name: 'Calcular acerto deste quadro' }).click();
   await page.getByText('Acerto calculado somente para as placas anotadas neste quadro.').waitFor();
-  await page.screenshot({ path: '/tmp/heatcity-sign-desktop.png', fullPage: true });
-  await page.getByRole('button', { name: /Tema escuro/ }).click();
-  await page.screenshot({ path: '/tmp/heatcity-sign-dark.png', fullPage: true });
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ path: '/tmp/heatcity-sign-mobile.png', fullPage: true });
-  assert.ok(
-    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
-    'Sem overflow horizontal na página móvel',
-  );
-  await page.getByRole('button', { name: 'Fechar fonte' }).click();
+  await page.getByRole('button', { name: 'Ver relatório atualizado →' }).click();
+  await restart();
   await page
     .getByLabel('Abrir meu vídeo')
     .setInputFiles(new URL('../public/detection-demo.mp4', import.meta.url).pathname);
-  await page.waitForFunction(
-    () =>
-      ![...document.querySelectorAll('button')].find(
-        (b) => b.textContent === 'Analisar quadro atual',
-      )?.disabled,
-  );
+  await ready();
   await page.getByRole('button', { name: 'Analisar quadro atual' }).click();
-  await page.getByRole('heading', { name: 'Análise final: dificuldade e melhorias' }).waitFor();
+  await page.locator('.detector-frame').waitFor();
+  await page.getByRole('button', { name: 'Concluir análise e ver relatório →' }).click();
+  await page.getByText('Precisão ainda não medida.', { exact: true }).waitFor();
+  const unannotated = JSON.parse((await download('Baixar diagnóstico JSON')).toString());
+  assert.equal(unannotated.summary.annotations, 0);
+  assert.equal(unannotated.summary.precision, null);
+  await page.getByRole('button', { name: 'Voltar ao vídeo' }).click();
   await page.getByRole('button', { name: 'Marcar posição real' }).click();
   const canvas = page.locator('.detector-frame .scene-image');
   await canvas.scrollIntoViewIfNeeded();
-  const rect = await canvas.boundingBox();
-  await page.mouse.move(rect.x + rect.width * 0.29, rect.y + rect.height * 0.29);
+  const box = await canvas.boundingBox();
+  await page.mouse.move(box.x + box.width * 0.29, box.y + box.height * 0.29);
   await page.mouse.down();
-  await page.mouse.move(rect.x + rect.width * 0.4, rect.y + rect.height * 0.34);
+  await page.mouse.move(box.x + box.width * 0.4, box.y + box.height * 0.34);
   await page.mouse.up();
   await page.getByRole('button', { name: 'Calcular acerto deste quadro' }).click();
   await page.getByText('Acerto calculado somente para as placas anotadas neste quadro.').waitFor();
-  await page.getByRole('button', { name: 'Fechar fonte' }).click();
+  await page.getByRole('button', { name: 'Ver relatório atualizado →' }).click();
+  await page.getByText('Acerto medido apenas nos quadros conferidos.', { exact: true }).waitFor();
+  await restart();
   await page.context().grantPermissions(['camera']);
   await page.getByRole('button', { name: 'Abrir webcam' }).click();
-  await page.waitForFunction(
-    () =>
-      ![...document.querySelectorAll('button')].find((b) => b.textContent === 'Iniciar análise')
-        ?.disabled,
-  );
+  await ready();
   await page.getByRole('button', { name: 'Iniciar análise', exact: true }).click();
-  await page.getByRole('heading', { name: 'Análise final: dificuldade e melhorias' }).waitFor();
+  await page.locator('.detector-frame').waitFor();
   await page.evaluate(() => {
     window.testCameraStream = document.querySelector('video').srcObject;
   });
   await page.getByRole('button', { name: 'Fechar fonte' }).click();
   assert.ok(
     await page.evaluate(() =>
-      window.testCameraStream.getTracks().every((track) => track.readyState === 'ended'),
+      window.testCameraStream.getTracks().every((t) => t.readyState === 'ended'),
     ),
   );
   assert.deepEqual(errors, []);
   console.log(
-    `PASS: vídeo sintético, ${data.frames.length} quadros, métricas anotadas, tempos, falhas, análise final, PDF/JSON, anotação manual e layout móvel; sem dados pessoais.`,
+    `PASS: 3 etapas, 4 recortes, relatório automático, ${data.frames.length} quadros, PDF/JSON/CSV, distinção entre acerto sintético e não medido, conferência manual, webcam e celular.`,
   );
 } finally {
   await browser.close();

@@ -860,3 +860,144 @@ th {
     height: 200px;
   }
 }
+
+[hidden] {
+  display: none !important;
+}
+.analysis-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  list-style: none;
+  padding: 0;
+  gap: 12px;
+  margin: 0 0 28px;
+}
+.analysis-steps li {
+  border-bottom: 2px solid var(--line);
+  padding: 10px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.analysis-steps li span {
+  display: inline-grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  margin-right: 9px;
+  font-weight: 700;
+}
+.analysis-steps li[aria-current] {
+  border-color: var(--accent);
+  color: var(--secondary);
+  font-weight: 700;
+}
+.analysis-steps li[aria-current] span {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+.plate-crops {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  padding: 22px 0;
+}
+.plate-crops figure {
+  margin: 0;
+}
+.plate-crops svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: #172438;
+  border-radius: 5px;
+}
+.plate-crops figcaption {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 650;
+}
+.detector-controls details {
+  margin: 0 0 28px;
+}
+.detector-controls h3 {
+  margin-top: 12px;
+}
+.analysis-report > .panel {
+  margin-bottom: 22px;
+}
+.report-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+.report-facts div {
+  padding: 16px;
+  background: var(--bg);
+  border-radius: 8px;
+}
+.report-facts dt {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+  margin-bottom: 7px;
+}
+.report-facts dd {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+.alternative-references {
+  margin-top: 24px;
+}
+@media (max-width: 650px) {
+  .analysis-steps {
+    gap: 8px;
+  }
+  .analysis-steps li {
+    font-size: 11px;
+  }
+  .analysis-steps li span {
+    display: grid;
+    margin-bottom: 7px;
+  }
+  .plate-crops {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .report-facts {
+    grid-template-columns: 1fr 1fr;
+  }
+  .report-facts dd {
+    font-size: 14px;
+  }
+}
+
+.report-plate {
+  border-top: 1px solid var(--line);
+  padding: 20px 0;
+}
+.report-plate > summary {
+  display: list-item;
+  font-size: 18px;
+  margin-bottom: 0;
+}
+.report-plate > summary span {
+  float: right;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.report-plate[open] > summary {
+  margin-bottom: 20px;
+}
+@media (max-width: 650px) {
+  .report-plate > summary span {
+    float: none;
+    display: block;
+    margin-left: 20px;
+  }
+}
